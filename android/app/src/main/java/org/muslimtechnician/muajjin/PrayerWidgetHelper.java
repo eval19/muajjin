@@ -462,24 +462,38 @@ public class PrayerWidgetHelper {
         manager.updateAppWidget(appWidgetId, views);
     }
 
+    public static String formatChipTime(Context context, long epochMs, String fallbackStr) {
+        if (epochMs > 0) {
+            try {
+                boolean is24 = android.text.format.DateFormat.is24HourFormat(context);
+                DateFormat df = new SimpleDateFormat(is24 ? "HH:mm" : "h:mm", Locale.getDefault());
+                return df.format(new Date(epochMs));
+            } catch (Exception ignored) {}
+        }
+        if (fallbackStr != null) {
+            return fallbackStr.replaceAll("(?i)\\s*[ap]m", "").trim();
+        }
+        return "--:--";
+    }
+
     private static void renderChips(Context context, RemoteViews views, WidgetTimelineState state) {
         renderSingleChip(context, views, R.id.chip_fajr, R.id.tv_chip_fajr_name, R.id.tv_chip_fajr_time,
-            "Fajr", state.fajrStr, state.fajrTs, state.startTimestamp, state.targetTimestamp, "fajr".equalsIgnoreCase(state.activePrayerId));
+            "Fajr", formatChipTime(context, state.fajrTs, state.fajrStr), state.fajrTs, state.startTimestamp, state.targetTimestamp, "fajr".equalsIgnoreCase(state.activePrayerId));
 
         renderSingleChip(context, views, R.id.chip_sunrise, R.id.tv_chip_sunrise_name, R.id.tv_chip_sunrise_time,
-            "Sunrise", state.sunriseStr, state.sunriseTs, state.startTimestamp, state.targetTimestamp, false);
+            "Sunrise", formatChipTime(context, state.sunriseTs, state.sunriseStr), state.sunriseTs, state.startTimestamp, state.targetTimestamp, false);
 
         renderSingleChip(context, views, R.id.chip_dhuhr, R.id.tv_chip_dhuhr_name, R.id.tv_chip_dhuhr_time,
-            "Dhuhr", state.dhuhrStr, state.dhuhrTs, state.startTimestamp, state.targetTimestamp, "dhuhr".equalsIgnoreCase(state.activePrayerId));
+            "Dhuhr", formatChipTime(context, state.dhuhrTs, state.dhuhrStr), state.dhuhrTs, state.startTimestamp, state.targetTimestamp, "dhuhr".equalsIgnoreCase(state.activePrayerId));
 
         renderSingleChip(context, views, R.id.chip_asr, R.id.tv_chip_asr_name, R.id.tv_chip_asr_time,
-            "Asr", state.asrStr, state.asrTs, state.startTimestamp, state.targetTimestamp, "asr".equalsIgnoreCase(state.activePrayerId));
+            "Asr", formatChipTime(context, state.asrTs, state.asrStr), state.asrTs, state.startTimestamp, state.targetTimestamp, "asr".equalsIgnoreCase(state.activePrayerId));
 
         renderSingleChip(context, views, R.id.chip_maghrib, R.id.tv_chip_maghrib_name, R.id.tv_chip_maghrib_time,
-            "Maghrib", state.maghribStr, state.maghribTs, state.startTimestamp, state.targetTimestamp, "maghrib".equalsIgnoreCase(state.activePrayerId));
+            "Maghrib", formatChipTime(context, state.maghribTs, state.maghribStr), state.maghribTs, state.startTimestamp, state.targetTimestamp, "maghrib".equalsIgnoreCase(state.activePrayerId));
 
         renderSingleChip(context, views, R.id.chip_isha, R.id.tv_chip_isha_name, R.id.tv_chip_isha_time,
-            "Isha", state.ishaStr, state.ishaTs, state.startTimestamp, state.targetTimestamp, "isha".equalsIgnoreCase(state.activePrayerId));
+            "Isha", formatChipTime(context, state.ishaTs, state.ishaStr), state.ishaTs, state.startTimestamp, state.targetTimestamp, "isha".equalsIgnoreCase(state.activePrayerId));
     }
 
     private static void renderSingleChip(
