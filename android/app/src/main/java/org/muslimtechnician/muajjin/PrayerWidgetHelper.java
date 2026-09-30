@@ -79,49 +79,49 @@ public class PrayerWidgetHelper {
         String activePrayerId;
 
         if (now < tsFajr) {
-            currentPill = "● Isha · " + prefs.getString("isha_time", "--:--");
+            currentPill = "● CURRENT: ISHA · " + prefs.getString("isha_time", "--:--");
             nextName = "Fajr";
             nextTime = prefs.getString("fajr_time", "--:--");
             targetTimestamp = tsFajr;
             startTimestamp = tsIsha > 0 ? tsIsha : (tsFajr - 8 * 3600 * 1000L);
             activePrayerId = "isha";
         } else if (now < tsSunrise) {
-            currentPill = "● Fajr · " + prefs.getString("fajr_time", "--:--");
+            currentPill = "● CURRENT: FAJR · " + prefs.getString("fajr_time", "--:--");
             nextName = "Sunrise";
             nextTime = prefs.getString("sunrise_time", "--:--");
             targetTimestamp = tsSunrise;
             startTimestamp = tsFajr;
             activePrayerId = "fajr";
         } else if (now < tsDhuhr) {
-            currentPill = "☼ Sunrise · " + prefs.getString("sunrise_time", "--:--");
+            currentPill = "☼ SUNRISE · " + prefs.getString("sunrise_time", "--:--");
             nextName = "Dhuhr";
             nextTime = prefs.getString("dhuhr_time", "--:--");
             targetTimestamp = tsDhuhr;
             startTimestamp = tsSunrise;
             activePrayerId = "sunrise";
         } else if (now < tsAsr) {
-            currentPill = "● Dhuhr · " + prefs.getString("dhuhr_time", "--:--");
+            currentPill = "● CURRENT: DHUHR · " + prefs.getString("dhuhr_time", "--:--");
             nextName = "Asr";
             nextTime = prefs.getString("asr_time", "--:--");
             targetTimestamp = tsAsr;
             startTimestamp = tsDhuhr;
             activePrayerId = "dhuhr";
         } else if (now < tsMaghrib) {
-            currentPill = "● Asr · " + prefs.getString("asr_time", "--:--");
+            currentPill = "● CURRENT: ASR · " + prefs.getString("asr_time", "--:--");
             nextName = "Maghrib";
             nextTime = prefs.getString("maghrib_time", "--:--");
             targetTimestamp = tsMaghrib;
             startTimestamp = tsAsr;
             activePrayerId = "asr";
         } else if (now < tsIsha) {
-            currentPill = "● Maghrib · " + prefs.getString("maghrib_time", "--:--");
+            currentPill = "● CURRENT: MAGHRIB · " + prefs.getString("maghrib_time", "--:--");
             nextName = "Isha";
             nextTime = prefs.getString("isha_time", "--:--");
             targetTimestamp = tsIsha;
             startTimestamp = tsMaghrib;
             activePrayerId = "maghrib";
         } else {
-            currentPill = "● Isha · " + prefs.getString("isha_time", "--:--");
+            currentPill = "● CURRENT: ISHA · " + prefs.getString("isha_time", "--:--");
             nextName = "Fajr";
             nextTime = prefs.getString("fajr_time", "--:--");
             targetTimestamp = tsNextFajr > now ? tsNextFajr : (tsIsha + 8 * 3600 * 1000L);
@@ -185,42 +185,42 @@ public class PrayerWidgetHelper {
                     String activePrayerId;
 
                     if (now < sunrise) {
-                        currentPill = "● Fajr · " + fajrTime;
+                        currentPill = "● CURRENT: FAJR · " + fajrTime;
                         nextName = "Sunrise";
                         nextTime = sunriseTime;
                         targetTimestamp = sunrise;
                         startTimestamp = fajr;
                         activePrayerId = "fajr";
                     } else if (now < dhuhr) {
-                        currentPill = "☼ Sunrise · " + sunriseTime;
+                        currentPill = "☼ SUNRISE · " + sunriseTime;
                         nextName = "Dhuhr";
                         nextTime = dhuhrTime;
                         targetTimestamp = dhuhr;
                         startTimestamp = sunrise;
                         activePrayerId = "sunrise";
                     } else if (now < asr) {
-                        currentPill = "● Dhuhr · " + dhuhrTime;
+                        currentPill = "● CURRENT: DHUHR · " + dhuhrTime;
                         nextName = "Asr";
                         nextTime = asrTime;
                         targetTimestamp = asr;
                         startTimestamp = dhuhr;
                         activePrayerId = "dhuhr";
                     } else if (now < maghrib) {
-                        currentPill = "● Asr · " + asrTime;
+                        currentPill = "● CURRENT: ASR · " + asrTime;
                         nextName = "Maghrib";
                         nextTime = maghribTime;
                         targetTimestamp = maghrib;
                         startTimestamp = asr;
                         activePrayerId = "asr";
                     } else if (now < isha) {
-                        currentPill = "● Maghrib · " + maghribTime;
+                        currentPill = "● CURRENT: MAGHRIB · " + maghribTime;
                         nextName = "Isha";
                         nextTime = ishaTime;
                         targetTimestamp = isha;
                         startTimestamp = maghrib;
                         activePrayerId = "maghrib";
                     } else {
-                        currentPill = "● Isha · " + ishaTime;
+                        currentPill = "● CURRENT: ISHA · " + ishaTime;
                         nextName = "Fajr";
                         nextTime = nextFajrTime;
                         targetTimestamp = nextFajr;
@@ -378,7 +378,7 @@ public class PrayerWidgetHelper {
         views.setTextViewText(R.id.tv_large_location, location);
         views.setTextViewText(R.id.tv_large_hijri, hijri);
         views.setTextViewText(R.id.tv_large_current_pill, currentPill);
-        views.setTextViewText(R.id.tv_large_summary, "NEXT: " + nextName.toUpperCase() + " · " + nextTime);
+        views.setTextViewText(R.id.tv_large_summary, nextName + " · " + nextTime);
         setupChronometer(views, R.id.tv_large_countdown, prefs);
         views.setProgressBar(R.id.pb_large_progress, 100, Math.min(100, Math.max(0, progress)), false);
 
