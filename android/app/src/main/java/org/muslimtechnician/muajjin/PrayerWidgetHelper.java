@@ -92,6 +92,24 @@ public class PrayerWidgetHelper {
                 updateLargeWidget(context, manager, id);
             }
         }
+
+        // 6. Lock Small Widgets (Keyguard)
+        ComponentName lockSmallComponent = new ComponentName(context, PrayerLockSmallProvider.class);
+        int[] lockSmallIds = manager.getAppWidgetIds(lockSmallComponent);
+        if (lockSmallIds != null && lockSmallIds.length > 0) {
+            for (int id : lockSmallIds) {
+                updateLockSmallWidget(context, manager, id);
+            }
+        }
+
+        // 7. Lock Medium Widgets (Keyguard)
+        ComponentName lockMedComponent = new ComponentName(context, PrayerLockMediumProvider.class);
+        int[] lockMedIds = manager.getAppWidgetIds(lockMedComponent);
+        if (lockMedIds != null && lockMedIds.length > 0) {
+            for (int id : lockMedIds) {
+                updateLockMediumWidget(context, manager, id);
+            }
+        }
     }
 
     public static void refreshStateFromTimestamps(Context context) {
@@ -521,6 +539,33 @@ public class PrayerWidgetHelper {
         views.setInt(R.id.row_isha, "setBackgroundResource", "isha".equalsIgnoreCase(state.activePrayerId) ? R.drawable.widget_active_row : 0);
 
         views.setOnClickPendingIntent(R.id.widget_large_root, getOpenAppIntent(context));
+        manager.updateAppWidget(appWidgetId, views);
+    }
+
+    // 6. Lock Small (Keyguard)
+    public static void updateLockSmallWidget(Context context, AppWidgetManager manager, int appWidgetId) {
+        WidgetTimelineState state = getTimelineState(context);
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_lock_small);
+
+        views.setTextViewText(R.id.tv_lock_small_label, state.label);
+        setupChronometer(views, R.id.tv_lock_small_countdown, state.targetTimestamp);
+        views.setTextViewText(R.id.tv_lock_small_time, "at " + state.nextTime);
+
+        views.setOnClickPendingIntent(R.id.widget_lock_small_root, getOpenAppIntent(context));
+        manager.updateAppWidget(appWidgetId, views);
+    }
+
+    // 7. Lock Medium (Keyguard)
+    public static void updateLockMediumWidget(Context context, AppWidgetManager manager, int appWidgetId) {
+        WidgetTimelineState state = getTimelineState(context);
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_lock_medium);
+
+        views.setTextViewText(R.id.tv_lock_med_label, state.label);
+        setupChronometer(views, R.id.tv_lock_med_countdown, state.targetTimestamp);
+        views.setTextViewText(R.id.tv_lock_med_current, state.footerText);
+        views.setTextViewText(R.id.tv_lock_med_next, state.contextLine2);
+
+        views.setOnClickPendingIntent(R.id.widget_lock_medium_root, getOpenAppIntent(context));
         manager.updateAppWidget(appWidgetId, views);
     }
 

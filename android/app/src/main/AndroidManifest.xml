@@ -93,6 +93,32 @@
                 android:resource="@xml/widget_prayer_large_info" />
         </receiver>
 
+        <!-- 6. Lock Small (Keyguard) -->
+        <receiver
+            android:name=".PrayerLockSmallProvider"
+            android:exported="true"
+            android:label="Prayer Times (Lock Small)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lock_small_info" />
+        </receiver>
+
+        <!-- 7. Lock Medium (Keyguard) -->
+        <receiver
+            android:name=".PrayerLockMediumProvider"
+            android:exported="true"
+            android:label="Prayer Times (Lock Medium)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lock_medium_info" />
+        </receiver>
+
         <!-- Exact Second Prayer Transition & Auto-Healing Alarm Receiver -->
         <receiver
             android:name=".PrayerWidgetAlarmReceiver"
@@ -106,6 +132,7 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
                 <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>
