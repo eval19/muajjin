@@ -9,9 +9,25 @@
     android:gravity="center">
 
     <TextView
+        android:id="@+id/tv_prayer_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_status_badge"
+        android:paddingStart="8dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="2dp"
+        android:text="NEXT SALAT"
+        android:textColor="#38BDF8"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <TextView
         android:id="@+id/tv_prayer_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
         android:text="Dhuhr"
         android:textColor="#FFFFFF"
         android:textSize="22sp"
@@ -23,19 +39,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:text="12:30 PM"
-        android:textColor="#CBD5E1"
-        android:textSize="14sp"
+        android:text="11:43 AM"
+        android:textColor="#94A3B8"
+        android:textSize="13sp"
         android:gravity="center" />
 
     <TextView
         android:id="@+id/tv_time_remaining"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="in 45m"
-        android:textColor="#10B981"
-        android:textSize="12sp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/widget_badge_background"
+        android:paddingStart="8dp"
+        android:paddingTop="3dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="3dp"
+        android:text="in 1h 02m"
+        android:textColor="#34D399"
+        android:textSize="11sp"
         android:textStyle="bold"
         android:gravity="center" />
 
@@ -43,10 +64,10 @@
         android:id="@+id/pb_prayer_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_marginTop="12dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="10dp"
         android:max="100"
-        android:progress="50"
+        android:progress="60"
         android:progressDrawable="@drawable/widget_progress_drawable" />
 
 </LinearLayout>

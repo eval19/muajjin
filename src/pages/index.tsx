@@ -16,6 +16,8 @@ import {
   getProhibitedTimes,
   setTranslationFunction,
 } from '@/utils/time-utils';
+import { calculateHijriDate, formatHijriDateLocal } from '@/utils/hijri-utils';
+import { syncPrayerTimesToWidget } from '@/services/widget-sync-service';
 import {
   Fragment,
   type FC,
@@ -142,6 +144,25 @@ const HomeDashboardPage: FC = () => {
       setIftarTime(adjustTime(timings.Maghrib, settings.iftarAdjustment));
       setLastCalculatedDate(new Date().toDateString());
 
+      try {
+        const hijri = calculateHijriDate(
+          new Date(),
+          settings.hijriAdjustment,
+          timings.Maghrib,
+          settings.hijriDateChangeAtMaghrib,
+        );
+        const hijriDateStr = formatHijriDateLocal(hijri);
+        syncPrayerTimesToWidget({
+          salats,
+          timings,
+          settings,
+          hijriDateStr,
+          force: true,
+        });
+      } catch (e) {
+        console.debug('Error syncing widget in loadSalatTimes:', e);
+      }
+
       setIsLoading(false);
     },
     [getSalatName],
@@ -182,6 +203,35 @@ const HomeDashboardPage: FC = () => {
 
     return () => clearInterval(timer);
   }, [lastCalculatedDate, loadSalatTimes, settings]);
+
+  // Keep widget continuously fresh with real-time countdown & progress
+  useEffect(() => {
+    if (salatTimes.length === 0) return;
+    const timings = calculatePrayerTimesLocally(new Date(), settings);
+    let hijriDateStr = '';
+    try {
+      const hijri = calculateHijriDate(
+        new Date(),
+        settings.hijriAdjustment,
+        timings.Maghrib,
+        settings.hijriDateChangeAtMaghrib,
+      );
+      hijriDateStr = formatHijriDateLocal(hijri);
+    } catch (e) {}
+
+    const sync = () => {
+      syncPrayerTimesToWidget({
+        salats: salatTimes,
+        timings,
+        settings,
+        hijriDateStr,
+      });
+    };
+
+    sync();
+    const interval = setInterval(sync, 30000);
+    return () => clearInterval(interval);
+  }, [salatTimes, settings]);
 
   // Render containers based on user order
   const renderContainers = () => {

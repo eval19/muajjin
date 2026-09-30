@@ -17,42 +17,71 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
-            android:text="Location"
-            android:textColor="#94A3B8"
-            android:textSize="11sp" />
+            android:text="RIYADH GOVERNORATE"
+            android:textColor="#64748B"
+            android:textSize="10sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tv_large_hijri"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:text="Hijri Date"
-            android:textColor="#94A3B8"
-            android:textSize="11sp" />
+            android:text="19 Rabi al-Thani 1448"
+            android:textColor="#64748B"
+            android:textSize="10sp" />
     </RelativeLayout>
 
-    <!-- Current Prayer Highlight -->
+    <!-- Current / Next Prayer Highlight -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp">
+        android:layout_marginTop="8dp">
 
-        <TextView
-            android:id="@+id/tv_large_summary"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Asr · 03:45 PM"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:layout_alignParentStart="true"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_large_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_status_badge"
+                android:paddingStart="7dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="2dp"
+                android:text="NEXT SALAT"
+                android:textColor="#38BDF8"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_large_summary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Dhuhr · 11:43 AM"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_large_countdown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:text="Next in 48m"
-            android:textColor="#10B981"
+            android:layout_centerVertical="true"
+            android:background="@drawable/widget_badge_background"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp"
+            android:text="in 1h 02m"
+            android:textColor="#34D399"
             android:textSize="12sp"
             android:textStyle="bold" />
     </RelativeLayout>

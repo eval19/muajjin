@@ -23,20 +23,35 @@ public class PrayerWidgetPlugin extends Plugin {
         SharedPreferences prefs = context.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
 
+        String statusLabel = call.getString("statusLabel", "NEXT SALAT");
         String currentName = call.getString("currentName", "Dhuhr");
         String currentTime = call.getString("currentTime", "--:--");
+        String nextTitle = call.getString("nextTitle", "Starts in");
         String nextName = call.getString("nextName", "Asr");
         String timeRemaining = call.getString("timeRemaining", "");
         Integer progressPercent = call.getInt("progressPercent", 0);
-        String locationName = call.getString("locationName", "Muajjin");
+        Long targetTimestamp = null;
+        try {
+            Double d = call.getDouble("targetTimestamp");
+            if (d != null) {
+                targetTimestamp = d.longValue();
+            }
+        } catch (Exception ignored) {}
+
+        String locationName = call.getString("locationName", "RIYADH GOVERNORATE");
         String hijriDate = call.getString("hijriDate", "");
         String activePrayerId = call.getString("activePrayerId", "dhuhr");
 
+        editor.putString("status_label", statusLabel);
         editor.putString("current_name", currentName);
         editor.putString("current_time", currentTime);
+        editor.putString("next_title", nextTitle);
         editor.putString("next_name", nextName);
         editor.putString("time_remaining", timeRemaining);
         editor.putInt("progress_percent", progressPercent != null ? progressPercent : 0);
+        if (targetTimestamp != null) {
+            editor.putLong("target_timestamp", targetTimestamp);
+        }
         editor.putString("location_name", locationName);
         editor.putString("hijri_date", hijriDate);
         editor.putString("active_prayer_id", activePrayerId);

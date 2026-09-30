@@ -9,7 +9,6 @@ import {
   getNextSalat,
 } from '@/utils/time-utils';
 import { Clock } from 'lucide-react';
-import { syncPrayerWidget } from '@/services/widget-sync-service';
 import {
   Fragment,
   useCallback,
@@ -275,14 +274,6 @@ export const CurrentPrayerContainer: FC<CurrentPrayerContainerProps> = ({
         return prev;
       }
       return { remainingTime, progressPercent, countdownLine, isProhibited };
-    });
-
-    syncPrayerWidget({
-      currentPrayer,
-      nextPrayer,
-      timeRemaining,
-      progressPercent,
-      allPrayers,
     });
 
     if (!isUiReadyRef.current) {

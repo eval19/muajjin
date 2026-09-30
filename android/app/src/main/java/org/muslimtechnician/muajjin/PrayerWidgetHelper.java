@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.widget.RemoteViews;
 
+import java.util.Locale;
+
 public class PrayerWidgetHelper {
     public static final String PREFS_NAME = "MuajjinPrayerData";
 
@@ -48,15 +50,36 @@ public class PrayerWidgetHelper {
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    private static String getFormattedCountdown(SharedPreferences prefs) {
+        long target = prefs.getLong("target_timestamp", 0);
+        if (target > 0) {
+            long now = System.currentTimeMillis();
+            long diff = target - now;
+            if (diff > 0) {
+                long totalMins = diff / (1000 * 60);
+                long hours = totalMins / 60;
+                long mins = totalMins % 60;
+                if (hours > 0) {
+                    return String.format(Locale.getDefault(), "in %dh %02dm", hours, mins);
+                } else {
+                    return String.format(Locale.getDefault(), "in %dm", Math.max(1, mins));
+                }
+            }
+        }
+        return prefs.getString("time_remaining", "Soon");
+    }
+
     public static void updateSmallWidget(Context context, AppWidgetManager manager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_small);
 
+        String statusLabel = prefs.getString("status_label", "NEXT SALAT");
         String currentName = prefs.getString("current_name", "Dhuhr");
-        String currentTime = prefs.getString("current_time", "12:30 PM");
-        String timeRemaining = prefs.getString("time_remaining", "Next prayer soon");
-        int progress = prefs.getInt("progress_percent", 0);
+        String currentTime = prefs.getString("current_time", "11:43 AM");
+        String timeRemaining = getFormattedCountdown(prefs);
+        int progress = prefs.getInt("progress_percent", 50);
 
+        views.setTextViewText(R.id.tv_prayer_status, statusLabel);
         views.setTextViewText(R.id.tv_prayer_name, currentName);
         views.setTextViewText(R.id.tv_prayer_time, currentTime);
         views.setTextViewText(R.id.tv_time_remaining, timeRemaining);
@@ -70,19 +93,21 @@ public class PrayerWidgetHelper {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_medium);
 
-        String location = prefs.getString("location_name", "Muajjin");
+        String location = prefs.getString("location_name", "RIYADH GOVERNORATE");
         String hijri = prefs.getString("hijri_date", "");
+        String statusLabel = prefs.getString("status_label", "NEXT SALAT");
         String currentName = prefs.getString("current_name", "Dhuhr");
-        String currentTime = prefs.getString("current_time", "12:30 PM");
-        String nextName = prefs.getString("next_name", "Asr");
-        String timeRemaining = prefs.getString("time_remaining", "in 45m");
-        int progress = prefs.getInt("progress_percent", 0);
+        String currentTime = prefs.getString("current_time", "11:43 AM");
+        String nextTitle = prefs.getString("next_title", "Starts in");
+        String timeRemaining = getFormattedCountdown(prefs);
+        int progress = prefs.getInt("progress_percent", 50);
 
         views.setTextViewText(R.id.tv_medium_location, location);
         views.setTextViewText(R.id.tv_medium_hijri, hijri);
+        views.setTextViewText(R.id.tv_medium_status, statusLabel);
         views.setTextViewText(R.id.tv_medium_current_name, currentName);
         views.setTextViewText(R.id.tv_medium_current_time, currentTime);
-        views.setTextViewText(R.id.tv_medium_next_title, "Next: " + nextName);
+        views.setTextViewText(R.id.tv_medium_next_title, nextTitle);
         views.setTextViewText(R.id.tv_medium_time_remaining, timeRemaining);
         views.setProgressBar(R.id.pb_medium_progress, 100, Math.min(100, Math.max(0, progress)), false);
 
@@ -94,16 +119,18 @@ public class PrayerWidgetHelper {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_large);
 
-        String location = prefs.getString("location_name", "Muajjin");
+        String location = prefs.getString("location_name", "RIYADH GOVERNORATE");
         String hijri = prefs.getString("hijri_date", "");
+        String statusLabel = prefs.getString("status_label", "NEXT SALAT");
         String currentName = prefs.getString("current_name", "Dhuhr");
-        String currentTime = prefs.getString("current_time", "12:30 PM");
-        String timeRemaining = prefs.getString("time_remaining", "Next prayer soon");
-        int progress = prefs.getInt("progress_percent", 0);
+        String currentTime = prefs.getString("current_time", "11:43 AM");
+        String timeRemaining = getFormattedCountdown(prefs);
+        int progress = prefs.getInt("progress_percent", 50);
         String activeId = prefs.getString("active_prayer_id", "dhuhr");
 
         views.setTextViewText(R.id.tv_large_location, location);
         views.setTextViewText(R.id.tv_large_hijri, hijri);
+        views.setTextViewText(R.id.tv_large_status, statusLabel);
         views.setTextViewText(R.id.tv_large_summary, currentName + " · " + currentTime);
         views.setTextViewText(R.id.tv_large_countdown, timeRemaining);
         views.setProgressBar(R.id.pb_large_progress, 100, Math.min(100, Math.max(0, progress)), false);
@@ -116,8 +143,9 @@ public class PrayerWidgetHelper {
         views.setTextViewText(R.id.tv_time_maghrib, prefs.getString("maghrib_time", "--:--"));
         views.setTextViewText(R.id.tv_time_isha, prefs.getString("isha_time", "--:--"));
 
-        // Highlight active row
+        // Highlight active or upcoming row
         views.setInt(R.id.row_fajr, "setBackgroundResource", "fajr".equalsIgnoreCase(activeId) ? R.drawable.widget_active_row : 0);
+        views.setInt(R.id.row_sunrise, "setBackgroundResource", "sunrise".equalsIgnoreCase(activeId) || "shuruq".equalsIgnoreCase(activeId) ? R.drawable.widget_active_row : 0);
         views.setInt(R.id.row_dhuhr, "setBackgroundResource", "dhuhr".equalsIgnoreCase(activeId) ? R.drawable.widget_active_row : 0);
         views.setInt(R.id.row_asr, "setBackgroundResource", "asr".equalsIgnoreCase(activeId) ? R.drawable.widget_active_row : 0);
         views.setInt(R.id.row_maghrib, "setBackgroundResource", "maghrib".equalsIgnoreCase(activeId) ? R.drawable.widget_active_row : 0);
