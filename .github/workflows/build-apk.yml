@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -52,9 +55,32 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
+      - name: Prepare APK for Release
+        run: |
+          mkdir -p release-output
+          APK_PATH=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          cp "$APK_PATH" release-output/Muajjin-v2.7.1-widgets.apk
+
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: muajjin-widget-debug-apk
-          path: android/app/build/outputs/apk/**/*.apk
+          path: release-output/Muajjin-v2.7.1-widgets.apk
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.7.1-widgets
+          name: "Muajjin v2.7.1 with Home Screen Widgets"
+          body: |
+            ### 🕌 Muajjin with Android Home Screen Widgets
+            - **3 Progressive Widget Sizes:** Small (2×2), Medium (4×2), and Large (4×3).
+            - **Live Visual Progress Line:** Matches the in-app prayer countdown and progress bar.
+            - **Direct APK:** Download `Muajjin-v2.7.1-widgets.apk` below and install directly on your Android phone.
+          files: release-output/Muajjin-v2.7.1-widgets.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
