@@ -5,10 +5,10 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_card_bg"
     android:orientation="vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
 
     <!-- Normal Label (Accent) -->
     <TextView
