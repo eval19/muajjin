@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_strip_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card_bg"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- Normal Label (Accent) -->
+    <TextView
+        android:id="@+id/tv_strip_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Asr in"
+        android:textColor="@color/w_accent"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:includeFontPadding="false" />
+
+    <!-- Warm State Label (Warning Amber) -->
+    <TextView
+        android:id="@+id/tv_strip_label_warm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Asr in"
+        android:textColor="@color/w_warm_text"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:includeFontPadding="false"
+        android:visibility="gone" />
+
+    <!-- Countdown Digits (Fixed-width tnum, always text_primary) -->
+    <Chronometer
+        android:id="@+id/tv_strip_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/w_text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:fontFeatureSettings="tnum"
+        android:includeFontPadding="false" />
+
+    <!-- Expanding Spacer -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Normal Progress Bar (4dp) -->
+    <ProgressBar
+        android:id="@+id/pb_strip_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:max="1000"
+        android:progress="600"
+        android:progressDrawable="@drawable/widget_progress_bar" />
+
+    <!-- Warm State Progress Bar (4dp) -->
+    <ProgressBar
+        android:id="@+id/pb_strip_progress_warm"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:max="1000"
+        android:progress="600"
+        android:progressDrawable="@drawable/widget_progress_bar_warm"
+        android:visibility="gone" />
+
+</LinearLayout>

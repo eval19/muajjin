@@ -5,17 +5,17 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.os.Bundle;
 
-public class PrayerWidgetMediumProvider extends AppWidgetProvider {
+public class PrayerWidgetStripProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            PrayerWidgetHelper.updateWideWidget(context, appWidgetManager, appWidgetId);
+            PrayerWidgetHelper.updateStripWidget(context, appWidgetManager, appWidgetId);
         }
         PrayerWidgetHelper.scheduleNextAlarm(context);
     }
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
-        PrayerWidgetHelper.updateWideWidget(context, appWidgetManager, appWidgetId);
+        PrayerWidgetHelper.updateStripWidget(context, appWidgetManager, appWidgetId);
     }
 }

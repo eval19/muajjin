@@ -8,21 +8,14 @@ import android.os.Bundle;
 public class PrayerWidgetSmallProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        PrayerWidgetHelper.refreshStateFromTimestamps(context);
         for (int appWidgetId : appWidgetIds) {
-            PrayerWidgetHelper.updateSmallWidget(context, appWidgetManager, appWidgetId);
+            PrayerWidgetHelper.updateSquareWidget(context, appWidgetManager, appWidgetId);
         }
         PrayerWidgetHelper.scheduleNextAlarm(context);
     }
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
-        PrayerWidgetHelper.updateSmallWidget(context, appWidgetManager, appWidgetId);
-    }
-
-    @Override
-    public void onEnabled(Context context) {
-        PrayerWidgetHelper.refreshStateFromTimestamps(context);
-        PrayerWidgetHelper.scheduleNextAlarm(context);
+        PrayerWidgetHelper.updateSquareWidget(context, appWidgetManager, appWidgetId);
     }
 }

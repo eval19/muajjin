@@ -74,10 +74,11 @@ jobs:
           tag_name: v2.7.1-widgets
           name: "Muajjin v2.7.1 with Home Screen Widgets"
           body: |
-            ### 🕌 Muajjin v2.7.1 - Polished Widgets with Live Ticking & Zero Dead Space
-            - **Live Hardware Chronometer:** Ticks every second directly on your home screen with zero app wakeups and 0% background battery drain.
-            - **Zero Dead Space & Proportional Grid Scaling:** Dynamic vertical spacers ensure widgets fill the launcher grid symmetrically without awkward bottom gaps.
-            - **Crystal Clear Hierarchy:** Next Prayer stands out as the bold white hero; Current Prayer is highlighted in vibrant Sky Blue (`#38BDF8`).
+            ### 🕌 Muajjin v2.7.1 - 4-Size Widget Suite & Fixed Palette
+            - **4 Distinct Sizes (Sheet 1):** 2x1 Strip, 2x2 Square, 4x1 Banner, and 4x2 Wide Card with 6-chip schedule strip, plus the preserved Full Table.
+            - **Fixed Dual Palette (Light & Dark):** High-contrast emerald/mint theme with instant system dark mode support.
+            - **Warm State Alert (Sheet 2):** Turns amber during the final 15 minutes before prayer window closure.
+            - **Live Hardware Chronometer:** Ticks every second with tabular fixed-width digits and zero battery drain.
             - **Direct APK:** Download `Muajjin-v2.7.1-widgets.apk` below and install directly on your Android phone.
           files: release-output/Muajjin-v2.7.1-widgets.apk
           draft: false

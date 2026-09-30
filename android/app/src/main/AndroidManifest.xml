@@ -28,11 +28,24 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Small Prayer Widget -->
+        <!-- 1. Strip 2x1 Prayer Widget -->
+        <receiver
+            android:name=".PrayerWidgetStripProvider"
+            android:exported="true"
+            android:label="Prayer Times (2x1 Strip)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_strip_info" />
+        </receiver>
+
+        <!-- 2. Square 2x2 Prayer Widget -->
         <receiver
             android:name=".PrayerWidgetSmallProvider"
             android:exported="true"
-            android:label="Prayer Times (Small)">
+            android:label="Prayer Times (2x2 Square)">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -41,11 +54,24 @@
                 android:resource="@xml/widget_prayer_small_info" />
         </receiver>
 
-        <!-- Medium Prayer Widget -->
+        <!-- 3. Banner 4x1 Prayer Widget -->
+        <receiver
+            android:name=".PrayerWidgetBannerProvider"
+            android:exported="true"
+            android:label="Prayer Times (4x1 Banner)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_banner_info" />
+        </receiver>
+
+        <!-- 4. Wide Card 4x2 Prayer Widget -->
         <receiver
             android:name=".PrayerWidgetMediumProvider"
             android:exported="true"
-            android:label="Prayer Times (Medium)">
+            android:label="Prayer Times (4x2 Wide Card)">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -54,11 +80,11 @@
                 android:resource="@xml/widget_prayer_medium_info" />
         </receiver>
 
-        <!-- Large Prayer Widget -->
+        <!-- 5. Full Table 4x4 Prayer Widget -->
         <receiver
             android:name=".PrayerWidgetLargeProvider"
             android:exported="true"
-            android:label="Prayer Times (Large)">
+            android:label="Prayer Times (Full Table)">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -73,6 +99,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="org.muslimtechnician.muajjin.ACTION_PRAYER_TRANSITION" />
+                <action android:name="org.muslimtechnician.muajjin.ACTION_BAR_PROGRESS_REFRESH" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />

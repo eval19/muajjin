@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_surface">#1B211E</color>
+    <color name="w_border">#2A332F</color>
+    <color name="w_text_primary">#EEF3F0</color>
+    <color name="w_text_secondary">#B4C0BA</color>
+    <color name="w_text_muted">#8A9791</color>
+    <color name="w_accent">#5FD3B5</color>
+    <color name="w_accent_tint">#1F3A33</color>
+    <color name="w_track">#34403A</color>
+    <color name="w_warm_text">#FFB74D</color>
+    <color name="w_warm_fill">#F59E0B</color>
+</resources>
