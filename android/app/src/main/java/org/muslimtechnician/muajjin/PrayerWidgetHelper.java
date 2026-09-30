@@ -374,11 +374,22 @@ public class PrayerWidgetHelper {
         }
 
         setupChronometer(views, R.id.tv_square_countdown, state.targetTimestamp);
+        views.setTextViewText(R.id.tv_square_next_time, state.nextTime);
         views.setTextViewText(R.id.tv_square_footer_left, state.footerText);
-        views.setTextViewText(R.id.tv_square_footer_right, state.nextTime);
+        views.setTextViewText(R.id.tv_square_footer_right, getCurrentPrayerStartTime(state));
 
         views.setOnClickPendingIntent(R.id.widget_square_root, getOpenAppIntent(context));
         manager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static String getCurrentPrayerStartTime(WidgetTimelineState state) {
+        if ("fajr".equalsIgnoreCase(state.activePrayerId)) return state.fajrStr;
+        if ("sunrise".equalsIgnoreCase(state.activePrayerId)) return state.sunriseStr;
+        if ("dhuhr".equalsIgnoreCase(state.activePrayerId)) return state.dhuhrStr;
+        if ("asr".equalsIgnoreCase(state.activePrayerId)) return state.asrStr;
+        if ("maghrib".equalsIgnoreCase(state.activePrayerId)) return state.maghribStr;
+        if ("isha".equalsIgnoreCase(state.activePrayerId)) return state.ishaStr;
+        return "";
     }
 
     // 3. Banner (4x1)

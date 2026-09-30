@@ -12,6 +12,7 @@ public class PrayerWidgetAlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         PrayerWidgetHelper.refreshStateFromTimestamps(context);
         PrayerWidgetHelper.updateAllWidgets(context);
+        PrayerNotificationHelper.updateLiveUpdateNotification(context);
         PrayerWidgetHelper.scheduleNextAlarm(context);
     }
 }

@@ -10,17 +10,18 @@
     android:paddingTop="14dp"
     android:paddingBottom="12dp">
 
-    <!-- Top Block: Label + Big Countdown -->
-    <LinearLayout
+    <!-- Top Block: Label + Next Prayer Time + Big Countdown -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="wrap_content">
 
         <!-- Normal Label (Accent) -->
         <TextView
             android:id="@+id/tv_square_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
             android:text="Asr in"
             android:textColor="@color/w_accent"
             android:textSize="13sp"
@@ -32,6 +33,8 @@
             android:id="@+id/tv_square_label_warm"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
             android:text="Asr in"
             android:textColor="@color/w_warm_text"
             android:textSize="13sp"
@@ -39,18 +42,31 @@
             android:includeFontPadding="false"
             android:visibility="gone" />
 
-        <!-- Countdown Digits (Fixed-width tnum, always text_primary) -->
-        <Chronometer
-            android:id="@+id/tv_square_countdown"
+        <!-- Next Prayer Clock Time (e.g. 3:06 PM) on top right -->
+        <TextView
+            android:id="@+id/tv_square_next_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:textColor="@color/w_text_primary"
-            android:textSize="28sp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="15:12"
+            android:textColor="@color/w_text_secondary"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:fontFeatureSettings="tnum"
             android:includeFontPadding="false" />
-    </LinearLayout>
+    </RelativeLayout>
+
+    <!-- Countdown Digits (Fixed-width tnum, always text_primary) -->
+    <Chronometer
+        android:id="@+id/tv_square_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="@color/w_text_primary"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:fontFeatureSettings="tnum"
+        android:includeFontPadding="false" />
 
     <!-- Expanding Spacer -->
     <FrameLayout
@@ -85,7 +101,7 @@
             android:progressDrawable="@drawable/widget_progress_bar_warm"
             android:visibility="gone" />
 
-        <!-- Footer Row: Left = Footer Text (e.g. "Now: Dhuhr"), Right = Next Event Clock Time (e.g. "15:12") -->
+        <!-- Footer Row: Left = Footer Text (e.g. "Now: Dhuhr"), Right = Current Prayer Start Time (e.g. "11:43 AM") -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -108,10 +124,9 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="15:12"
-                android:textColor="@color/w_text_secondary"
+                android:text="11:47"
+                android:textColor="@color/w_text_muted"
                 android:textSize="11sp"
-                android:textStyle="bold"
                 android:includeFontPadding="false" />
         </RelativeLayout>
     </LinearLayout>

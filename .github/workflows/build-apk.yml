@@ -74,9 +74,10 @@ jobs:
           tag_name: v2.7.1-widgets
           name: "Muajjin v2.7.1 with Home Screen Widgets"
           body: |
-            ### 🕌 Muajjin v2.7.1 - Widgets Suite & Keyguard Lock-Screen Support
+            ### 🕌 Muajjin v2.7.1 - Widgets Suite & Android 16 Live Updates
+            - **2x2 Square Widget Perfected:** Clear separation between next prayer (top right) and current prayer (bottom right).
+            - **Android 16 Live Update & Super Island (Part 5):** Ongoing silent countdown on lock screen and dynamic island capsule.
             - **4 Distinct Sizes + Full Table:** 2x1 Strip, 2x2 Square, 4x1 Banner, 4x2 Wide Card with 6-chip schedule strip, and 4x4 Full Table.
-            - **Lock-Screen Keyguard Widgets (Part 4 Checkpoint):** Transparent background with soft text shadow and hardware countdown chronometer.
             - **Fixed Dual Palette (Light & Dark):** High-contrast emerald/mint theme with instant system dark mode support.
             - **Warm State Alert (Sheet 2):** Turns amber during the final 15 minutes before prayer window closure.
             - **Live Hardware Chronometer:** Ticks every second with tabular fixed-width digits and zero battery drain.

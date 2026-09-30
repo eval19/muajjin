@@ -87,6 +87,7 @@ public class PrayerWidgetPlugin extends Plugin {
         // Refresh state from timestamps and update all widgets
         PrayerWidgetHelper.refreshStateFromTimestamps(context);
         PrayerWidgetHelper.updateAllWidgets(context);
+        PrayerNotificationHelper.updateLiveUpdateNotification(context);
         PrayerWidgetHelper.scheduleNextAlarm(context);
 
         JSObject ret = new JSObject();
