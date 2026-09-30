@@ -9,6 +9,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(PrayerWidgetPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Edge-to-edge and status bar colors handled by @capawesome/capacitor-android-edge-to-edge-support plugin

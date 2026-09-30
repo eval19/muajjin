@@ -27,6 +27,45 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Small Prayer Widget -->
+        <receiver
+            android:name=".PrayerWidgetSmallProvider"
+            android:exported="true"
+            android:label="Prayer Times (Small)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_small_info" />
+        </receiver>
+
+        <!-- Medium Prayer Widget -->
+        <receiver
+            android:name=".PrayerWidgetMediumProvider"
+            android:exported="true"
+            android:label="Prayer Times (Medium)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_medium_info" />
+        </receiver>
+
+        <!-- Large Prayer Widget -->
+        <receiver
+            android:name=".PrayerWidgetLargeProvider"
+            android:exported="true"
+            android:label="Prayer Times (Large)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_large_info" />
+        </receiver>
     </application>
 
     <!-- Permissions -->
