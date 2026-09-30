@@ -74,12 +74,14 @@ public class PrayerWidgetHelper {
         long targetTimestamp;
         long startTimestamp;
         String currentPill;
+        String currentShortPill;
         String nextName;
         String nextTime;
         String activePrayerId;
 
         if (now < tsFajr) {
             currentPill = "● CURRENT: ISHA · " + prefs.getString("isha_time", "--:--");
+            currentShortPill = "● Isha · " + prefs.getString("isha_time", "--:--");
             nextName = "Fajr";
             nextTime = prefs.getString("fajr_time", "--:--");
             targetTimestamp = tsFajr;
@@ -87,6 +89,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "isha";
         } else if (now < tsSunrise) {
             currentPill = "● CURRENT: FAJR · " + prefs.getString("fajr_time", "--:--");
+            currentShortPill = "● Fajr · " + prefs.getString("fajr_time", "--:--");
             nextName = "Sunrise";
             nextTime = prefs.getString("sunrise_time", "--:--");
             targetTimestamp = tsSunrise;
@@ -94,6 +97,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "fajr";
         } else if (now < tsDhuhr) {
             currentPill = "☼ SUNRISE · " + prefs.getString("sunrise_time", "--:--");
+            currentShortPill = "☼ Sunrise · " + prefs.getString("sunrise_time", "--:--");
             nextName = "Dhuhr";
             nextTime = prefs.getString("dhuhr_time", "--:--");
             targetTimestamp = tsDhuhr;
@@ -101,6 +105,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "sunrise";
         } else if (now < tsAsr) {
             currentPill = "● CURRENT: DHUHR · " + prefs.getString("dhuhr_time", "--:--");
+            currentShortPill = "● Dhuhr · " + prefs.getString("dhuhr_time", "--:--");
             nextName = "Asr";
             nextTime = prefs.getString("asr_time", "--:--");
             targetTimestamp = tsAsr;
@@ -108,6 +113,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "dhuhr";
         } else if (now < tsMaghrib) {
             currentPill = "● CURRENT: ASR · " + prefs.getString("asr_time", "--:--");
+            currentShortPill = "● Asr · " + prefs.getString("asr_time", "--:--");
             nextName = "Maghrib";
             nextTime = prefs.getString("maghrib_time", "--:--");
             targetTimestamp = tsMaghrib;
@@ -115,6 +121,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "asr";
         } else if (now < tsIsha) {
             currentPill = "● CURRENT: MAGHRIB · " + prefs.getString("maghrib_time", "--:--");
+            currentShortPill = "● Maghrib · " + prefs.getString("maghrib_time", "--:--");
             nextName = "Isha";
             nextTime = prefs.getString("isha_time", "--:--");
             targetTimestamp = tsIsha;
@@ -122,6 +129,7 @@ public class PrayerWidgetHelper {
             activePrayerId = "maghrib";
         } else {
             currentPill = "● CURRENT: ISHA · " + prefs.getString("isha_time", "--:--");
+            currentShortPill = "● Isha · " + prefs.getString("isha_time", "--:--");
             nextName = "Fajr";
             nextTime = prefs.getString("fajr_time", "--:--");
             targetTimestamp = tsNextFajr > now ? tsNextFajr : (tsIsha + 8 * 3600 * 1000L);
@@ -130,6 +138,7 @@ public class PrayerWidgetHelper {
         }
 
         editor.putString("current_pill", currentPill);
+        editor.putString("current_short_pill", currentShortPill);
         editor.putString("next_name", nextName);
         editor.putString("next_time", nextTime);
         editor.putLong("target_timestamp", targetTimestamp);
@@ -178,6 +187,7 @@ public class PrayerWidgetHelper {
                     editor.putString("isha_time", ishaTime);
 
                     String currentPill;
+                    String currentShortPill;
                     String nextName;
                     String nextTime;
                     long targetTimestamp;
@@ -186,6 +196,7 @@ public class PrayerWidgetHelper {
 
                     if (now < sunrise) {
                         currentPill = "● CURRENT: FAJR · " + fajrTime;
+                        currentShortPill = "● Fajr · " + fajrTime;
                         nextName = "Sunrise";
                         nextTime = sunriseTime;
                         targetTimestamp = sunrise;
@@ -193,6 +204,7 @@ public class PrayerWidgetHelper {
                         activePrayerId = "fajr";
                     } else if (now < dhuhr) {
                         currentPill = "☼ SUNRISE · " + sunriseTime;
+                        currentShortPill = "☼ Sunrise · " + sunriseTime;
                         nextName = "Dhuhr";
                         nextTime = dhuhrTime;
                         targetTimestamp = dhuhr;
@@ -200,6 +212,7 @@ public class PrayerWidgetHelper {
                         activePrayerId = "sunrise";
                     } else if (now < asr) {
                         currentPill = "● CURRENT: DHUHR · " + dhuhrTime;
+                        currentShortPill = "● Dhuhr · " + dhuhrTime;
                         nextName = "Asr";
                         nextTime = asrTime;
                         targetTimestamp = asr;
@@ -207,6 +220,7 @@ public class PrayerWidgetHelper {
                         activePrayerId = "dhuhr";
                     } else if (now < maghrib) {
                         currentPill = "● CURRENT: ASR · " + asrTime;
+                        currentShortPill = "● Asr · " + asrTime;
                         nextName = "Maghrib";
                         nextTime = maghribTime;
                         targetTimestamp = maghrib;
@@ -214,6 +228,7 @@ public class PrayerWidgetHelper {
                         activePrayerId = "asr";
                     } else if (now < isha) {
                         currentPill = "● CURRENT: MAGHRIB · " + maghribTime;
+                        currentShortPill = "● Maghrib · " + maghribTime;
                         nextName = "Isha";
                         nextTime = ishaTime;
                         targetTimestamp = isha;
@@ -221,6 +236,7 @@ public class PrayerWidgetHelper {
                         activePrayerId = "maghrib";
                     } else {
                         currentPill = "● CURRENT: ISHA · " + ishaTime;
+                        currentShortPill = "● Isha · " + ishaTime;
                         nextName = "Fajr";
                         nextTime = nextFajrTime;
                         targetTimestamp = nextFajr;
@@ -229,6 +245,7 @@ public class PrayerWidgetHelper {
                     }
 
                     editor.putString("current_pill", currentPill);
+                    editor.putString("current_short_pill", currentShortPill);
                     editor.putString("next_name", nextName);
                     editor.putString("next_time", nextTime);
                     editor.putLong("target_timestamp", targetTimestamp);
@@ -324,13 +341,16 @@ public class PrayerWidgetHelper {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_small);
 
-        String currentPill = prefs.getString("current_pill", "● Dhuhr · 11:43 AM");
+        String currentPill = prefs.getString("current_short_pill", "");
+        if (currentPill.isEmpty()) {
+            String full = prefs.getString("current_pill", "● Dhuhr · 11:43 AM");
+            currentPill = full.replace("CURRENT: ", "").replace("NOW: ", "");
+        }
         String nextName = prefs.getString("next_name", "Asr");
         String nextTime = prefs.getString("next_time", "03:06 PM");
         int progress = getCalculatedProgress(prefs);
 
         views.setTextViewText(R.id.tv_prayer_current, currentPill);
-        views.setTextViewText(R.id.tv_prayer_status, "NEXT SALAT");
         views.setTextViewText(R.id.tv_prayer_name, nextName);
         views.setTextViewText(R.id.tv_prayer_time, nextTime);
         setupChronometer(views, R.id.tv_time_remaining, prefs);
