@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 import { PrayerTime, UserSettings } from '@/types';
-import { LocalPrayerTimes } from '@/services/prayer-times-local';
+import { calculatePrayerTimesLocally, LocalPrayerTimes } from '@/services/prayer-times-local';
 import { formatTime, getCurrentSalat, getNextSalat } from '@/utils/time-utils';
 
 export interface PrayerWidgetPluginInterface {
@@ -18,6 +18,7 @@ export interface PrayerWidgetPluginInterface {
     activePrayerId: string;
     prayers: Record<string, string>;
     prayerTimestamps?: Record<string, number>;
+    prayerScheduleJson?: string;
   }): Promise<{ success: boolean }>;
 }
 
@@ -177,6 +178,37 @@ export const syncPrayerTimesToWidget = async (params: {
   lastSyncedMinute = currentMinute;
   lastSyncedDataHash = dataHash;
 
+  const daysArray = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    const dayTimings = calculatePrayerTimesLocally(d, settings);
+
+    const fDate = parseTimeToDate(dayTimings.Fajr, d);
+    const sDate = parseTimeToDate(dayTimings.Shuruq, d);
+    const dhDate = parseTimeToDate(dayTimings.Dhuhr, d);
+    const aDate = parseTimeToDate(dayTimings.Asr, d);
+    const mDate = parseTimeToDate(dayTimings.Maghrib, d);
+    const iDate = parseTimeToDate(dayTimings.Isha, d);
+
+    daysArray.push({
+      date: d.toISOString().split('T')[0],
+      fajr: fDate.getTime(),
+      fajrTime: formatTime(dayTimings.Fajr, settings.timeFormat),
+      sunrise: sDate.getTime(),
+      sunriseTime: formatTime(dayTimings.Shuruq, settings.timeFormat),
+      dhuhr: dhDate.getTime(),
+      dhuhrTime: formatTime(dayTimings.Dhuhr, settings.timeFormat),
+      asr: aDate.getTime(),
+      asrTime: formatTime(dayTimings.Asr, settings.timeFormat),
+      maghrib: mDate.getTime(),
+      maghribTime: formatTime(dayTimings.Maghrib, settings.timeFormat),
+      isha: iDate.getTime(),
+      ishaTime: formatTime(dayTimings.Isha, settings.timeFormat),
+    });
+  }
+  const prayerScheduleJson = JSON.stringify(daysArray);
+
   try {
     await PrayerWidget.updateWidgetData({
       statusLabel,
@@ -192,6 +224,7 @@ export const syncPrayerTimesToWidget = async (params: {
       activePrayerId,
       prayers: prayersMap,
       prayerTimestamps,
+      prayerScheduleJson,
     });
   } catch (error) {
     console.debug('PrayerWidget sync skipped (non-native or web):', error);

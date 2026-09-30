@@ -32,7 +32,7 @@
             android:textSize="10sp" />
     </RelativeLayout>
 
-    <!-- Main Highlight: Status, Prayer Name, Time, Countdown -->
+    <!-- Main Highlight: Current Context & Next Prayer Hero -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -45,7 +45,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tv_large_status"
+                android:id="@+id/tv_large_current_pill"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_status_badge"
@@ -53,7 +53,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="7dp"
                 android:paddingBottom="2dp"
-                android:text="NEXT SALAT"
+                android:text="● NOW: DHUHR · 11:43 AM"
                 android:textColor="#38BDF8"
                 android:textSize="9sp"
                 android:textStyle="bold" />
@@ -63,13 +63,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Dhuhr · 11:43 AM"
+                android:text="NEXT: ASR · 03:06 PM"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView
+        <!-- Live Ticking Countdown Chronometer Badge -->
+        <Chronometer
             android:id="@+id/tv_large_countdown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -80,7 +81,6 @@
             android:paddingTop="5dp"
             android:paddingEnd="12dp"
             android:paddingBottom="5dp"
-            android:text="in 35m"
             android:textColor="#34D399"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -93,7 +93,7 @@
         android:layout_width="match_parent"
         android:layout_height="4dp"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="10dp"
+        android:layout_marginBottom="8dp"
         android:max="100"
         android:progress="65"
         android:progressDrawable="@drawable/widget_progress_drawable" />

@@ -67,13 +67,18 @@
                 android:resource="@xml/widget_prayer_large_info" />
         </receiver>
 
-        <!-- Exact Second Prayer Transition Alarm Receiver -->
+        <!-- Exact Second Prayer Transition & Auto-Healing Alarm Receiver -->
         <receiver
             android:name=".PrayerWidgetAlarmReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="org.muslimtechnician.muajjin.ACTION_PRAYER_TRANSITION" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.USER_PRESENT" />
             </intent-filter>
         </receiver>
     </application>

@@ -77,12 +77,16 @@ public class PrayerWidgetPlugin extends Plugin {
             editor.putLong("ts_next_fajr", (long) timestamps.optDouble("nextFajr", 0));
         }
 
+        String scheduleJson = call.getString("prayerScheduleJson");
+        if (scheduleJson != null && !scheduleJson.isEmpty()) {
+            editor.putString("prayer_schedule_json", scheduleJson);
+        }
+
         editor.apply();
 
-        // Trigger immediate update on all widgets on the launcher
+        // Refresh state from timestamps and update all widgets
+        PrayerWidgetHelper.refreshStateFromTimestamps(context);
         PrayerWidgetHelper.updateAllWidgets(context);
-
-        // Schedule precise RTC alarm for the next prayer transition
         PrayerWidgetHelper.scheduleNextAlarm(context);
 
         JSObject ret = new JSObject();
