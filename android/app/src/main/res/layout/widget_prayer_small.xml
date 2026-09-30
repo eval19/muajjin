@@ -19,7 +19,7 @@
         android:paddingBottom="2dp"
         android:text="NEXT SALAT"
         android:textColor="#38BDF8"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
         android:gravity="center" />
 
@@ -30,7 +30,7 @@
         android:layout_marginTop="6dp"
         android:text="Dhuhr"
         android:textColor="#FFFFFF"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:gravity="center" />
 
@@ -41,7 +41,7 @@
         android:layout_marginTop="2dp"
         android:text="11:43 AM"
         android:textColor="#94A3B8"
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:gravity="center" />
 
     <TextView
@@ -50,13 +50,13 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:background="@drawable/widget_badge_background"
-        android:paddingStart="8dp"
-        android:paddingTop="3dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="3dp"
-        android:text="in 1h 02m"
+        android:paddingStart="10dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="4dp"
+        android:text="in 35m"
         android:textColor="#34D399"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:textStyle="bold"
         android:gravity="center" />
 

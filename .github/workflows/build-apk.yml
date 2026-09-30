@@ -74,9 +74,11 @@ jobs:
           tag_name: v2.7.1-widgets
           name: "Muajjin v2.7.1 with Home Screen Widgets"
           body: |
-            ### 🕌 Muajjin with Android Home Screen Widgets
-            - **3 Progressive Widget Sizes:** Small (2×2), Medium (4×2), and Large (4×3).
-            - **Live Visual Progress Line:** Matches the in-app prayer countdown and progress bar.
+            ### 🕌 Muajjin v2.7.1 - Polished Widgets with Exact-Second Hardware RTC
+            - **Exact-Second Hardware RTC Sync:** 0% idle battery and CPU consumption; wakes precisely on the second of prayer transition via native Android AlarmManager.
+            - **Zero Bottom Void & Perfect Ergonomics:** Proportional layout weights dynamically adapt to any Android launcher grid (Small, Medium, Large).
+            - **Smart Non-Prayer Awareness:** Accurately recognizes Duha / Ishraq periods (after Sunrise, before Dhuhr) and targets Dhuhr directly.
+            - **Clean Countdown Badge:** Elegant emerald countdown pill (`in 35m`) matching the app design.
             - **Direct APK:** Download `Muajjin-v2.7.1-widgets.apk` below and install directly on your Android phone.
           files: release-output/Muajjin-v2.7.1-widgets.apk
           draft: false

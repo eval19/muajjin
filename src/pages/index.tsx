@@ -204,22 +204,25 @@ const HomeDashboardPage: FC = () => {
     return () => clearInterval(timer);
   }, [lastCalculatedDate, loadSalatTimes, settings]);
 
-  // Keep widget continuously fresh with real-time countdown & progress
+  // Keep widget fresh with zero battery consumption when app is backgrounded
   useEffect(() => {
     if (salatTimes.length === 0) return;
-    const timings = calculatePrayerTimesLocally(new Date(), settings);
-    let hijriDateStr = '';
-    try {
-      const hijri = calculateHijriDate(
-        new Date(),
-        settings.hijriAdjustment,
-        timings.Maghrib,
-        settings.hijriDateChangeAtMaghrib,
-      );
-      hijriDateStr = formatHijriDateLocal(hijri);
-    } catch (e) {}
 
-    const sync = () => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const performSync = () => {
+      const timings = calculatePrayerTimesLocally(new Date(), settings);
+      let hijriDateStr = '';
+      try {
+        const hijri = calculateHijriDate(
+          new Date(),
+          settings.hijriAdjustment,
+          timings.Maghrib,
+          settings.hijriDateChangeAtMaghrib,
+        );
+        hijriDateStr = formatHijriDateLocal(hijri);
+      } catch (e) {}
+
       syncPrayerTimesToWidget({
         salats: salatTimes,
         timings,
@@ -228,9 +231,37 @@ const HomeDashboardPage: FC = () => {
       });
     };
 
-    sync();
-    const interval = setInterval(sync, 30000);
-    return () => clearInterval(interval);
+    const startTimer = () => {
+      performSync();
+      if (!interval) {
+        interval = setInterval(performSync, 30000);
+      }
+    };
+
+    const stopTimer = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopTimer();
+      } else {
+        startTimer();
+      }
+    };
+
+    if (!document.hidden) {
+      startTimer();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      stopTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [salatTimes, settings]);
 
   // Render containers based on user order

@@ -7,6 +7,7 @@ import android.content.Context;
 public class PrayerWidgetMediumProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        PrayerWidgetHelper.refreshStateFromTimestamps(context);
         for (int appWidgetId : appWidgetIds) {
             PrayerWidgetHelper.updateMediumWidget(context, appWidgetManager, appWidgetId);
         }

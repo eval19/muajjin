@@ -66,6 +66,16 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_prayer_large_info" />
         </receiver>
+
+        <!-- Exact Second Prayer Transition Alarm Receiver -->
+        <receiver
+            android:name=".PrayerWidgetAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.muslimtechnician.muajjin.ACTION_PRAYER_TRANSITION" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->
@@ -79,4 +89,8 @@
 
     <!-- Internet Permission -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Exact Second Prayer Transition & Boot Recovery Permissions -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

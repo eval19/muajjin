@@ -17,6 +17,7 @@ export interface PrayerWidgetPluginInterface {
     hijriDate: string;
     activePrayerId: string;
     prayers: Record<string, string>;
+    prayerTimestamps?: Record<string, number>;
   }): Promise<{ success: boolean }>;
 }
 
@@ -136,6 +137,26 @@ export const syncPrayerTimesToWidget = async (params: {
     progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
   }
 
+  const fajrDate = parseTimeToDate(timings.Fajr, now);
+  const sunriseDate = parseTimeToDate(timings.Shuruq, now);
+  const dhuhrDate = parseTimeToDate(timings.Dhuhr, now);
+  const asrDate = parseTimeToDate(timings.Asr, now);
+  const maghribDate = parseTimeToDate(timings.Maghrib, now);
+  const ishaDate = parseTimeToDate(timings.Isha, now);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextFajrDate = parseTimeToDate(timings.Fajr, tomorrow);
+
+  const prayerTimestamps: Record<string, number> = {
+    fajr: fajrDate.getTime(),
+    sunrise: sunriseDate.getTime(),
+    dhuhr: dhuhrDate.getTime(),
+    asr: asrDate.getTime(),
+    maghrib: maghribDate.getTime(),
+    isha: ishaDate.getTime(),
+    nextFajr: nextFajrDate.getTime(),
+  };
+
   const prayersMap: Record<string, string> = {
     fajr: formatTime(timings.Fajr, settings.timeFormat),
     sunrise: formatTime(timings.Shuruq, settings.timeFormat),
@@ -170,6 +191,7 @@ export const syncPrayerTimesToWidget = async (params: {
       hijriDate,
       activePrayerId,
       prayers: prayersMap,
+      prayerTimestamps,
     });
   } catch (error) {
     console.debug('PrayerWidget sync skipped (non-native or web):', error);

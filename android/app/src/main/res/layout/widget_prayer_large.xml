@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Header Row -->
+    <!-- Top Metadata Header: Location · Hijri Date -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -32,7 +32,7 @@
             android:textSize="10sp" />
     </RelativeLayout>
 
-    <!-- Current / Next Prayer Highlight -->
+    <!-- Main Highlight: Status, Prayer Name, Time, Countdown -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -65,7 +65,7 @@
                 android:layout_marginTop="3dp"
                 android:text="Dhuhr · 11:43 AM"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -76,170 +76,191 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_badge_background"
-            android:paddingStart="10dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="4dp"
-            android:text="in 1h 02m"
+            android:paddingStart="12dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="5dp"
+            android:text="in 35m"
             android:textColor="#34D399"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
-    <!-- Progress Bar -->
+    <!-- Progress Line -->
     <ProgressBar
         android:id="@+id/pb_large_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="4dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="10dp"
         android:max="100"
         android:progress="65"
         android:progressDrawable="@drawable/widget_progress_drawable" />
 
-    <!-- 5 Prayers List Container -->
+    <!-- Daily Prayers Schedule (Vertically Weighted to Gracefully Fill Entire Bottom Height) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="vertical">
 
         <!-- Fajr -->
         <RelativeLayout
             android:id="@+id/row_fajr"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_fajr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Fajr"
                 android:textColor="#E2E8F0"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/tv_time_fajr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="04:30 AM"
+                android:text="04:26 AM"
                 android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </RelativeLayout>
 
         <!-- Sunrise -->
         <RelativeLayout
             android:id="@+id/row_sunrise"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_sunrise"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sunrise"
-                android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:textColor="#64748B"
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/tv_time_sunrise"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="05:50 AM"
-                android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:text="05:44 AM"
+                android:textColor="#64748B"
+                android:textSize="13sp" />
         </RelativeLayout>
 
         <!-- Dhuhr -->
         <RelativeLayout
             android:id="@+id/row_dhuhr"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_dhuhr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Dhuhr"
-                android:textColor="#E2E8F0"
-                android:textSize="12sp" />
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
             <TextView
                 android:id="@+id/tv_time_dhuhr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="12:15 PM"
-                android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:text="11:43 AM"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </RelativeLayout>
 
         <!-- Asr -->
         <RelativeLayout
             android:id="@+id/row_asr"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_asr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Asr"
                 android:textColor="#E2E8F0"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/tv_time_asr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="03:45 PM"
+                android:text="03:06 PM"
                 android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </RelativeLayout>
 
         <!-- Maghrib -->
         <RelativeLayout
             android:id="@+id/row_maghrib"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_maghrib"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Maghrib"
                 android:textColor="#E2E8F0"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/tv_time_maghrib"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="06:14 PM"
+                android:text="05:41 PM"
                 android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </RelativeLayout>
 
         <!-- Isha -->
         <RelativeLayout
             android:id="@+id/row_isha"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="4dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center_vertical">
             <TextView
                 android:id="@+id/tv_name_isha"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Isha"
                 android:textColor="#E2E8F0"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
             <TextView
                 android:id="@+id/tv_time_isha"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="07:44 PM"
+                android:text="07:11 PM"
                 android:textColor="#94A3B8"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </RelativeLayout>
     </LinearLayout>
 

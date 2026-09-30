@@ -66,10 +66,24 @@ public class PrayerWidgetPlugin extends Plugin {
             editor.putString("isha_time", prayers.optString("isha", "--:--"));
         }
 
+        JSObject timestamps = call.getObject("prayerTimestamps");
+        if (timestamps != null) {
+            editor.putLong("ts_fajr", (long) timestamps.optDouble("fajr", 0));
+            editor.putLong("ts_sunrise", (long) timestamps.optDouble("sunrise", 0));
+            editor.putLong("ts_dhuhr", (long) timestamps.optDouble("dhuhr", 0));
+            editor.putLong("ts_asr", (long) timestamps.optDouble("asr", 0));
+            editor.putLong("ts_maghrib", (long) timestamps.optDouble("maghrib", 0));
+            editor.putLong("ts_isha", (long) timestamps.optDouble("isha", 0));
+            editor.putLong("ts_next_fajr", (long) timestamps.optDouble("nextFajr", 0));
+        }
+
         editor.apply();
 
         // Trigger immediate update on all widgets on the launcher
         PrayerWidgetHelper.updateAllWidgets(context);
+
+        // Schedule precise RTC alarm for the next prayer transition
+        PrayerWidgetHelper.scheduleNextAlarm(context);
 
         JSObject ret = new JSObject();
         ret.put("success", true);
