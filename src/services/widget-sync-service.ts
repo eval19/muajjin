@@ -167,7 +167,11 @@ export function createWidgetSync(
 
         if (!successfulSchedule && !checkedNativeStatus && adapter.getScheduleStatus) {
           try {
-            const status = await adapter.getScheduleStatus();
+            const statusPromise = adapter.getScheduleStatus();
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Status query timeout')), 5000),
+            );
+            const status = await Promise.race([statusPromise, timeoutPromise]);
             checkedNativeStatus = true;
             // Refresh time and timezone post-await to eliminate sleep/suspension skew
             now = clock();

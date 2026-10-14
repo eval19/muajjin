@@ -48,6 +48,7 @@ public class PrayerWidgetPlugin extends Plugin {
                     result.put("madhab",config.madhab);
                     result.put("revision",revision);
                 }
+                call.resolve(result);
             } catch(Exception error){call.reject("Unable to read schedule status: "+error.getMessage(),error);}
         });
     }
