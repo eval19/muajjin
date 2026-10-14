@@ -10,7 +10,7 @@ import {
 import type { QazaCounterKey, QazaCounts } from '../types';
 
 export const useQazaTracker = () => {
-  const [counts, setCounts] = useLocalStorage<QazaCounts>(
+  const [counts, setCounts, storage] = useLocalStorage<QazaCounts>(
     'muajjin-qaza-tracker',
     INITIAL_COUNTS,
   );
@@ -23,16 +23,6 @@ export const useQazaTracker = () => {
   const isDrawerOpen = activeKey !== null && !isClosing;
   const isDrawerVisible = activeKey !== null;
 
-  useEffect(() => {
-    if (isDrawerVisible) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isDrawerVisible]);
 
   const openCounter = useCallback((key: QazaCounterKey) => {
     setIsClosing(false);
@@ -65,7 +55,7 @@ export const useQazaTracker = () => {
     if (!activeKey) return;
     setCounts((prev) => ({
       ...prev,
-      [activeKey]: Math.min(MAX_QAZA_COUNT, prev[activeKey] + 1),
+      [activeKey]: prev[activeKey] >= MAX_QAZA_COUNT ? prev[activeKey] : prev[activeKey] + 1,
     }));
   }, [activeKey, setCounts]);
 
@@ -89,7 +79,7 @@ export const useQazaTracker = () => {
       MAX_QAZA_COUNT,
       Math.max(0, parseInt(editValue, 10) || 0),
     );
-    setCounts((prev) => ({ ...prev, [activeKey]: parsed }));
+    if (!setCounts((prev) => ({ ...prev, [activeKey]: parsed }))) return;
     setEditing(false);
     setEditValue('');
   }, [activeKey, editValue, setCounts]);
@@ -104,13 +94,17 @@ export const useQazaTracker = () => {
   const handleEditKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') commitManualEdit();
-      if (e.key === 'Escape') setEditing(false);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setEditing(false);
+      }
     },
     [commitManualEdit],
   );
 
   return {
     counts,
+    storageError: storage.error,
     activeKey,
     activeCount,
     editing,

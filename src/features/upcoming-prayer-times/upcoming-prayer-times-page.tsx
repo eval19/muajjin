@@ -5,74 +5,41 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
-import { calculatePrayerTimesLocally } from '@/services/prayer-times-local';
-import { adjustTime, formatTime } from '@/utils/time-utils';
-import { Calendar } from 'lucide-react';
-import { type FC, type PointerEvent, useMemo, useRef, useState } from 'react';
+import { calculatePrayerInstants } from '@/services/prayer-times-local';
+import type { PrayerInstants } from '@/services/prayer-times-local';
+import type { PrayerTime } from '@/types';
+import { derivePrayerDay, formatTime, localDateKey } from '@/utils/time-utils';
+import { useMemo, useState } from 'react';
+import type { FC } from 'react';
 
-type UpcomingPrayer = {
-  id: string;
-  name: string;
-  start: string;
-  end: string;
-};
 
 type UpcomingDay = {
   dateKey: string;
   dateLabel: string;
-  prayers: UpcomingPrayer[];
+  prayers: PrayerTime[];
+  unavailable: boolean;
 };
 
 const DATE_PICKER_MIN = '1900-01-01';
 const DATE_PICKER_MAX = '2100-12-31';
 
-const formatDateForInput = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 const parseInputDate = (value: string): Date => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
 
-const formatDisplayDate = (value: string): string => {
-  const date = parseInputDate(value);
-  const day = date.toLocaleDateString(undefined, { day: 'numeric' });
-  const month = date.toLocaleDateString(undefined, { month: 'long' });
-  const year = date.toLocaleDateString(undefined, { year: 'numeric' });
-  return `${day} ${month}, ${year}`;
-};
 
 const UpcomingPrayerTimesPage: FC = () => {
   const { settings } = useApp();
-  const { t, getSalatName } = useTranslation();
+  const { t, activeTranslation } = useTranslation();
+  const language = activeTranslation?.meta.languageCode.replace(/_/g, '-');
 
   const [startDateValue, setStartDateValue] = useState(() =>
-    formatDateForInput(new Date()),
+    localDateKey(new Date()),
   );
   const [singleDayOnly, setSingleDayOnly] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-
-  const openDatePicker = () => {
-    const input = dateInputRef.current;
-    if (!input) return;
-
-    if (typeof input.showPicker === 'function') {
-      input.showPicker();
-      return;
-    }
-
-    input.focus();
-  };
-
-  const handleDatePointerDown = (e: PointerEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    openDatePicker();
-  };
 
   const viewedMonthLabel = useMemo(() => {
     const selectedDate = parseInputDate(startDateValue);
@@ -82,11 +49,11 @@ const UpcomingPrayerTimesPage: FC = () => {
       1,
     );
 
-    return viewedMonthDate.toLocaleDateString(undefined, {
+    return viewedMonthDate.toLocaleDateString(language, {
       month: 'long',
       year: 'numeric',
     });
-  }, [monthOffset, startDateValue]);
+  }, [monthOffset, startDateValue, language]);
 
   const upcomingDays = useMemo<UpcomingDay[]>(() => {
     const selectedDate = parseInputDate(startDateValue);
@@ -111,56 +78,37 @@ const UpcomingPrayerTimesPage: FC = () => {
       }
     }
 
+    const schedules = new Map<string, PrayerInstants>();
+    const instantsForDate = (date: Date) => {
+      const key = localDateKey(date);
+      const cached = schedules.get(key);
+      if (cached) return cached;
+      const instants = calculatePrayerInstants(date, settings);
+      schedules.set(key, instants);
+      return instants;
+    };
     return datesToRender.map((date) => {
-      date.setHours(0, 0, 0, 0);
-
-      const timings = calculatePrayerTimesLocally(date, settings);
-
-      const prayers: UpcomingPrayer[] = [
-        {
-          id: 'fajr',
-          name: getSalatName('Fajr'),
-          start: timings.Fajr,
-          end: adjustTime(timings.Shuruq, -1),
-        },
-        {
-          id: 'dhuhr',
-          name: getSalatName('Dhuhr'),
-          start: timings.Dhuhr,
-          end: adjustTime(timings.Asr, -1),
-        },
-        {
-          id: 'asr',
-          name: getSalatName('Asr'),
-          start: timings.Asr,
-          end: adjustTime(timings.Maghrib, -1),
-        },
-        {
-          id: 'maghrib',
-          name: getSalatName('Maghrib'),
-          start: timings.Maghrib,
-          end: adjustTime(timings.Isha, -1),
-        },
-        {
-          id: 'isha',
-          name: getSalatName('Isha'),
-          start: timings.Isha,
-          end: adjustTime(timings.Fajr, -1),
-        },
-      ];
+      let prayers: PrayerTime[] = [];
+      let unavailable = false;
+      try {
+        prayers = derivePrayerDay(date, settings, t, instantsForDate).prayers;
+      } catch {
+        unavailable = true;
+      }
 
       return {
-        dateKey: formatDateForInput(date),
-        dateLabel: date.toLocaleDateString(undefined, {
+        dateKey: localDateKey(date),
+        dateLabel: date.toLocaleDateString(language, {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
           year: 'numeric',
         }),
         prayers,
+        unavailable,
       };
     });
-  }, [getSalatName, monthOffset, settings, singleDayOnly, startDateValue]);
+  }, [t, language, monthOffset, settings, singleDayOnly, startDateValue]);
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -172,33 +120,19 @@ const UpcomingPrayerTimesPage: FC = () => {
         <Card className="p-4">
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <p className="mb-1 text-sm font-medium">
+              <label htmlFor="upcoming-date" className="mb-1 block text-sm font-medium">
                 {t('salatTimes.datePickerLabel')}
-              </p>
+              </label>
               <div className="relative">
                 <Input
-                  type="text"
-                  value={formatDisplayDate(startDateValue)}
-                  readOnly
-                  tabIndex={-1}
-                  className="cursor-pointer select-none pr-10"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    openDatePicker();
-                  }}
-                />
-                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  ref={dateInputRef}
+                  id="upcoming-date"
                   type="date"
                   value={startDateValue}
                   min={DATE_PICKER_MIN}
                   max={DATE_PICKER_MAX}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className="absolute left-0 h-0 w-0 opacity-0"
-                  onPointerDown={handleDatePointerDown}
+                  className="h-11"
                   onChange={(e) => {
+                    if (!e.target.value || !e.target.validity.valid) return;
                     setStartDateValue(e.target.value);
                     setMonthOffset(0);
                   }}
@@ -211,6 +145,7 @@ const UpcomingPrayerTimesPage: FC = () => {
                 {t('salatTimes.singleDayCompact')}
               </p>
               <Switch
+                aria-label={t('salatTimes.singleDayCompact')}
                 checked={singleDayOnly}
                 onCheckedChange={setSingleDayOnly}
               />
@@ -246,6 +181,11 @@ const UpcomingPrayerTimesPage: FC = () => {
                 {day.dateLabel}
               </div>
 
+              {day.unavailable && (
+                <p role="alert" className="p-4 text-sm text-destructive">
+                  {t('errors.prayerCalculationUnavailable')}
+                </p>
+              )}
               <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-2 border-b bg-muted/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <div className="text-left">{t('salatTimes.salat')}</div>
                 <div className="text-right">{t('salatTimes.start')}</div>
@@ -259,10 +199,10 @@ const UpcomingPrayerTimesPage: FC = () => {
                     className="grid grid-cols-[1.1fr_1fr_1fr] items-center gap-2 px-4 py-2">
                     <span className="text-left font-medium">{prayer.name}</span>
                     <span className="text-right tabular-nums">
-                      {formatTime(prayer.start, settings.timeFormat)}
+                      {formatTime(prayer.start, settings.timeFormat, t)}
                     </span>
                     <span className="text-right tabular-nums">
-                      {formatTime(prayer.end, settings.timeFormat)}
+                      {formatTime(prayer.end, settings.timeFormat, t)}
                     </span>
                   </div>
                 ))}

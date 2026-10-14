@@ -1,0 +1,169 @@
+import { describe, expect, test } from 'bun:test';
+import { normalizeAppSettings, normalizeQazaCounts, normalizeContainerOrder, normalizeVisibility } from '../src/utils/settings-storage';
+import { createPersistentStore, commitStorageChanges } from '../src/utils/persistent-storage';
+import { validateTranslation, normalizeStoredTranslations } from '../src/utils/translation-validation';
+import { validateWoff2, decodeLegacyFont, LatestFontRequest } from '../src/utils/font-storage';
+import enTemplate from '../src/i18n/template-en.json';
+import { calculatePrayerInstants } from '../src/services/prayer-times-local';
+
+class MemoryStorage {
+  values = new Map<string, string>();
+  denied = false;
+  getItem(key: string) { if (this.denied) throw new Error('SecurityError'); return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { if (this.denied) throw new Error('QuotaExceededError'); this.values.set(key, value); }
+  removeItem(key: string) { if (this.denied) throw new Error('SecurityError'); this.values.delete(key); }
+}
+
+describe('settings loading boundary', () => {
+  test('migrates legacy names without overwriting valid current values or zero coordinates', () => {
+    const settings = normalizeAppSettings({ madhab: 2, sehriAdjustment: -9, latitude: 0, longitude: 0, jamaahTimes: { Fajr: '05:35', Isha: 20 }, homeSections: [{ id: 'saumTimes', visible: false, order: 0 }] });
+    expect(settings.madhab).toBe(0);
+    expect(settings.suhoorAdjustment).toBe(-9);
+    expect(settings.latitude).toBe(0);
+    expect(settings.longitude).toBe(0);
+    expect(settings.jamaahTimes).toEqual({ Fajr: '05:35' });
+    expect(settings.homeSections?.find((section) => section.id === 'saumTimes')?.visible).toBe(false);
+    expect(settings.homeSections).toHaveLength(6);
+    expect(normalizeAppSettings({ sehriAdjustment: -9, suhoorAdjustment: 3 }).suhoorAdjustment).toBe(3);
+  });
+  test('damaged saved coordinates cannot calculate another city while valid preferences survive', () => {
+    for (const latitude of [91, null, 'wrong', Infinity]) {
+      const settings = normalizeAppSettings({ city: 'Dhaka', latitude, longitude: 0, method: 4, madhab: 0, jamaahTimes: { Fajr: '05:35' } });
+      expect(() => calculatePrayerInstants(new Date(2026, 9, 13), settings)).toThrow(RangeError);
+      expect(settings.city).toBe('Dhaka');
+      expect(settings.jamaahTimes.Fajr).toBe('05:35');
+    }
+  });
+  test('a partially missing saved coordinate cannot fabricate a location', () => {
+    for (const saved of [{ city: 'Dhaka', longitude: 90.4 }, { city: 'Dhaka', latitude: 23.8 }]) {
+      const settings = normalizeAppSettings(saved);
+      expect(() => calculatePrayerInstants(new Date(2026, 9, 13), settings)).toThrow(RangeError);
+      expect(settings.city).toBe('Dhaka');
+    }
+  });
+  test('onboarding keeps the explicit unselected madhab until the user chooses', () => {
+    const settings = normalizeAppSettings({ latitude: 0, longitude: 0, madhab: null, onboardingComplete: false });
+    expect(settings.madhab).toBeNull();
+    expect(() => calculatePrayerInstants(new Date(2026, 9, 13), settings)).toThrow(RangeError);
+    expect(normalizeAppSettings({ ...settings, madhab: 0 }).madhab).toBe(0);
+  });
+  test('valid Qaza siblings and existing large counts survive invalid entries', () => {
+    expect(normalizeQazaCounts({ fajr: 234, dhuhr: -1, asr: '3', other: 100000, saum: 8 })).toEqual({ fajr: 234, dhuhr: 0, asr: 0, maghrib: 0, isha: 0, other: 100000, saum: 8 });
+  });
+  test('customization restores missing siblings without accepting unknown panels or truthy types', () => {
+    const order = normalizeContainerOrder(['saumTimes', 'salatTimes', 'saumTimes', 'unknown', 4]);
+    expect(order.slice(0, 2)).toEqual(['saumTimes', 'salatTimes']);
+    expect(new Set(order).size).toBe(6);
+    expect(normalizeVisibility({ saumTimes: false, currentSalat: 'false' }).saumTimes).toBe(false);
+    expect(normalizeVisibility({ currentSalat: 'false' }).currentSalat).toBe(true);
+  });
+});
+
+describe('durable shared persistence transitions', () => {
+  test('repeated functional updates use the latest committed count before any render', () => {
+    const storage = new MemoryStorage();
+    const store = createPersistentStore('counter', 0, (value) => typeof value === 'number' ? value : 0, () => storage);
+    store.set((value) => value + 1);
+    store.set((value) => value + 1);
+    store.set((value) => value + 1);
+    expect(store.getSnapshot().value).toBe(3);
+    expect(storage.getItem('counter')).toBe('3');
+    expect(createPersistentStore('counter', 0, (value) => typeof value === 'number' ? value : 0, () => storage).getSnapshot().value).toBe(3);
+  });
+  test('quota failures do not publish a successful value and recover on retry', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('counter', '4');
+    const store = createPersistentStore('counter', 0, (value) => typeof value === 'number' ? value : 0, () => storage);
+    storage.denied = true;
+    expect(store.set((value) => value + 1)).toBe(false);
+    expect(store.getSnapshot().value).toBe(4);
+    expect(store.getSnapshot().error).not.toBeNull();
+    storage.denied = false;
+    expect(store.set((value) => value + 1)).toBe(true);
+    expect(store.getSnapshot().value).toBe(5);
+  });
+  test('unknown external values, corrupt JSON, deletion and clear are validated and announced', () => {
+    const storage = new MemoryStorage();
+    const store = createPersistentStore('qaza', normalizeQazaCounts({ fajr: 2 }), normalizeQazaCounts, () => storage);
+    let announcements = 0;
+    store.subscribe(() => { announcements++; });
+    store.receiveExternal('{"fajr":9,"asr":"bad"}');
+    expect(store.getSnapshot().value.fajr).toBe(9);
+    expect(store.getSnapshot().value.asr).toBe(0);
+    store.receiveExternal('{broken');
+    expect(store.getSnapshot().value.fajr).toBe(9);
+    expect(store.getSnapshot().error).not.toBeNull();
+    store.receiveExternal(null);
+    expect(store.getSnapshot().value.fajr).toBe(2);
+    expect(announcements).toBe(3);
+  });
+  test('reads another tab latest durable state before functional updates', () => {
+    const storage = new MemoryStorage();
+    const store = createPersistentStore('counter', 0, (value) => typeof value === 'number' ? value : 0, () => storage);
+    storage.setItem('counter', '20');
+    store.set((value) => value + 1);
+    expect(store.getSnapshot().value).toBe(21);
+  });
+  test('multi-key failures roll back prior writes without touching unrelated data', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('a', 'old'); storage.setItem('unrelated', 'keep');
+    const failingStorage = {
+      getItem: storage.getItem.bind(storage),
+      removeItem: storage.removeItem.bind(storage),
+      setItem(key: string, value: string) { if (key === 'b') throw new Error('QuotaExceededError'); storage.setItem(key, value); },
+    };
+    expect(() => commitStorageChanges(failingStorage, { a: 'new', b: 'new' })).toThrow();
+    expect(storage.getItem('a')).toBe('old');
+    expect(storage.getItem('unrelated')).toBe('keep');
+  });
+});
+
+describe('translation boundary', () => {
+  test('retains older partial imports with English deep defaults', () => {
+    const translation = validateTranslation({ meta: enTemplate.meta, translations: { salats: { fajr: 'Dawn' } } });
+    expect(translation.translations.salats.fajr).toBe('Dawn');
+    expect(translation.translations.salats.isha).toBe(enTemplate.translations.salats.isha);
+    const stored = normalizeStoredTranslations({ valid: { ...translation, id: 'valid', importedAt: '2025-01-01T00:00:00.000Z' }, invalid: { meta: 4 } });
+    expect(Object.keys(stored)).toEqual(['valid']);
+  });
+  test('raw stored translations preserve valid imports and allow corrupt collections to be repaired', () => {
+    const entry = { meta: enTemplate.meta, translations: { salats: { fajr: 'Dawn' } } };
+    expect(normalizeStoredTranslations(JSON.stringify({ saved: entry })).saved.translations.salats.fajr).toBe('Dawn');
+    const repaired = { ...normalizeStoredTranslations('{broken'), replacement: entry };
+    expect(normalizeStoredTranslations(JSON.stringify(repaired)).replacement.translations.salats.fajr).toBe('Dawn');
+  });
+  test('rejects wrong shapes, malformed placeholders, direction and excessive strings', () => {
+    expect(() => validateTranslation({ meta: { ...enTemplate.meta, direction: 'up' }, translations: {} })).toThrow();
+    expect(() => validateTranslation({ meta: enTemplate.meta, translations: { salats: { fajr: 1 } } })).toThrow();
+    expect(() => validateTranslation({ meta: enTemplate.meta, translations: { saum: { adjustedBy: '{{hours}} min' } } })).toThrow();
+    expect(() => validateTranslation({ meta: enTemplate.meta, translations: { saum: { adjustedBy: '{{minutes' } } })).toThrow();
+    expect(() => validateTranslation({ meta: enTemplate.meta, translations: { salats: { fajr: 'x'.repeat(8193) } } })).toThrow();
+  });
+  test('prototype-bearing properties are rejected', () => {
+    expect(() => validateTranslation(JSON.parse('{"meta":{"languageName":"Test","languageCode":"xx","direction":"rtl","version":"1"},"translations":{"__proto__":{"fajr":"bad"}}}'))).toThrow();
+  });
+});
+
+describe('font binary and latest-selection contracts', () => {
+  test('rejects malformed binary headers, wrong filename and excessive size', () => {
+    expect(() => validateWoff2('other.woff2', new ArrayBuffer(49))).toThrow();
+    expect(() => validateWoff2('customfont.woff2', new ArrayBuffer(48))).toThrow();
+    expect(() => validateWoff2('customfont.woff2', new ArrayBuffer(5 * 1024 * 1024 + 1))).toThrow();
+  });
+  test('legacy migration rejects malformed encodings without modifying saved data', () => {
+    expect(() => decodeLegacyFont({ name: 'customfont.woff2', data: 'data:font/woff2;base64,!', timestamp: 7 })).toThrow();
+  });
+  test('a late prepared font cannot replace a newer working choice, and denied commits preserve the old font', async () => {
+    const requests = new LatestFontRequest();
+    let working = 'original';
+    const old = requests.begin();
+    const newer = requests.begin();
+    expect(requests.commit(newer, () => { working = 'newer'; })).toBe(true);
+    await Promise.resolve();
+    expect(requests.commit(old, () => { working = 'late'; })).toBe(false);
+    expect(working).toBe('newer');
+    const denied = requests.begin();
+    expect(() => requests.commit(denied, () => { throw new Error('Storage denied'); })).toThrow();
+    expect(working).toBe('newer');
+  });
+});

@@ -55,6 +55,9 @@ tmp/
 
 reproducible-checksums.txt
 reproducible-checksums-*.txt
+reproducible-output/
+scripts/__pycache__/
+tests/__pycache__/
 
 # Auto-generated agent rules (personalized per developer)
 .brainsync/agent-rules.md
@@ -76,3 +79,6 @@ active-context.md
 .cline/
 
 .agent-mem/
+
+# Isolated local implementation/verification tools
+.tools/

@@ -30,38 +30,58 @@ const HIJRI_MONTHS = [
  * Calculate Hijri date from Gregorian date using Umm al-Qura calendar
  * @param gregorianDate - The Gregorian date to convert
  * @param adjustment - Day adjustment (-3 to +3 days for lunar calendar variations)
- * @param maghribTime - Optional Maghrib time in "HH:MM" format (if changing at Maghrib)
+ * @param maghribTimestamp - Optional actual Maghrib instant (epoch milliseconds)
  * @param changeAtMaghrib - If true, Hijri date changes at Maghrib instead of midnight
  * @returns HijriDateResult with day, month, year, and formatted date
  */
 export function calculateHijriDate(
   gregorianDate: Date,
   adjustment: number = 0,
-  maghribTime?: string,
+  maghribTimestamp?: number,
   changeAtMaghrib: boolean = false,
 ): HijriDateResult {
-  let dateToConvert = new Date(gregorianDate);
+  if (!Number.isFinite(gregorianDate.getTime()) || !Number.isInteger(adjustment)) {
+    throw new RangeError('Invalid Hijri calculation date or adjustment');
+  }
+  const dateToConvert = new Date(gregorianDate);
+  const rollover = changeAtMaghrib && Number.isFinite(maghribTimestamp) &&
+    gregorianDate.getTime() >= maghribTimestamp ? 1 : 0;
+  dateToConvert.setDate(dateToConvert.getDate() + adjustment + rollover);
 
-  // If user wants Hijri date to change at Maghrib (Islamic tradition)
-  if (changeAtMaghrib && maghribTime) {
-    const [maghribHours, maghribMinutes] = maghribTime.split(':').map(Number);
-    const maghribTotalMinutes = maghribHours * 60 + maghribMinutes;
-    const currentTotalMinutes =
-      dateToConvert.getHours() * 60 + dateToConvert.getMinutes();
-
-    // If current time is AFTER Maghrib, add 1 day (Islamic day starts at Maghrib)
-    if (currentTotalMinutes >= maghribTotalMinutes) {
-      dateToConvert.setDate(dateToConvert.getDate() + 1);
+  // @umalqura/core's Gregorian conversion divides local-midnight epoch
+  // differences by 24h. Across DST that can produce fractional Hijri days.
+  // Reuse its exact public year/month dataset with civil-date ordinals instead.
+  const ordinal = Date.UTC(dateToConvert.getFullYear(), dateToConvert.getMonth(), dateToConvert.getDate()) / 86_400_000;
+  const calendar = umalqura.$;
+  const first = calendar.hijriToGregorian(1318, 1, 1);
+  const last = calendar.hijriToGregorian(1500, 12, 30);
+  const firstOrdinal = Date.UTC(first.gy, first.gm, first.gd) / 86_400_000;
+  const lastOrdinal = Date.UTC(last.gy, last.gm, last.gd) / 86_400_000;
+  if (ordinal < firstOrdinal || ordinal > lastOrdinal) {
+    throw new RangeError('Date is outside the supported Umm al-Qura calendar');
+  }
+  let low = 1318;
+  let high = 1500;
+  let yearStart = firstOrdinal;
+  while (low <= high) {
+    const year = Math.floor((low + high) / 2);
+    const start = calendar.hijriToGregorian(year, 1, 1);
+    const startOrdinal = Date.UTC(start.gy, start.gm, start.gd) / 86_400_000;
+    if (startOrdinal <= ordinal) {
+      low = year + 1;
+      yearStart = startOrdinal;
+    } else {
+      high = year - 1;
     }
   }
-
-  // Apply day adjustment
-  dateToConvert.setDate(dateToConvert.getDate() + adjustment);
-
-  // Calculate Hijri date using Umm al-Qura calendar
-  const hijri = umalqura(dateToConvert);
-
-  const monthIndex = hijri.hm - 1; // Convert to 0-based index (hm is Hijri month)
+  let day = ordinal - yearStart + 1;
+  let month = 1;
+  while (day > calendar.getDaysInMonth(high, month)) {
+    day -= calendar.getDaysInMonth(high, month);
+    month++;
+  }
+  const hijri = { hd: day, hm: month, hy: high };
+  const monthIndex = month - 1;
 
   return {
     day: String(hijri.hd).padStart(2, '0'),

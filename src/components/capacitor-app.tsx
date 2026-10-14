@@ -3,10 +3,10 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support';
 import { useTheme } from 'next-themes';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 
-export function CapacitorApp({ children }: { children: React.ReactNode }) {
-  const isInitializedRef = useRef(false);
+export function CapacitorApp({ children }: { children: ReactNode }) {
   const { theme, resolvedTheme } = useTheme();
 
   // Handle status bar color based on theme (Android only)
@@ -39,47 +39,25 @@ export function CapacitorApp({ children }: { children: React.ReactNode }) {
   }, [theme, resolvedTheme]);
 
   useEffect(() => {
-    // Only set up once
-    if (isInitializedRef.current) {
-      return;
-    }
-    isInitializedRef.current = true;
-
-    // Handle Android back button
-    const setupBackButton = async () => {
-      // Check if running in native app (Capacitor)
-      const isNative = (window as any).Capacitor?.isNative;
-
-      if (!isNative) {
-        return; // Only set up in native app
-      }
-
-      // Listen for back button presses
-      const handler = await App.addListener('backButton', async () => {
-        // Check if we can go back in navigation history
-        const canGoBack = window.history.length > 1;
-
-        if (canGoBack) {
-          // Navigate back in React Router
-          window.history.back();
-        } else {
-          // At the root, exit the app
-          App.exitApp();
-        }
+    if (!Capacitor.isNativePlatform()) return;
+    let disposed = false;
+    const handler = App.addListener('backButton', ({ canGoBack }) => {
+      if (disposed) return;
+      // Let the open dialog/select consume Back before navigating or exiting.
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
       });
-
-      return handler;
-    };
-
-    const handlerPromise = setupBackButton();
-
-    // Cleanup listener on unmount
+      if (!(document.activeElement ?? document).dispatchEvent(escape)) return;
+      if (canGoBack && window.location.pathname !== '/') window.history.back();
+      else void App.exitApp();
+    });
+    void handler.catch((error) => console.warn('Android back-button listener failed:', error));
     return () => {
-      handlerPromise.then((handler) => {
-        if (handler) {
-          handler.remove();
-        }
-      });
+      disposed = true;
+      void handler.then((listener) => listener.remove())
+        .catch((error) => console.warn('Android back-button cleanup failed:', error));
     };
   }, []);
 

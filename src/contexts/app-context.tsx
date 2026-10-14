@@ -1,110 +1,75 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  FC,
-  ReactNode,
-  useCallback,
-} from 'react';
-import { UserSettings } from '@/types';
-import { DEFAULT_SETTINGS } from '@/constants/default-settings';
+import { createContext, useContext, useCallback, useEffect, useState } from 'react';
+import type { FC, ReactNode } from 'react';
+import { App as NativeApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { readNativeSystemTimeFormat } from '@/services/widget-sync-service';
+import { getSystemTimeFormat, setSystemTimeFormat } from '@/utils/time-utils';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { defaultAppSettings } from '@/utils/settings-storage';
+import type { AppSettings } from '@/utils/settings-storage';
 
-export interface AppSettings extends UserSettings {
-  onboardingComplete: boolean;
-  homeSections?: HomeSection[];
-}
-
-export interface HomeSection {
-  id: string;
-  name: string;
-  visible: boolean;
-  order: number;
-}
-
-const defaultAppSettings: AppSettings = {
-  ...DEFAULT_SETTINGS,
-  onboardingComplete: false,
-  homeSections: [
-    { id: 'dateTime', name: 'Date & Time Header', visible: true, order: 0 },
-    { id: 'currentSalat', name: 'Current Salat', visible: true, order: 1 },
-    { id: 'nextSalat', name: 'Next Salat', visible: true, order: 2 },
-    { id: 'salatTimes', name: 'Salat Times', visible: true, order: 3 },
-    {
-      id: 'prohibitedTimes',
-      name: 'Prohibited Times',
-      visible: true,
-      order: 4,
-    },
-    { id: 'saumTimes', name: 'Saum Times', visible: true, order: 5 },
-  ],
-};
+export type { AppSettings, HomeSection } from '@/utils/settings-storage';
 
 interface AppContextType {
   settings: AppSettings;
-  updateSettings: (newSettings: Partial<AppSettings>) => void;
-  resetSettings: () => void;
+  updateSettings: (newSettings: Partial<AppSettings>) => boolean;
+  resetSettings: () => boolean;
+  storageError: string | null;
+  systemTimeFormat: '12h' | '24h';
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const APP_SETTINGS_KEY = 'muajjin-settings';
-
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    if (typeof window === 'undefined') {
-      return defaultAppSettings;
-    }
-
-    // Legacy onboarding completion flag (pre-AppContext)
-    const legacyOnboardingCompleted =
-      localStorage.getItem('muajjin-onboarding-completed') === 'true';
-
-    const saved = localStorage.getItem(APP_SETTINGS_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          ...defaultAppSettings,
-          ...parsed,
-          // Ensure onboardingComplete is true if legacy flag exists
-          onboardingComplete:
-            Boolean(parsed?.onboardingComplete) || legacyOnboardingCompleted,
-        };
-      } catch (e) {
-        console.error('Failed to parse saved settings:', e);
-        return defaultAppSettings;
-      }
-    }
-
-    // No saved settings yet: still respect legacy onboarding completion flag
-    return {
-      ...defaultAppSettings,
-      onboardingComplete: legacyOnboardingCompleted,
-    };
-  });
-
-  // Save to localStorage whenever settings change
+  const [settings, setSettings, status] = useLocalStorage<AppSettings>('muajjin-settings', defaultAppSettings);
+  const [systemTimeFormat, publishSystemTimeFormat] = useState(getSystemTimeFormat);
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(settings));
-    }
-  }, [settings]);
-
-  const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    let disposed = false;
+    let revision = 0;
+    const native = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    const reconcile = async () => {
+      const intent = ++revision;
+      try {
+        const format = native ? await readNativeSystemTimeFormat()
+          : new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12 ? '12h' : '24h';
+        if (disposed || intent !== revision) return;
+        setSystemTimeFormat(format);
+        publishSystemTimeFormat(format);
+      } catch { console.warn('System clock preference unavailable; explicit 12h/24h choices remain available'); }
+    };
+    void reconcile();
+    window.addEventListener('focus', reconcile);
+    const listener = native ? NativeApp.addListener('appStateChange', ({ isActive }) => { if (isActive) void reconcile(); }) : undefined;
+    if (listener) void listener.catch(() => console.warn('System clock lifecycle listener unavailable'));
+    return () => {
+      disposed = true;
+      window.removeEventListener('focus', reconcile);
+      if (listener) void listener.then((handle) => handle.remove()).catch(() => console.warn('System clock lifecycle cleanup failed'));
+    };
   }, []);
-
-  const resetSettings = useCallback(() => {
-    setSettings(defaultAppSettings);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(APP_SETTINGS_KEY);
-      localStorage.removeItem('muajjin-onboarding-completed');
-    }
-  }, []);
-
+  const reset = status.reset;
+  const updateSettings = useCallback((newSettings: Partial<AppSettings>) =>
+    setSettings((previous) => {
+      if (newSettings.latitude !== undefined && newSettings.latitude !== previous.latitude &&
+          (typeof newSettings.latitude !== 'number' || !Number.isFinite(newSettings.latitude) || Math.abs(newSettings.latitude) > 90)) {
+        throw new RangeError('Enter a valid latitude (-90 to 90)');
+      }
+      if (newSettings.longitude !== undefined && newSettings.longitude !== previous.longitude &&
+          (typeof newSettings.longitude !== 'number' || !Number.isFinite(newSettings.longitude) || Math.abs(newSettings.longitude) > 180)) {
+        throw new RangeError('Enter a valid longitude (-180 to 180)');
+      }
+      const next = {
+        ...previous, ...newSettings,
+        jamaahTimes: newSettings.jamaahTimes ? { ...previous.jamaahTimes, ...newSettings.jamaahTimes } : previous.jamaahTimes,
+      };
+      if (next.onboardingComplete && next.madhab !== 0 && next.madhab !== 1) {
+        throw new RangeError('Choose a madhab before completing setup');
+      }
+      return next;
+    }), [setSettings]);
+  const resetSettings = useCallback(() => reset(['muajjin-onboarding-completed']), [reset]);
   return (
-    <AppContext.Provider value={{ settings, updateSettings, resetSettings }}>
+    <AppContext.Provider value={{ settings, updateSettings, resetSettings, storageError: status.error, systemTimeFormat }}>
       {children}
     </AppContext.Provider>
   );

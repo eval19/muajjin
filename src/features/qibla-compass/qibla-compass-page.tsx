@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
 import { NativeGeolocation } from '@/plugins/native-geolocation';
+import { useForegroundActive } from '@/hooks/use-visible-clock';
 import { Capacitor } from '@capacitor/core';
 import { Coordinates, Qibla } from 'adhan';
 import { Compass, LocateFixed, MapPin, Navigation } from 'lucide-react';
-import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FC } from 'react';
 import { Link } from 'react-router-dom';
 
 const KAABA_LATITUDE = 21.4225241;
@@ -113,6 +115,7 @@ const formatDistance = (distanceKm: number) => {
 const QiblaCompassPage: FC = () => {
   const { t } = useTranslation();
   const { settings } = useApp();
+  const active = useForegroundActive();
   const [heading, setHeading] = useState<number | null>(null);
   const [smoothedHeading, setSmoothedHeading] = useState<number | null>(null);
   const [displayDialRotation, setDisplayDialRotation] = useState(0);
@@ -265,7 +268,7 @@ const QiblaCompassPage: FC = () => {
   }, [subscribeToOrientation]);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!Capacitor.isNativePlatform() || !active) {
       return;
     }
 
@@ -314,10 +317,10 @@ const QiblaCompassPage: FC = () => {
         window.clearInterval(intervalId);
       }
     };
-  }, [startBrowserOrientationFallback]);
+  }, [startBrowserOrientationFallback, active]);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform() || !active) {
       return;
     }
 
@@ -338,7 +341,7 @@ const QiblaCompassPage: FC = () => {
     }
 
     return subscribeToOrientation();
-  }, [subscribeToOrientation]);
+  }, [subscribeToOrientation, active]);
 
   const requestOrientationPermission = useCallback(async () => {
     try {

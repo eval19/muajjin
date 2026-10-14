@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import type { HTMLInputTypeAttribute } from 'react';
 
 interface LabeledInputFieldProps {
   id: string;
@@ -8,8 +9,11 @@ interface LabeledInputFieldProps {
   value: string | number;
   onChange: (value: string) => void;
   placeholder?: string;
-  type?: React.HTMLInputTypeAttribute;
+  type?: HTMLInputTypeAttribute;
   step?: string | number;
+  min?: number;
+  max?: number;
+  required?: boolean;
   containerClassName?: string;
   inputClassName?: string;
 }
@@ -22,6 +26,9 @@ export function LabeledInputField({
   placeholder,
   type = 'text',
   step,
+  min,
+  max,
+  required,
   containerClassName = 'space-y-1',
   inputClassName = 'bg-card',
 }: LabeledInputFieldProps) {
@@ -32,6 +39,9 @@ export function LabeledInputField({
         id={id}
         type={type}
         step={step}
+        min={min}
+        max={max}
+        required={required}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

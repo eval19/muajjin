@@ -6,7 +6,7 @@ import { TranslationProvider } from './contexts/translation-context';
 import { Capacitor } from '@capacitor/core';
 import { useState, useEffect } from 'react';
 
-const Root = () => {
+export const Root = () => {
   const isNative = Capacitor.isNativePlatform();
   const [isSmallScreen, setIsSmallScreen] = useState(false);
 

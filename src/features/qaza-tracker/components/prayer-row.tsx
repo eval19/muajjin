@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/contexts/translation-context';
 import { Pencil } from 'lucide-react';
-import { type FC, useCallback } from 'react';
+import { useCallback } from 'react';
+import type { FC } from 'react';
 
 import type { QazaCounterKey } from '../types';
 
@@ -17,6 +19,7 @@ export const PrayerRow: FC<PrayerRowProps> = ({
   counterKey,
   onEdit,
 }) => {
+  const { t } = useTranslation();
   const handleClick = useCallback(() => {
     onEdit(counterKey);
   }, [counterKey, onEdit]);
@@ -34,7 +37,9 @@ export const PrayerRow: FC<PrayerRowProps> = ({
       </span>
       <Button
         size="icon"
-        className="h-[34px] w-[34px] shrink-0 rounded-lg shadow-sm"
+        className="size-11 shrink-0 rounded-lg shadow-sm"
+        aria-label={`${t('qaza.editCount')}: ${label}`}
+        data-qaza-counter={counterKey}
         onClick={handleClick}>
         <Pencil className="h-4 w-4" />
       </Button>

@@ -1,42 +1,26 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from '@/contexts/translation-context';
-import { ProhibitedTime } from '@/types';
-import { formatTime } from '@/utils/time-utils';
+import type { ProhibitedTime } from '@/types';
+import { formatTime, isWithinWindow, prayerBoundaries } from '@/utils/time-utils';
+import { useBoundaryClock } from '@/hooks/use-visible-clock';
 import { AlertTriangle, Sun, Sunrise, Sunset } from 'lucide-react';
-import { type FC, useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 
 interface ProhibitedTimesContainerProps {
   prohibitedTimes: ProhibitedTime[];
+  timeline: ProhibitedTime[];
   timeFormat?: 'system' | '12h' | '24h';
 }
 
 export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
   prohibitedTimes,
+  timeline,
   timeFormat = 'system',
 }) => {
   const { t } = useTranslation();
-  const [now, setNow] = useState<Date>(new Date());
-
-  const timeToMinutes = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    return (h || 0) * 60 + (m || 0);
-  };
-
-  const isTimeInRange = (current: Date, start: string, end: string) => {
-    const currentMinutes = current.getHours() * 60 + current.getMinutes();
-    const startMinutes = timeToMinutes(start);
-    const endMinutes = timeToMinutes(end);
-
-    if (endMinutes < startMinutes) {
-      return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
-    }
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const boundaries = useMemo(() => prayerBoundaries(timeline), [timeline]);
+  const now = useBoundaryClock(boundaries);
 
   const getTimeIcon = (id: ProhibitedTime['id']) => {
     switch (id) {
@@ -58,8 +42,10 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
           <h3 className="font-bold">{t('prohibited.title')}</h3>
         </div>
         <div className="space-y-2">
-          {prohibitedTimes.map((time) => {
-            const isCurrent = isTimeInRange(now, time.start, time.end);
+          {prohibitedTimes.map((display) => {
+            const current = timeline.find((candidate) => candidate.id === display.id && isWithinWindow(candidate, now));
+            const time = current ?? display;
+            const isCurrent = current !== undefined;
             const TimeIcon = getTimeIcon(time.id);
             return (
               <div
@@ -86,8 +72,8 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
                   </span>
                 </div>
                 <span className="text-sm font-bold">
-                  {formatTime(time.start, timeFormat)} →{' '}
-                  {formatTime(time.end, timeFormat)}
+                  {formatTime(time.start, timeFormat, t)} →{' '}
+                  {formatTime(time.end, timeFormat, t)}
                 </span>
               </div>
             );

@@ -22,7 +22,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, GripVertical, Trash2, Upload } from 'lucide-react';
-import { type FC, useRef } from 'react';
+import { useRef } from 'react';
+import type { ChangeEvent, FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { DEFAULT_CONTAINER_ORDER } from '@/constants/default-settings';
@@ -80,6 +81,7 @@ const SortableContainer: FC<SortableContainerProps> = ({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
+            aria-label={label}
             {...attributes}
             {...listeners}
             className="cursor-grab active:cursor-grabbing"
@@ -89,6 +91,7 @@ const SortableContainer: FC<SortableContainerProps> = ({
           <span className="text-sm font-medium">{label}</span>
         </div>
         <Switch
+          aria-label={label}
           checked={isVisible}
           onCheckedChange={() => onToggle(id)}
           className="cursor-pointer"
@@ -103,7 +106,6 @@ const DisplaySettings: FC = () => {
   const { t, uploadFont, removeFont, customFont, activeTranslation } =
     useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // const [userSettings] = useLocalStorage<UserSettings>('muajjin-settings', DEFAULT_SETTINGS);
   const [containerOrder, setContainerOrder] = useLocalStorage<string[]>(
     'muajjin-container-order',
     DEFAULT_CONTAINER_ORDER,
@@ -189,7 +191,7 @@ const DisplaySettings: FC = () => {
   };
 
   const handleFontUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -210,60 +212,47 @@ const DisplaySettings: FC = () => {
       <SettingsSection
         title={t('settings.customFont')}
         description={t('settings.uploadFontDesc')}>
-        {hasCustomFont ? (
-          <div className="flex items-center justify-between rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/50 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="break-all text-sm text-muted-foreground">
                 {t('settings.currentFont')}: {currentFont.name}
+                {currentFont.type === 'builtin' && ` (${t('settings.builtin')})`}
+                {currentFont.type === 'system' && ` (${t('settings.systemFont')})`}
               </span>
             </div>
-
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={removeFont}
-              className="gap-1">
-              <Trash2 className="h-4 w-4" />
-              {t('settings.removeFont')}
-            </Button>
+            {hasCustomFont && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={removeFont}
+                className="gap-1">
+                <Trash2 className="h-4 w-4" />
+                {t('settings.removeFont')}
+              </Button>
+            )}
           </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Current font indicator */}
-            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-              <Check className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {t('settings.currentFont')}: {currentFont.name}
-                {currentFont.type === 'builtin' &&
-                  ` (${t('settings.builtin')})`}
-                {currentFont.type === 'system' &&
-                  ` (${t('settings.systemFont')})`}
-              </span>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".woff2"
-              onChange={handleFontUpload}
-              className="hidden"
-            />
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4" />
-              {t('settings.uploadFont')}
-            </Button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              {t('settings.fontFileName')}
-            </p>
-          </div>
-        )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".woff2"
+            onChange={handleFontUpload}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4" />
+            {t('settings.uploadFont')}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            {t('settings.fontFileName')}
+          </p>
+        </div>
       </SettingsSection>
 
       {/* Home Screen Layout */}

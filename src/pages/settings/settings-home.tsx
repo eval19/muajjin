@@ -15,7 +15,8 @@ import {
   Sunrise,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { type FC, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsHome: FC = () => {
@@ -131,11 +132,11 @@ const SettingsHome: FC = () => {
       {settingsCategories.map((category) => {
         const Icon = category.icon;
         return (
-          <Card
-            key={category.id}
-            className="cursor-pointer p-3 transition-colors hover:bg-accent/50"
-            onClick={() => navigate(category.route)}>
-            <div className="flex items-center gap-3">
+          <Card key={category.id} className="overflow-hidden">
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 p-3 text-start transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              onClick={() => navigate(category.route)}>
               <div
                 className={`h-10 w-10 rounded-xl ${category.bgColor} flex items-center justify-center`}>
                 <Icon className={`h-5 w-5 ${category.color}`} />
@@ -143,7 +144,7 @@ const SettingsHome: FC = () => {
 
               <span className="flex-1 font-semibold">{category.label}</span>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
+            </button>
           </Card>
         );
       })}

@@ -9,7 +9,7 @@ import { useTranslation } from '@/contexts/translation-context';
 import {
   CALCULATION_METHODS,
   CALCULATION_METHOD_KEYS,
-} from '@/services/prayer-times-service';
+} from '@/services/prayer-times-local';
 
 interface CalculationMethodSelectProps {
   value: number | null | undefined;

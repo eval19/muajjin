@@ -6,8 +6,9 @@ import { SettingsSection } from '@/components/settings/settings-section';
 import { Switch } from '@/components/ui/switch';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
-import { UserSettings } from '@/types';
-import { type FC, useEffect, useState } from 'react';
+import type { UserSettings } from '@/types';
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const HijriSettings: FC = () => {
@@ -23,8 +24,7 @@ const HijriSettings: FC = () => {
   }, [settings]);
 
   const handleSave = () => {
-    updateSettings(localSettings);
-    navigate(-1);
+    if (updateSettings(localSettings)) navigate(-1);
   };
 
   return (

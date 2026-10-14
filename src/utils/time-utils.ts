@@ -1,5 +1,6 @@
-import { LocalPrayerTimes } from '@/services/prayer-times-local';
-import { PrayerTime, ProhibitedTime } from '@/types';
+import { calculatePrayerInstants, formatPrayerClock } from '@/services/prayer-times-local';
+import type { PrayerInstants } from '@/services/prayer-times-local';
+import type { PrayerTime, ProhibitedTime, UserSettings } from '@/types';
 
 // Cache for translation function to avoid circular imports
 let translationFunction: ((key: string) => string) | null = null;
@@ -12,67 +13,19 @@ function t(key: string): string {
   return translationFunction ? translationFunction(key) : key;
 }
 
+let systemTimeFormat: '12h' | '24h' | undefined;
+
+/** AppProvider reconciles the OS preference at startup/resume, never per tick. */
+export function setSystemTimeFormat(format: '12h' | '24h'): void {
+  systemTimeFormat = format;
+}
 /**
  * Detect if the user's system uses 12-hour or 24-hour time format
  * Uses Intl.DateTimeFormat to check the system preference
  */
 export function getSystemTimeFormat(): '12h' | '24h' {
-  try {
-    // Use a test time (13:00 = 1 PM) to check if system shows 12h or 24h
-    const formatter = new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: false, // Let the system decide
-    });
-
-    const parts = formatter.formatToParts(new Date(2021, 0, 1, 13));
-    const hasDayPeriod = parts.some((part) => part.type === 'dayPeriod');
-
-    // If the formatter doesn't use dayPeriod for 13:00, it's 24h format
-    // But we need to check if hour12 is actually being used
-    const formatterWith12h = new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
-      hour12: true,
-    });
-    const formattedWith12h = formatterWith12h.format(new Date(2021, 0, 1, 13));
-
-    // If system shows "1 PM" or similar, it's 12h format
-    // If system shows "13", it's 24h format
-    const formatterAuto = new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
-      hour12: true,
-    });
-    const formattedAuto = formatterAuto.format(new Date(2021, 0, 1, 13));
-
-    // Check if the result contains PM/AM indicator
-    if (formattedAuto.includes('PM') || formattedAuto.includes('AM')) {
-      return '12h';
-    }
-
-    // Check if the hour is shown as 13 (24h) or 1 (12h)
-    const hourPart = parts.find((p) => p.type === 'hour');
-    if (hourPart && hourPart.value === '13') {
-      return '24h';
-    }
-
-    // Fallback: try formatting and check for day period
-    const testFormatter = new Intl.DateTimeFormat(undefined, {
-      hour: 'numeric',
-      minute: 'numeric',
-    });
-    const testFormatted = testFormatter.format(new Date(2021, 0, 1, 13));
-
-    // If it contains AM/PM, it's 12h
-    if (testFormatted.includes('AM') || testFormatted.includes('PM')) {
-      return '12h';
-    }
-
-    // Default to 24h if unable to detect
-    return '24h';
-  } catch {
-    // If detection fails, default to 24h
-    return '24h';
-  }
+  return systemTimeFormat ?? (systemTimeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
+    .resolvedOptions().hour12 ? '12h' : '24h');
 }
 
 /**
@@ -92,6 +45,7 @@ export function resolveTimeFormat(
 export function formatTime(
   time: string,
   format: 'system' | '12h' | '24h' = 'system',
+  translate: (key: string) => string = t,
 ): string {
   if (!time || typeof time !== 'string') {
     return '--:--';
@@ -117,144 +71,201 @@ export function formatTime(
   }
 
   // 12h format with AM/PM
-  const ampm = hoursNum >= 12 ? t('common.pm') : t('common.am');
+  const ampm = hoursNum >= 12 ? translate('common.pm') : translate('common.am');
   const hours12 = hoursNum % 12 || 12;
   return `${hours12}:${minutes} ${ampm}`;
 }
 
-// Adjust time by adding or subtracting minutes
-export function adjustTime(time: string, minutesAdjustment: number): string {
-  if (!time || typeof time !== 'string') {
-    return '--:--';
-  }
 
-  const parts = time.split(':');
-  if (parts.length < 2) {
-    return '--:--';
-  }
-
-  const [hours, minutes] = parts.map((part) => parseInt(part, 10));
-
-  if (isNaN(hours) || isNaN(minutes) || isNaN(minutesAdjustment)) {
-    return time; // Return original time if adjustment fails
-  }
-
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-
-  // Add or subtract minutes
-  date.setMinutes(date.getMinutes() + minutesAdjustment);
-
-  const adjustedHours = String(date.getHours()).padStart(2, '0');
-  const adjustedMinutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${adjustedHours}:${adjustedMinutes}`;
+export function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-// Get the current salat based on current time
-export function getCurrentSalat(salatTimes: PrayerTime[]): PrayerTime | null {
-  const now = new Date();
-  const currentHours = now.getHours();
-  const currentMinutes = now.getMinutes();
+export function addLocalDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
 
-  for (let i = 0; i < salatTimes.length; i++) {
-    const currentSalat = salatTimes[i];
-    const nextSalat = salatTimes[i + 1] || salatTimes[0]; // Loop back to first salat if needed
+export function nextLocalMidnight(date: Date): number {
+  const next = addLocalDays(date, 1);
+  next.setHours(0, 0, 0, 0);
+  return next.getTime();
+}
 
-    const [startHours, startMinutes] = currentSalat.start
-      .split(':')
-      .map(Number);
-    const [endHours, endMinutes] = (currentSalat.end || nextSalat.start)
-      .split(':')
-      .map(Number);
+const MINUTE = 60_000;
+type Translate = (key: string) => string;
 
-    // Convert to minutes for easier comparison
-    const startTotalMinutes = startHours * 60 + startMinutes;
-    const endTotalMinutes = endHours * 60 + endMinutes;
-    const currentTotalMinutes = currentHours * 60 + currentMinutes;
+/** User-entered Jama'ah clocks are the one clock-to-date input boundary. */
+function jamaahTimestamp(clock: string | undefined, start: Date, overnight: boolean): number | undefined {
+  if (!clock) return undefined;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(clock);
+  if (!match) throw new RangeError('Invalid Jama’ah time');
+  const result = new Date(start);
+  result.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  if (overnight && result.getTime() < start.getTime()) {
+    result.setDate(result.getDate() + 1);
+  }
+  return result.getTime();
+}
 
-    // Handle day wraparound for Isha (end time can be "earlier" than start time)
-    if (currentSalat.id === 'isha' && endTotalMinutes < startTotalMinutes) {
-      if (
-        currentTotalMinutes >= startTotalMinutes ||
-        currentTotalMinutes <= endTotalMinutes
-      ) {
-        return currentSalat;
-      }
-    } else {
-      if (
-        currentTotalMinutes >= startTotalMinutes &&
-        currentTotalMinutes <= endTotalMinutes
-      ) {
-        return currentSalat;
-      }
+export function buildPrayerWindows(
+  instants: PrayerInstants,
+  nextFajr: Date,
+  settings: UserSettings,
+  translate: Translate = (key) => key,
+): PrayerTime[] {
+  const definitions = [
+    ['fajr', 'Fajr', instants.fajr, instants.sunrise],
+    ['dhuhr', 'Dhuhr', instants.dhuhr, instants.asr],
+    ['asr', 'Asr', instants.asr, instants.maghrib],
+    ['maghrib', 'Maghrib', instants.maghrib, instants.isha],
+    ['isha', 'Isha', instants.isha, nextFajr],
+  ] as const;
+  return definitions.map(([id, key, start, boundary]) => {
+    if (boundary.getTime() <= start.getTime()) {
+      throw new RangeError('Prayer windows are not chronological');
     }
-  }
-
-  return null;
-}
-
-// Get the next salat based on current time
-export function getNextSalat(salatTimes: PrayerTime[]): PrayerTime | null {
-  const now = new Date();
-  const currentHours = now.getHours();
-  const currentMinutes = now.getMinutes();
-  const currentTotalMinutes = currentHours * 60 + currentMinutes;
-
-  // Sort salats by start time
-  const sortedSalats = [...salatTimes].sort((a, b) => {
-    const [aHours, aMinutes] = a.start.split(':').map(Number);
-    const [bHours, bMinutes] = b.start.split(':').map(Number);
-    return aHours * 60 + aMinutes - (bHours * 60 + bMinutes);
+    const jamaah = settings.jamaahTimes[key];
+    return {
+      id, name: translate(`salats.${id}`),
+      start: formatPrayerClock(start),
+      // Display the preceding minute, including its full 59.999 seconds.
+      end: formatPrayerClock(new Date(boundary.getTime() - MINUTE)),
+      jamaah,
+      startTimestamp: start.getTime(),
+      endTimestamp: boundary.getTime() - 1,
+      jamaahTimestamp: jamaahTimestamp(jamaah, start, id === 'isha'),
+    };
   });
-
-  // Find the next salat
-  for (const salat of sortedSalats) {
-    const [hours, minutes] = salat.start.split(':').map(Number);
-    const salatTotalMinutes = hours * 60 + minutes;
-
-    if (salatTotalMinutes > currentTotalMinutes) {
-      return salat;
-    }
-  }
-
-  // If no next salat found today, return the first salat of the day
-  return sortedSalats[0];
 }
 
-// Get prohibited salat times with start and end ranges
-export function getProhibitedTimes(
-  prayerTimes: LocalPrayerTimes,
-): ProhibitedTime[] {
-  const prohibitedTimes: ProhibitedTime[] = [
-    {
-      id: 'shuruq',
-      name: t('prohibited.shuruq'),
-      start: prayerTimes.Shuruq, // When Fajr ends
-      end: adjustTime(prayerTimes.Shuruq, 14), // 15 minutes after Shuruq
-    },
-    {
-      id: 'zawal',
-      name: t('prohibited.zawal'),
-      start: adjustTime(prayerTimes.Dhuhr, -5), // 5 minutes before Dhuhr
-      end: adjustTime(prayerTimes.Dhuhr, -1), // Until Dhuhr starts
-    },
-    {
-      id: 'ghurub',
-      name: t('prohibited.ghurub'),
-      start: adjustTime(prayerTimes.Maghrib, -15), // 15 minutes before Maghrib
-      end: adjustTime(prayerTimes.Maghrib, -1), // Until Maghrib starts
-    },
-  ];
+export interface FastingEvent {
+  id: 'suhoor' | 'iftar';
+  timestamp: number;
+}
 
-  return prohibitedTimes;
+export interface PrayerDay {
+  instants: PrayerInstants;
+  prayers: PrayerTime[];
+  timeline: PrayerTime[];
+  prohibitedTimes: ProhibitedTime[];
+  prohibitedTimeline: ProhibitedTime[];
+  maghribForHijri?: number;
+  suhoorTimestamp: number;
+  iftarTimestamp: number;
+  fastingEvents: FastingEvent[];
+  suhoorTime: string;
+  iftarTime: string;
+}
+
+/** One input revision produces prayer, prohibited and fasting data together. */
+export function derivePrayerDay(date: Date, settings: UserSettings, translate: Translate = (key) => key, instantsForDate?: (date: Date) => PrayerInstants): PrayerDay {
+  const midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+  const from = midnight.getTime();
+  const until = nextLocalMidnight(midnight);
+  // Coordinates do not imply the device timezone. Adjacent calculation dates
+  // can supply today's events; keep their epochs instead of re-dating clocks.
+  const days = Array.from({ length: 6 }, (_, index) =>
+    instantsForDate ? instantsForDate(addLocalDays(midnight, index - 2)) : calculatePrayerInstants(addLocalDays(midnight, index - 2), settings));
+  const windows = days.slice(0, -1).map((instants, index) =>
+    buildPrayerWindows(instants, days[index + 1].fajr, settings, translate));
+  const timeline = windows.flat();
+  const prayers = windows[2].map((prayer) => timeline.find((candidate) =>
+    candidate.id === prayer.id && candidate.startTimestamp! >= from &&
+    candidate.startTimestamp! < until) ?? prayer);
+  const prohibitedDays = days.slice(0, -1).map((instants) => getProhibitedTimes(instants, translate));
+  const prohibitedTimeline = prohibitedDays.flat();
+  const prohibitedTimes = prohibitedDays[2].map((time) => prohibitedTimeline.find((candidate) =>
+    candidate.id === time.id && candidate.endTimestamp! >= from &&
+    candidate.startTimestamp! < until) ?? time);
+  const fajr = days.find((instants) => instants.fajr.getTime() >= from && instants.fajr.getTime() < until)?.fajr ?? days[2].fajr;
+  const maghrib = days.find((instants) => instants.maghrib.getTime() >= from && instants.maghrib.getTime() < until)?.maghrib;
+  const suhoorTimestamp = fajr.getTime() + settings.suhoorAdjustment * MINUTE;
+  const iftarTimestamp = (maghrib ?? days[2].maghrib).getTime() + settings.iftarAdjustment * MINUTE;
+  const fastingEvents: FastingEvent[] = days.slice(0, -1).flatMap((instants) => [
+    { id: 'suhoor' as const, timestamp: instants.fajr.getTime() + settings.suhoorAdjustment * MINUTE },
+    { id: 'iftar' as const, timestamp: instants.maghrib.getTime() + settings.iftarAdjustment * MINUTE },
+  ]).sort((a, b) => a.timestamp - b.timestamp);
+  return {
+    instants: days[2], prayers, timeline, prohibitedTimes, prohibitedTimeline,
+    maghribForHijri: maghrib?.getTime(),
+    suhoorTimestamp, iftarTimestamp, fastingEvents,
+    suhoorTime: formatPrayerClock(new Date(suhoorTimestamp)),
+    iftarTime: formatPrayerClock(new Date(iftarTimestamp)),
+  };
+}
+
+// Timeline consumers receive already-chronological dated data, not clock strings.
+export function getCurrentSalat(salatTimes: readonly PrayerTime[], now: Date): PrayerTime | null {
+  const timestamp = now.getTime();
+  return salatTimes.find((salat) =>
+    timestamp >= salat.startTimestamp && timestamp <= salat.endTimestamp,
+  ) ?? null;
+}
+
+export function getNextSalat(salatTimes: readonly PrayerTime[], now: Date): PrayerTime | null {
+  return salatTimes.find((salat) => salat.startTimestamp > now.getTime()) ?? null;
+}
+
+export function isWithinWindow(window: Pick<PrayerTime, 'startTimestamp' | 'endTimestamp'>, now: Date): boolean {
+  return now.getTime() >= window.startTimestamp && now.getTime() <= window.endTimestamp;
+}
+
+export function prayerBoundaries(prayers: readonly PrayerTime[]): number[] {
+  return prayers.flatMap((prayer) => [
+    prayer.startTimestamp, prayer.endTimestamp === undefined ? undefined : prayer.endTimestamp + 1,
+  ]).filter((value): value is number => Number.isFinite(value));
+}
+
+export function getPrayerCountdown(prayer: PrayerTime, now: Date) {
+  const start = prayer.startTimestamp;
+  const jamaah = prayer.jamaahTimestamp;
+  const target = jamaah !== undefined && jamaah > now.getTime() ? 'jamaah' : 'end';
+  const timestamp = target === 'jamaah' ? jamaah : prayer.endTimestamp === undefined ? undefined : prayer.endTimestamp + 1;
+  if (!Number.isFinite(start) || !Number.isFinite(timestamp)) {
+    throw new RangeError('Countdown requires dated prayer windows');
+  }
+  return {
+    target,
+    remainingMilliseconds: Math.max(0, timestamp - now.getTime()),
+    progressPercent: Math.min(100, Math.max(0, (now.getTime() - start) / Math.max(1, timestamp - start) * 100)),
+  };
+}
+
+export function getNextFastingEvent(events: readonly FastingEvent[], now: Date): FastingEvent | null {
+  return events.find((event) => event.timestamp > now.getTime()) ?? null;
+}
+
+export function formatCountdown(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  return `${hours < 1 ? '' : `${hours}:`}${String(minutes).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+export function getProhibitedTimes(instants: PrayerInstants, translate: Translate = t): ProhibitedTime[] {
+  const windows: Array<['shuruq' | 'zawal' | 'ghurub', number, number]> = [
+    ['shuruq', instants.sunrise.getTime(), instants.sunrise.getTime() + 15 * MINUTE],
+    ['zawal', instants.dhuhr.getTime() - 5 * MINUTE, instants.dhuhr.getTime()],
+    ['ghurub', instants.maghrib.getTime() - 15 * MINUTE, instants.maghrib.getTime()],
+  ];
+  return windows.map(([id, start, boundary]) => ({
+    id, name: translate(`prohibited.${id}`),
+    start: formatPrayerClock(new Date(start)),
+    end: formatPrayerClock(new Date(boundary - MINUTE)),
+    startTimestamp: start,
+    endTimestamp: boundary - 1,
+  }));
 }
 
 // Format current time
 export function getCurrentTimeFormatted(
   format: 'system' | '12h' | '24h' = 'system',
+  now: Date = new Date(),
 ): string {
-  const now = new Date();
+  // The caller can provide a visible, reconciled clock.
 
   // Resolve the actual format (handle 'system' option)
   const actualFormat = resolveTimeFormat(format);
@@ -298,8 +309,8 @@ export function getDayName(date: Date, short: boolean = true): string {
 }
 
 // Format Gregorian date without day name (e.g., "12 Aug 2026")
-export function formatGregorianDateShort(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+export function formatGregorianDateShort(date: Date, language?: string): string {
+  return new Intl.DateTimeFormat(language?.replace(/_/g, '-'), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

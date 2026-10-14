@@ -2,7 +2,6 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UpdateChecker } from '@/features/update-checker';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { CapacitorApp } from './components/capacitor-app';
@@ -26,7 +25,6 @@ import TimeLocationSettings from './pages/settings/time-location-settings';
 import TranslationSettings from './pages/settings/translation-settings';
 import UpcomingPrayerTimesPage from './features/upcoming-prayer-times/upcoming-prayer-times-page';
 
-const queryClient = new QueryClient();
 
 function ScrollToTopOnNavigate() {
   const { pathname } = useLocation();
@@ -39,7 +37,6 @@ function ScrollToTopOnNavigate() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
     <AppProvider>
       <TooltipProvider>
         <Toaster />
@@ -203,7 +200,6 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AppProvider>
-  </QueryClientProvider>
 );
 
 export default App;

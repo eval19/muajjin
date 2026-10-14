@@ -25,7 +25,7 @@ export function LocationStatusAlert({
           : 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
 
     return (
-      <div className={`flex items-center gap-2 rounded-lg p-3 ${bgClass}`}>
+      <div role={status.type === 'error' ? 'alert' : 'status'} aria-live="polite" className={`flex items-center gap-2 rounded-lg p-3 ${bgClass}`}>
         {status.type === 'success' && (
           <CheckCircle2 className="h-5 w-5 text-green-500" />
         )}
@@ -40,6 +40,8 @@ export function LocationStatusAlert({
 
   return (
     <div
+      role={status.type === 'error' ? 'alert' : 'status'}
+      aria-live="polite"
       className={`flex items-start gap-2 rounded-md border p-3 ${
         status.type === 'success'
           ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200'

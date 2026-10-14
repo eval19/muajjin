@@ -1,20 +1,19 @@
-import { type FC, useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useMemo } from 'react';
+import type { FC } from 'react';
+import { useTranslation } from '@/contexts/translation-context';
+import { useBoundaryClock } from '@/hooks/use-visible-clock';
+import { formatPrayerClock } from '@/services/prayer-times-local';
 import {
-  formatGregorianDateShort,
-  getCurrentTimeFormatted,
+  formatGregorianDateShort, formatTime, nextLocalMidnight,
 } from '@/utils/time-utils';
-import {
-  calculateHijriDate,
-  formatHijriDateLocal,
-  HijriDateResult,
-} from '@/utils/hijri-utils';
+import { calculateHijriDate } from '@/utils/hijri-utils';
 import { MapPin } from 'lucide-react';
 
 interface DateTimeContainerProps {
   hijriAdjustment: number;
   hijriDateChangeAtMaghrib: boolean;
-  maghribTime?: string;
+  maghribTimestamp?: number;
+  date: Date;
   location?: {
     city: string;
     country: string;
@@ -25,68 +24,46 @@ interface DateTimeContainerProps {
 export const DateTimeContainer: FC<DateTimeContainerProps> = ({
   hijriAdjustment,
   hijriDateChangeAtMaghrib,
-  maghribTime,
+  maghribTimestamp,
+  date,
   location,
   timeFormat = 'system',
 }) => {
-  const [currentTime, setCurrentTime] = useState(
-    getCurrentTimeFormatted(timeFormat),
-  );
-  const [hijriDate, setHijriDate] = useState<HijriDateResult | null>(null);
-  const [lastCalculatedDate, setLastCalculatedDate] = useState<string>('');
-
-  // Update current time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(getCurrentTimeFormatted(timeFormat));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeFormat]);
-
-  // Calculate Hijri date locally on component mount, adjustment change, and date change
-  useEffect(() => {
-    const updateHijriDate = () => {
-      const today = new Date().toDateString();
-      if (lastCalculatedDate !== today) {
-        // Calculate Hijri date locally using Umm al-Qura calendar (no API call needed!)
-        const hijri = calculateHijriDate(
-          new Date(),
-          hijriAdjustment,
-          maghribTime,
-          hijriDateChangeAtMaghrib,
-        );
-        setHijriDate(hijri);
-        setLastCalculatedDate(today);
-      }
-    };
-
-    // Update immediately on mount
-    updateHijriDate();
-
-    // Check every minute for date change
-    const timer = setInterval(updateHijriDate, 60000);
-
-    return () => clearInterval(timer);
-  }, [
-    hijriAdjustment,
-    hijriDateChangeAtMaghrib,
-    maghribTime,
-    lastCalculatedDate,
-  ]);
+  const { t, activeTranslation } = useTranslation();
+  const boundaries = useMemo(() => [
+    nextLocalMidnight(date), maghribTimestamp,
+  ].filter((value): value is number => Number.isFinite(value)), [date, maghribTimestamp]);
+  // The visible clock has no seconds; update at minute and date boundaries only.
+  const now = useBoundaryClock(boundaries, 60_000);
+  const currentTime = formatTime(formatPrayerClock(now), timeFormat, t);
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const day = now.getDate();
+  const afterMaghrib = hijriDateChangeAtMaghrib &&
+    maghribTimestamp !== undefined && now.getTime() >= maghribTimestamp;
+  const hijri = useMemo(() => {
+    try {
+      return calculateHijriDate(new Date(year, month, day), hijriAdjustment + (afterMaghrib ? 1 : 0));
+    } catch {
+      return null;
+    }
+  }, [year, month, day, hijriAdjustment, afterMaghrib]);
+  const monthLabel = hijri ? t(`hijri.months.${hijri.month.number}`) : '';
 
   return (
     <div className="space-y-3 text-center">
       {/* Large Clock Time */}
       <div className="text-5xl font-bold tracking-tighter text-primary">
-        {currentTime.split(':').slice(0, 2).join(':')}
+        {currentTime}
       </div>
 
       {/* Date Row */}
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        <span>{formatGregorianDateShort(new Date())}</span>
+        <span>{formatGregorianDateShort(now, activeTranslation?.meta.languageCode)}</span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-        <span>{formatHijriDateLocal(hijriDate)}</span>
+        <span>{hijri
+          ? `${hijri.day} ${monthLabel} ${hijri.year}`
+          : t('errors.hijriDateUnavailable')}</span>
       </div>
 
       {/* Location Badge */}

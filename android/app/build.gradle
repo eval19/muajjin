@@ -1,10 +1,16 @@
 apply plugin: 'com.android.application'
 
 def normalizedEpochValue = rootProject.ext.getReproducibleSourceDateEpoch(project)
+def buildMode = (project.findProperty('buildMode') ?: 'nongithub').toString()
+if (!(buildMode in ['github', 'nongithub'])) {
+    throw new GradleException("buildMode must be github or nongithub")
+}
+def signingRequested = project.findProperty('signRelease') == 'true'
 
 android {
     namespace = "org.muslimtechnician.muajjin"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = "36.0.0"
 
     buildFeatures {
         buildConfig = true
@@ -14,8 +20,8 @@ android {
         applicationId "org.muslimtechnician.muajjin"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 271
-        versionName "2.7.1"
+        versionCode 280
+        versionName "2.8.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -29,16 +35,22 @@ android {
         )
     }
 
-    def keystorePropertiesFile = rootProject.file("local.properties")
-    def keystoreProperties = new Properties()
-    if (keystorePropertiesFile.exists()) {
-        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    }
-
-    signingConfigs {
-        release {
-        if (keystoreProperties['keystore.file']) {
-            storeFile file(keystoreProperties['keystore.file'])
+    // Release assembly is unsigned unless signing is explicitly requested.
+    // Never consume a developer's keystore just because local.properties exists.
+    if (signingRequested) {
+        def keystorePropertiesFile = rootProject.file("local.properties")
+        def keystoreProperties = new Properties()
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+        }
+        ['keystore.file', 'keystore.password', 'keystore.key.alias', 'keystore.key.password'].each { key ->
+            if (!keystoreProperties[key]) {
+                throw new GradleException("Explicit release signing requires ${key} in local.properties")
+            }
+        }
+        signingConfigs {
+            release {
+                storeFile file(keystoreProperties['keystore.file'])
                 storePassword keystoreProperties['keystore.password']
                 keyAlias keystoreProperties['keystore.key.alias']
                 keyPassword keystoreProperties['keystore.key.password']
@@ -56,7 +68,9 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (signingRequested) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -84,8 +98,32 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "app-release.apk"
+            def signatureSuffix = variant.buildType.name == 'release' && !signingRequested ? '-unsigned' : ''
+            outputFileName = "muajjin-${variant.versionName}-${variant.versionCode}-${buildMode}-${variant.name}${signatureSuffix}.apk"
         }
+    }
+}
+
+// Reject an APK/AAB labelled for another distribution or source epoch.
+// Pure native unit tests do not require web assets; only packaging does.
+def validateBundledWebInputs = tasks.register('validateBundledWebInputs') {
+    doLast {
+        def manifest = file('src/main/assets/public/build-info.json')
+        if (!manifest.isFile()) {
+            throw new GradleException('Build web assets and Capacitor sync before Android packaging')
+        }
+        def inputs = new groovy.json.JsonSlurper().parse(manifest)
+        if (inputs.mode != buildMode) {
+            throw new GradleException("Bundled web mode ${inputs.mode} does not match Android ${buildMode}")
+        }
+        if (inputs.sourceDateEpoch.toString() != normalizedEpochValue.toString()) {
+            throw new GradleException('Bundled web source epoch does not match Android sourceDateEpoch')
+        }
+    }
+}
+tasks.configureEach {
+    if (name in ['packageDebug', 'packageRelease', 'bundleDebug', 'bundleRelease']) {
+        dependsOn(validateBundledWebInputs)
     }
 }
 

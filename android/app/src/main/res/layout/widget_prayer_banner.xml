@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_banner_root"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card_bg"
@@ -11,23 +13,27 @@
     android:paddingBottom="10dp">
 
     <!-- Top Row: Left Hero (Label + Countdown) & Right Context (2 Lines) -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <!-- Left: Label & Countdown -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:orientation="vertical">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="start">
 
             <!-- Normal Label (Accent) -->
             <TextView
                 android:id="@+id/tv_banner_label"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="Asr in"
                 android:textColor="@color/w_accent"
                 android:textSize="12sp"
@@ -37,8 +43,10 @@
             <!-- Warm State Label (Warning Amber) -->
             <TextView
                 android:id="@+id/tv_banner_label_warm"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="Asr in"
                 android:textColor="@color/w_warm_text"
                 android:textSize="12sp"
@@ -60,17 +68,19 @@
 
         <!-- Right: 2 Right-Aligned Context Lines -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="end">
 
             <TextView
                 android:id="@+id/tv_banner_footer_top"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="Now: Dhuhr"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
@@ -78,15 +88,18 @@
 
             <TextView
                 android:id="@+id/tv_banner_footer_bottom"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
+                android:gravity="end"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:text="Asr at 15:12"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:includeFontPadding="false" />
         </LinearLayout>
-    </RelativeLayout>
+    </LinearLayout>
 
     <!-- Expanding Spacer -->
     <FrameLayout

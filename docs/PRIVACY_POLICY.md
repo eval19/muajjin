@@ -1,6 +1,6 @@
 # Privacy Policy - Muajjin Salat Times App
 
-**Last Updated:** February 2026
+**Last Updated:** October 2026
 
 ## 1. Overview
 
@@ -11,16 +11,15 @@ Muajjin is a privacy-focused Islamic Salat times application. We respect your pr
 ### 2.1 Location Data
 
 - **Purpose:** To calculate accurate Salat times based on your geographical location
-- **Usage:** Location coordinates (latitude and longitude) are used solely for Salat time calculations
-- **Storage:** All location data is stored locally on your device
-- **Sharing:** We do not share your location with any third parties
+- **Usage:** Coordinates support local prayer/fasting calculations, Qibla and native schedule renewal.
+- **Storage:** Saved coordinates and location labels are kept in local app/browser storage.
+- **Network exception:** When automatic GPS detection requests a city/country name, coordinates are sent to OpenStreetMap Nominatim. IP fallback providers receive your IP address. Manual entry does not require these services; see section 3.2.
 
 ### 2.2 Permissions Requested
 
-- **Location Permission:** Used to:
-  - Detect your GPS location for automatic Salat time calculation
-  - Provide IP-based location fallback (when GPS is unavailable)
-  - Allow manual location entry by users
+- **Location permission:** Used only for user-initiated GPS detection. Approximate/coarse permission is supported where the platform provides it. Requests are bounded and cancelled when obsolete; there is no continuous background location tracking.
+- IP lookup and manual entry do **not** require GPS permission.
+- **Notifications/exact alarms:** Android permissions and device settings control optional native notification delivery and precise transition alarms. Widgets use Android’s widget-host APIs. Permission denial does not disable local calculations/manual location.
 
 ### 2.3 No User Accounts
 
@@ -32,10 +31,10 @@ Muajjin is a privacy-focused Islamic Salat times application. We respect your pr
 
 ### 3.1 Local Storage
 
-- All app settings and preferences are stored locally on your device
-- No data is transmitted to external servers except for:
-  - IP geolocation services (for location detection fallback)
-  - GitHub releases (for app update checks - when enabled)
+- Settings, Qaza counts and customization use local storage; native schedule/configuration/presentation use Android private preferences.
+- Custom translations stay local. Verified custom font binaries use IndexedDB; legacy base64 data is retained until successful durable migration.
+- Existing network exceptions are IP lookup, optional GPS reverse geocoding, and GitHub update checks/downloads in the GitHub distribution. Muajjin has no account, analytics or advertising backend.
+- Android’s manifest permits OS-managed app backup. What is backed up/restored depends on Android, device policy and user settings; Muajjin does not provide its own cloud backup.
 
 ### 3.2 Third-Party Services
 
@@ -44,23 +43,23 @@ Muajjin is a privacy-focused Islamic Salat times application. We respect your pr
 - ip-api.com (HTTP)
 - ipwhois.app (HTTPS)
 - These services receive your IP address to determine approximate location
-- No personal data is shared beyond IP address
+- IP addresses are personal data; approximate location may be returned. The HTTP provider is not encrypted and may be blocked by platform policy; HTTPS is the existing fallback. Provider privacy policies apply.
 
 **OpenStreetMap Nominatim API:**
 
 - Used to reverse geocode coordinates into city/country names
-- Receives only coordinates (latitude, longitude)
-- No personal data transmitted
+- Receives the requested coordinates plus ordinary request information such as IP address and user-agent, not your Qaza history, saved settings or custom imports.
+- Coordinates are personal data. Address lookup is optional for local calculations; failure retains valid coordinates without inventing a city/country.
 
 ## 4. Data Sharing & Selling
 
-### 4.1 No Data Sharing
+### 4.1 No Selling or Advertising
 
-- We do not sell, rent, or share your personal data with third parties
+- We do not sell or rent personal data. Automatic detection and GitHub-only updates contact the services disclosed above; we do not claim those requests transmit no personal data.
 - No data is used for advertising purposes
 - No analytics or tracking services are integrated
 
-### 4.2 No Third-Party SDKs
+### 4.2 No Advertising or Analytics SDKs
 
 - No Google Analytics
 - No Facebook SDK
@@ -78,22 +77,21 @@ Muajjin is a privacy-focused Islamic Salat times application. We respect your pr
 ### 5.2 Data Deletion
 
 - To delete all app data: Uninstall the app or clear app data in device settings
-- Since all data is stored locally, uninstalling removes all data permanently
+- Clearing/uninstalling removes the app’s active local data, but OS-managed backups/restores are governed by platform settings. Browser deployments also require clearing the relevant site’s localStorage/IndexedDB. We cannot promise uninstall erases every OS backup.
 
 ### 5.3 Data Access
 
-- You can view and modify all data within the app's Settings screen
+- Settings, Qaza controls and translation/font controls expose the supported user data operations. System app/site storage controls can clear the complete local dataset.
 
 ## 6. Children's Privacy
 
 - Muajjin is suitable for users of all ages
-- No account creation means no personal data is collected from any users
+- No account or identity collection is required. Coordinates/IP addresses used in automatic detection are still personal data, regardless of age.
 
 ## 7. Data Retention
 
-- All data is retained only on your device
-- Data is retained until you uninstall the app or clear app data
-- No backup or cloud storage of user data
+- Local app data persists until removed through app/site controls or uninstall, subject to platform backup/restore.
+- Muajjin operates no cloud-storage service; Android OS-managed backup may be enabled by the user/device.
 
 ## 8. Changes to This Privacy Policy
 
@@ -128,4 +126,4 @@ For privacy-related inquiries:
 
 ---
 
-_This privacy policy was last updated on February 2026 and applies to version 2.1.0 and later of Muajjin._
+_This policy describes the current Muajjin storage/network behavior; Android and third-party service policies also apply._

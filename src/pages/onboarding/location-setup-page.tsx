@@ -1,9 +1,6 @@
 import { LabeledInputField } from '@/components/form/labeled-input-field';
 import { LocationAutoDetectButton } from '@/components/location/location-auto-detect-button';
-import {
-  LocationStatus,
-  LocationStatusAlert,
-} from '@/components/location/location-status-alert';
+import { LocationStatusAlert } from '@/components/location/location-status-alert';
 import { OnboardingPageLayout } from '@/components/onboarding/onboarding-page-layout';
 import { OnboardingStepHeader } from '@/components/onboarding/onboarding-step-header';
 import { Button } from '@/components/ui/button';
@@ -11,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ONBOARDING_DEFAULTS } from '@/constants/default-settings';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
-import { detectLocation, LocationResult } from '@/services/location-service';
+import { useLocationDetection } from '@/hooks/use-location-detection';
 import { MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,79 +17,27 @@ export default function LocationSetupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { updateSettings } = useApp();
-  const [location, setLocation] = useState<{
-    city: string;
-    country: string;
-    latitude: number;
-    longitude: number;
-  }>({
-    city: '',
-    country: '',
-    latitude: 0,
-    longitude: 0,
+  const [location, setLocation] = useState({ city: '', country: '', latitude: '', longitude: '' });
+  const { detect, cancel, isDetecting, status } = useLocationDetection((result) => {
+    setLocation({ city: result.city, country: result.country, latitude: String(result.latitude), longitude: String(result.longitude) });
   });
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus | null>(
-    null,
-  );
-
-  const handleAutoDetect = async () => {
-    setIsDetecting(true);
-    setLocationStatus({
-      type: 'info',
-      message: t('onboarding.detectingGps'),
-    });
-
-    try {
-      const result: LocationResult = await detectLocation();
-
-      setLocation({
-        city: result.city,
-        country: result.country,
-        latitude: result.latitude,
-        longitude: result.longitude,
-      });
-
-      setLocationStatus({
-        type: 'success',
-        message: `${result.city}, ${result.country}`,
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error && error.message.startsWith('errors.')
-          ? t(error.message)
-          : error instanceof Error
-            ? error.message
-            : t('errors.locationFailed');
-      setLocationStatus({
-        type: 'error',
-        message: errorMessage,
-      });
-    } finally {
-      setIsDetecting(false);
-    }
+  const latitude = location.latitude.trim() === '' ? NaN : Number(location.latitude);
+  const longitude = location.longitude.trim() === '' ? NaN : Number(location.longitude);
+  const valid = Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
+    Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+  const changeLocation = (key: 'city' | 'latitude' | 'longitude', value: string) => {
+    cancel();
+    setLocation((previous) => ({ ...previous, [key]: value }));
   };
-
   const handleContinue = () => {
-    // Save to global settings via AppContext and continue
-    const settings = {
-      latitude: location.latitude || ONBOARDING_DEFAULTS.latitude,
-      longitude: location.longitude || ONBOARDING_DEFAULTS.longitude,
-      city: location.city || ONBOARDING_DEFAULTS.city,
-      country: location.country || ONBOARDING_DEFAULTS.country,
-      method: ONBOARDING_DEFAULTS.method,
-      madhab: ONBOARDING_DEFAULTS.madhab,
-      timeFormat: 'system' as const,
-      jamaahTimes: {},
-      suhoorAdjustment: 0,
-      iftarAdjustment: 0,
-      hijriAdjustment: 0,
-      hijriDateChangeAtMaghrib: true,
-      manualLocation: true,
-    };
-
-    updateSettings(settings);
-    navigate('/onboarding/settings', { replace: true });
+    if (!valid || !location.city.trim()) return;
+    cancel();
+    if (updateSettings({
+      latitude, longitude, city: location.city.trim(), country: location.country,
+      method: ONBOARDING_DEFAULTS.method, madhab: ONBOARDING_DEFAULTS.madhab,
+      timeFormat: 'system', jamaahTimes: {}, suhoorAdjustment: 0, iftarAdjustment: 0,
+      hijriAdjustment: 0, hijriDateChangeAtMaghrib: true, manualLocation: true,
+    })) navigate('/onboarding/settings', { replace: true });
   };
 
   return (
@@ -113,7 +58,7 @@ export default function LocationSetupPage() {
               label={t('onboarding.locationName')}
               placeholder={t('onboarding.locationPlaceholder')}
               value={location.city}
-              onChange={(value) => setLocation({ ...location, city: value })}
+              onChange={(value) => changeLocation('city', value)}
               containerClassName="space-y-2"
             />
 
@@ -125,13 +70,11 @@ export default function LocationSetupPage() {
                 step="0.0001"
                 label={t('onboarding.latitude')}
                 placeholder={t('onboarding.latitudePlaceholder')}
-                value={location.latitude || ''}
-                onChange={(value) =>
-                  setLocation({
-                    ...location,
-                    latitude: parseFloat(value) || 0,
-                  })
-                }
+                value={location.latitude}
+                onChange={(value) => changeLocation('latitude', value)}
+                min={-90}
+                max={90}
+                required
                 containerClassName="space-y-2"
               />
 
@@ -142,13 +85,11 @@ export default function LocationSetupPage() {
                 step="0.0001"
                 label={t('onboarding.longitude')}
                 placeholder={t('onboarding.longitudePlaceholder')}
-                value={location.longitude || ''}
-                onChange={(value) =>
-                  setLocation({
-                    ...location,
-                    longitude: parseFloat(value) || 0,
-                  })
-                }
+                value={location.longitude}
+                onChange={(value) => changeLocation('longitude', value)}
+                min={-180}
+                max={180}
+                required
                 containerClassName="space-y-2"
               />
             </div>
@@ -157,11 +98,11 @@ export default function LocationSetupPage() {
             <LocationAutoDetectButton
               variant="secondary"
               isDetecting={isDetecting}
-              onClick={handleAutoDetect}
+              onClick={detect}
             />
 
             {/* Status Message */}
-            <LocationStatusAlert status={locationStatus} mode="onboarding" />
+            <LocationStatusAlert status={status} mode="onboarding" />
           </div>
         </CardContent>
       </Card>
@@ -171,7 +112,7 @@ export default function LocationSetupPage() {
         onClick={handleContinue}
         size="lg"
         className="w-full"
-        disabled={!location.city}>
+        disabled={!location.city.trim() || !valid}>
         {t('onboarding.continue')}
       </Button>
     </OnboardingPageLayout>

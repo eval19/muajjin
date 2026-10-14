@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_wide_root"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card_bg"
@@ -11,40 +13,44 @@
     android:paddingBottom="12dp">
 
     <!-- Top Row: Left Hero (Label + Countdown) & Right Context (2 Lines) -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <!-- Left: Label & Big Countdown -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:orientation="vertical">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="start">
 
             <!-- Normal Label (Accent) -->
             <TextView
                 android:id="@+id/tv_wide_label"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Asr in"
                 android:textColor="@color/w_accent"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:singleLine="true"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
 
             <!-- Warm State Label (Warning Amber) -->
             <TextView
                 android:id="@+id/tv_wide_label_warm"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Asr in"
                 android:textColor="@color/w_warm_text"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:singleLine="true"
+                android:ellipsize="end"
                 android:includeFontPadding="false"
                 android:visibility="gone" />
 
@@ -63,26 +69,27 @@
 
         <!-- Right: 2 Right-Aligned Context Lines -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="end">
 
             <TextView
                 android:id="@+id/tv_wide_footer_top"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Now: Dhuhr"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="12sp"
                 android:singleLine="true"
+                android:gravity="end"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
 
             <TextView
                 android:id="@+id/tv_wide_footer_bottom"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
                 android:text="Asr at 3:06 PM"
@@ -90,9 +97,11 @@
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:singleLine="true"
+                android:gravity="end"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
-    </RelativeLayout>
+    </LinearLayout>
 
     <!-- Normal Progress Bar (4dp) directly below hero section -->
     <ProgressBar
@@ -145,16 +154,18 @@
             android:background="@drawable/widget_chip_transparent">
             <TextView
                 android:id="@+id/tv_chip_fajr_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Fajr"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_fajr_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="04:26"
@@ -162,7 +173,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
 
@@ -181,16 +195,18 @@
             android:background="@drawable/widget_chip_transparent">
             <TextView
                 android:id="@+id/tv_chip_sunrise_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Sunrise"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_sunrise_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="05:44"
@@ -198,7 +214,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
 
@@ -217,17 +236,19 @@
             android:background="@drawable/widget_chip_current">
             <TextView
                 android:id="@+id/tv_chip_dhuhr_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Dhuhr"
                 android:textColor="@color/w_accent"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_dhuhr_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="11:43"
@@ -235,7 +256,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
 
@@ -254,16 +278,18 @@
             android:background="@drawable/widget_chip_next">
             <TextView
                 android:id="@+id/tv_chip_asr_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Asr"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_asr_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="03:06"
@@ -271,7 +297,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
 
@@ -290,16 +319,18 @@
             android:background="@drawable/widget_chip_transparent">
             <TextView
                 android:id="@+id/tv_chip_maghrib_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Maghrib"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_maghrib_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="05:41"
@@ -307,7 +338,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
 
@@ -326,16 +360,18 @@
             android:background="@drawable/widget_chip_transparent">
             <TextView
                 android:id="@+id/tv_chip_isha_name"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Isha"
                 android:textColor="@color/w_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
             <TextView
                 android:id="@+id/tv_chip_isha_time"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="07:11"
@@ -343,7 +379,10 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFeatureSettings="tnum"
-                android:singleLine="true"
+                android:singleLine="false"
+                android:maxLines="2"
+                android:gravity="center"
+                android:ellipsize="end"
                 android:includeFontPadding="false" />
         </LinearLayout>
     </LinearLayout>

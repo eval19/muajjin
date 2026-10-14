@@ -41,8 +41,7 @@ export default function FinalSettingsPage() {
   const isReadyToFinish = settings.madhab !== null;
   const handleFinish = () => {
     // Save all settings and mark onboarding as completed
-    updateSettings({ ...settings, onboardingComplete: true });
-    navigate('/', { replace: true });
+    if (updateSettings({ ...settings, onboardingComplete: true })) navigate('/', { replace: true });
   };
 
   return (

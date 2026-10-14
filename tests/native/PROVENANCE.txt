@@ -1,0 +1,133 @@
+Muajjin native engine provenance and parity contract
+===================================================
+
+Authoritative port inputs are the installed, locked packages, not an unrelated
+Java library with a similar name. No new application dependency was introduced.
+
+adhan 4.4.3 (node_modules/adhan/package.json), MIT, Copyright (c) 2016 Batoul Apps
+Repository: https://github.com/batoulapps/adhan-js
+Release source: https://github.com/batoulapps/adhan-js/tree/v4.4.3/src
+Exact installed source paths ported:
+  node_modules/adhan/lib/esm/PrayerTimes.js
+  node_modules/adhan/lib/esm/CalculationMethod.js
+  node_modules/adhan/lib/esm/CalculationParameters.js
+  node_modules/adhan/lib/esm/Astronomical.js
+  node_modules/adhan/lib/esm/SolarCoordinates.js
+  node_modules/adhan/lib/esm/SolarTime.js
+  node_modules/adhan/lib/esm/TimeComponents.js
+  node_modules/adhan/lib/esm/DateUtils.js
+  node_modules/adhan/lib/esm/MathUtils.js
+  node_modules/adhan/lib/esm/Madhab.js
+Factory documentation: node_modules/adhan/METHODS.md
+Original full license: node_modules/adhan/LICENSE
+
+@umalqura/core 0.0.7 (node_modules/@umalqura/core/package.json), MIT,
+Copyright (c) 2019 Alaa Masoud
+Repository: https://github.com/umalqura/umalqura
+Exact installed source: node_modules/@umalqura/core/dist/index.esm.js
+Conversion: lines 188-215; exact mapping: lines 574-787.
+Original table attribution is preserved: generated from the .NET BCL by upstream.
+Original full license: node_modules/@umalqura/core/LICENSE
+
+Both full licenses ship in android/app/src/main/assets/native-engine-licenses.txt,
+so the notices are present in both the source checkout and packaged Android app.
+
+Native contract
+---------------
+NativePrayerCalculator.calculate(Calendar,double,double,int,int) returns epoch
+milliseconds in order [fajr,sunrise,dhuhr,asr,maghrib,isha]. Calendar local date
+components and its timezone, not coordinates or the global default timezone,
+select the calculation date. IDs 1,2,3,4,5,7,8,9,10,11,12,15 match the web mapping;
+12 and 15 both select MoonsightingCommittee. Madhab 0/1 gives shadow factors 1/2.
+Factories retain their method adjustments, default MiddleOfTheNight high-latitude
+rule, unresolved polar circles, General shafaq, Singapore UP rounding (including
+advancing a full minute at :00), Tehran Maghrib 4.5-degree angle, and moonsighting
+seasonal and latitude >=55 behavior. Decimal hours are floored by component;
+JavaScript Date's millisecond truncation and fractional-night milliseconds are
+retained. There is no tolerance added to conceal a discrepancy.
+Invalid arguments throw IllegalArgumentException. An invalid final astronomical
+event throws IllegalStateException, never a made-up time or epoch-zero sentinel.
+The coordinator must catch that condition and retain/produce honest recovery.
+The Gregorian year argument range is AD 1..9999.
+
+NativeHijriCalculator.calculate(Calendar,int,boolean,long,long) returns
+[day,month1Based,year]. Rollover is inclusive at now >= maghrib when enabled.
+Adjustment/rollover use local Calendar addition without mutating the input.
+Conversion uses exact Gregorian date ordinals, not midnight epochs divided by
+86400000. This intentionally fixes @umalqura/core's DST/fractional-day bug without
+changing any table entry. Supported Gregorian range is 1900-04-30..2077-11-16,
+corresponding to Hijri 1318-01-01..1500-12-30. Out-of-range conversion rejects
+IllegalArgumentException rather than substituting an approximate calendar.
+
+Reference fixtures
+------------------
+Committed results: tests/native/engine-parity.jsonl
+Permanent generator: tests/native/generate-fixtures.mjs
+Tests: android/app/src/test/java/org/muslimtechnician/muajjin/NativeEngineParityTest.java
+
+From repository root, regenerate using an existing runtime:
+  node tests/native/generate-fixtures.mjs
+or:
+  bun tests/native/generate-fixtures.mjs
+
+The generator runs the REAL installed JavaScript engines in fresh processes with
+explicit TZ, checks their exact versions, and records SHA-256 source provenance.
+Prayer references are actual adhan epoch values, not Java results or a forwarding
+mock. Invalid upstream events are recorded as null, which requires a Java throw.
+Hijri references use the actual upstream table in a UTC subprocess after local
+calendar adjustment/rollover, so expected dates are DST-safe rather than preserving
+the known upstream epoch-subtraction defect. Every supported Hijri month has
+first/last-day fixtures; locations, both madhabs, all methods, leap day, all
+seasons, DST transitions, antimeridians, zero coordinates and polar outcomes are
+included. Pacific/Apia 2011-12-29 covers a skipped next local date.
+
+After all native integration edits land, from android/ with JDK 21:
+  gradlew.bat testDebugUnitTest --tests org.muslimtechnician.muajjin.NativeEngineParityTest
+Unix equivalent:
+  ./gradlew testDebugUnitTest --tests org.muslimtechnician.muajjin.NativeEngineParityTest
+
+The engines and the JUnit test also compile/run without Gradle or Android APIs.
+Use javac from JDK 21 with the repository's existing JUnit 4.13.2 and Hamcrest jars,
+compile these five files to a temporary test output directory:
+  android/app/src/main/java/org/muslimtechnician/muajjin/NativeCalendarMath.java
+  android/app/src/main/java/org/muslimtechnician/muajjin/NativeSolarMath.java
+  android/app/src/main/java/org/muslimtechnician/muajjin/NativePrayerCalculator.java
+  android/app/src/main/java/org/muslimtechnician/muajjin/NativeHijriCalculator.java
+  android/app/src/test/java/org/muslimtechnician/muajjin/NativeEngineParityTest.java
+Then run java with that directory plus existing JUnit/Hamcrest on the classpath:
+  org.junit.runner.JUnitCore org.muslimtechnician.muajjin.NativeEngineParityTest
+If not running inside this checkout, pass JVM option:
+  -Dmuajjin.engineFixtures=<absolute-path-to-tests/native/engine-parity.jsonl>
+Use ';' for Windows classpath separators and ':' for Unix. No Android SDK or
+Android org.json substitute is required for this focused engine test.
+
+Cost and maintenance
+--------------------
+The port adds four small pure-Java production files and one license asset, no jar,
+network endpoint, periodic timer, Android dependency or service. The Hijri table
+contains 367 int entries (183 flags + 184 year starts), 1468 bytes of numeric
+payload before object overhead; starts are converted in place only once. Fixtures,
+the generator and JVM tests are not application assets and do not add APK size.
+Compressed APK/DEX increase versus the original application remains unmeasured.
+Integrated unsigned builds and strict payload comparisons are recorded in
+tasks/evidence.md; payload equality is not signature or pristine-source proof.
+
+A future upstream upgrade requires deliberate source comparison, preserving MIT
+notices, version/provenance update and fixture regeneration plus exact JVM parity.
+Do not independently replace this port with an approximate astronomical or Hijri
+implementation. Platform timezone databases may differ for historical changed
+rules (especially date-line changes), and Java/JavaScript floating-point libm
+results can sit near rounding boundaries; the cross-language matrix detects such
+mismatches but cannot prove every date/coordinate. Device-zone policy intentionally
+does not infer a timezone from manually selected coordinates. The finite Hijri
+table must be extended from a licensed, authoritative source before November 2077;
+fail honestly outside it. Polar no-sunrise/no-sunset dates remain unresolved as in
+the configured web engine, not a new religious high-latitude policy.
+
+Verification status
+-------------------
+The implementation worker generates reference data but deliberately does not run
+builds, lint, formatters or JVM parity checks mid-flight. The integration owner
+must run the generator and the focused JVM test after integration and record the
+actual results. This file is a command/provenance contract, not a claim of passing
+verification or measured APK costs.

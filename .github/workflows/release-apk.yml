@@ -1,148 +1,117 @@
-name: Build Release APK
+name: Build unsigned release artifacts
 
+# Tag builds and explicit manual requests produce CI artifacts only. There is
+# no keystore access, signing, GitHub Release mutation, or automatic publishing.
 on:
-  release:
-    types: [published]
+  push:
+    tags: ['v[0-9]*']
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Source ref to build (tag or commit; no implicit latest release)'
+        type: string
+        required: true
+        default: main
+      source_date_epoch:
+        description: 'Actual build epoch in seconds; empty means selected source commit timestamp'
+        type: string
+        default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  quality:
+    uses: ./.github/workflows/build-apk.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+      full_native: true
+
+  release:
+    needs: quality
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [nongithub, github]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
-
-      - name: Setup Node.js LTS
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
-
-      - name: Get latest release version
-        id: get_version
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          else
-            VERSION=$(gh release view --json tagName -q .tagName)
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+          node-version: '22.14.0'
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
+      - uses: actions/setup-java@v4
         with:
-          path: |
-            ~/.bun/install/cache
-            node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock', 'package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Set SOURCE_DATE_EPOCH
-        run: |
-          # Derive build timestamp from the release tag's commit time
-          TAG="${{ steps.get_version.outputs.VERSION }}"
-          COMMIT="$(git rev-list -n 1 "$TAG")"
-          EPOCH="$(git show -s --format=%ct "$COMMIT")"
-          echo "Using tag '$TAG' commit timestamp: $EPOCH"
-          echo "SOURCE_DATE_EPOCH=$EPOCH" >> $GITHUB_ENV
-          echo "Using SOURCE_DATE_EPOCH=$EPOCH"
-          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
-
-      - name: Build web assets
-        run: bun run build:github
-
-      - name: Sync to Android (Capacitor)
-        run: bunx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Create local.properties
-        run: |
-          echo "keystore.file=/tmp/keystore.jks" > android/local.properties
-          echo "keystore.password=${{ secrets.KEYSTORE_PASSWORD }}" >> android/local.properties
-          echo "keystore.key.alias=${{ secrets.KEY_ALIAS }}" >> android/local.properties
-          echo "keystore.key.password=${{ secrets.KEY_PASSWORD }}" >> android/local.properties
-
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/keystore.jks
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-
-      - name: Build Release APK
-        run: |
-          cd android
-          ./gradlew clean assembleRelease -PsourceDateEpoch="$SOURCE_DATE_EPOCH" --stacktrace
-
-      - name: Rename APK
-        run: |
-          cd android/app/build/outputs/apk/release
-          mv app-release.apk muajjin-${{ steps.get_version.outputs.VERSION }}.apk
-
-      - name: Record reproducible checksums
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/release/muajjin-${VERSION}.apk"
-          CHECKSUM_FILE="reproducible-checksums.txt"
-
-          : > "$CHECKSUM_FILE"
-          printf "APK\n" >> "$CHECKSUM_FILE"
-          sha256sum "$APK" >> "$CHECKSUM_FILE"
-          sha512sum "$APK" >> "$CHECKSUM_FILE"
-
-          if [[ -d dist ]]; then
-            printf "\nWeb bundle\n" >> "$CHECKSUM_FILE"
-            find dist -type f -print0 | sort -z | xargs -0 sha256sum >> "$CHECKSUM_FILE"
-          fi
-
-          cat >> "$CHECKSUM_FILE" << EOF
-
-          Build Metadata
-          SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}
-          BUILD_MODE=github
-          GIT_TAG=${RELEASE_TAG}
-          EOF
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Validate selected source identity
+        id: identity
         env:
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          BUILD_MODE: ${{ matrix.mode }}
+          REQUESTED_EPOCH: ${{ inputs.source_date_epoch }}
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(bun -p 'require("./package.json").version')
+          if [[ "$EVENT_NAME" == push && "$TAG_NAME" != "v$version" ]]; then
+            echo 'Release tag must exactly match package/native version.' >&2
+            exit 1
+          fi
+          epoch="${REQUESTED_EPOCH:-$(git show -s --format=%ct HEAD)}"
+          echo "epoch=$epoch" >> "$GITHUB_OUTPUT"
+          echo "name=$(python3 -B scripts/build-identity.py --mode "$BUILD_MODE" --variant release)" >> "$GITHUB_OUTPUT"
+      - name: Controlled unsigned release assembly
+        env:
+          BUILD_MODE: ${{ matrix.mode }}
+          BUILD_EPOCH: ${{ steps.identity.outputs.epoch }}
+        run: bun run reproducible:build --install --mode "$BUILD_MODE" --time "$BUILD_EPOCH" --output "reproducible-output/$BUILD_MODE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.identity.outputs.name }}
+          path: |
+            reproducible-output/${{ matrix.mode }}/${{ steps.identity.outputs.name }}
+            reproducible-output/${{ matrix.mode }}/build-metadata.txt
+          if-no-files-found: error
 
-      - name: Upload Release Asset
+  publish:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: "Muajjin ${{ github.ref_name }} (Enhanced Edition)"
+          tag_name: ${{ github.ref_name }}
           files: |
-            ./android/app/build/outputs/apk/release/muajjin-${{ steps.get_version.outputs.VERSION }}.apk
-            ./reproducible-checksums.txt
+            release-artifacts/**/*.apk
+            release-artifacts/**/build-metadata.txt
+          draft: false
+          prerelease: false
+          body: |
+            ### 🕌 Muajjin ${{ github.ref_name }} (Enhanced Edition)
+
+            An enhanced, ultra-efficient, and truly offline-first Salat & Saum companion for Android and Web.
+
+            #### 🌟 Highlights & Key Improvements
+            - 🔄 **True Indefinite Offline Schedule Renewal:** Built-in native Java calculation engine (porting `adhan 4.4.3` and Umm al-Qura). Widgets and alarms recalculate indefinitely offline without ever needing to reopen the app.
+            - ⚡ **Zero-Waste Battery & CPU Performance:** Replaced 1-second interval loops with an event-driven boundary clock scheduler. Background alarms automatically power down when no widgets or notifications are active.
+            - 🎯 **Mathematical & Calculation Fixes:** Fixed equator/prime-meridian (`0,0`) coordinates bug, true astronomical next-day Fajr calculation, overnight Isha boundary precision, and isolated madhab parameters.
+            - 💾 **Crash-Proof Asset Storage:** User-uploaded custom fonts (up to 5MB) moved from `localStorage` base64 strings into native binary IndexedDB storage with strict WOFF2 validation.
+            - 📱 **Refined Widget Suite:** All 7 widget variants optimized, including a redesigned 3-column × 2-row large widget grid preventing text clipping in Arabic/RTL and compact screens.
+

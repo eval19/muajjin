@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_lock_small_root"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
@@ -11,8 +13,11 @@
     <!-- Prayer Name / Label (e.g. Asr in) with shadow for legibility on any wallpaper -->
     <TextView
         android:id="@+id/tv_lock_small_label"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="Asr in"
         android:textColor="#FFFFFF"
         android:textSize="13sp"
@@ -23,7 +28,7 @@
         android:shadowRadius="3"
         android:includeFontPadding="false" />
 
-    <!-- Big Countdown Chronometer (Hardware ticking, zero battery) -->
+    <!-- Android-hosted countdown; no app-owned per-second refresh. -->
     <Chronometer
         android:id="@+id/tv_lock_small_countdown"
         android:layout_width="wrap_content"
@@ -42,9 +47,12 @@
     <!-- Next Prayer Time (e.g. at 3:06 PM) -->
     <TextView
         android:id="@+id/tv_lock_small_time"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="at 15:12"
         android:textColor="#E6FFFFFF"
         android:textSize="11sp"

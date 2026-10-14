@@ -10,6 +10,7 @@
       "loading": "Loading...",
       "save": "Save",
       "cancel": "Cancel",
+      "close": "Close",
       "am": "AM",
       "pm": "PM",
       "appName": "Muajjin",
@@ -22,6 +23,7 @@
       "noCityFound": "No city found."
     },
     "navigation": {
+      "menu": "Menu",
       "home": "Home",
       "calendar": "Calendar",
       "compass": "Compass",
@@ -189,6 +191,7 @@
       "detectingGps": "Detecting location via GPS...",
       "locationDetected": "Location detected: {{city}}, {{country}}",
       "locationDetectedWithMethod": "Location detected: {{city}}, {{country}} ({{method}})",
+      "locationMethodIp": "IP lookup",
       "continue": "Continue",
       "selectCalculationMethod": "Select calculation method",
       "selectMadhab": "Madhab",
@@ -274,14 +277,48 @@
       "shafi": "Shafi'i",
       "hanafi": "Hanafi"
     },
+    "hijri": {
+      "months": {
+        "1": "Muharram",
+        "2": "Safar",
+        "3": "Rabi al-Awwal",
+        "4": "Rabi al-Thani",
+        "5": "Jumada al-Ula",
+        "6": "Jumada al-Akhirah",
+        "7": "Rajab",
+        "8": "Sha'ban",
+        "9": "Ramadan",
+        "10": "Shawwal",
+        "11": "Dhu al-Qi'dah",
+        "12": "Dhu al-Hijjah"
+      }
+    },
+    "nativeWidget": {
+      "now": "Now",
+      "in": "in",
+      "at": "at",
+      "startsIn": "Starts in",
+      "remainingHours": "{{hours}}h {{minutes}}m",
+      "remainingMinutes": "{{minutes}}m",
+      "recovery": "Open Muajjin to restore prayer settings"
+    },
     "errors": {
       "locationFailed": "Failed to get your location",
+      "locationPermissionDenied": "GPS permission denied and IP lookup failed. Keep or enter your location manually.",
+      "locationUnavailable": "GPS is unavailable and IP lookup failed. Keep or enter your location manually.",
+      "locationNetworkFailed": "Network location lookup failed. Keep or enter your location manually.",
+      "locationCancelled": "Location detection cancelled.",
+      "locationAddressUnavailable": "Coordinates found, but the address is unavailable. You can edit the location name.",
       "locationDenied": "Location permission denied. Please enable location access.",
       "locationTimeout": "Location detection timed out. Please try again or enter your location manually.",
       "locationAutoDetectFailed": "Could not detect location automatically. Please enable GPS or check your internet connection, then try again. You can also enter your location manually.",
       "invalidFile": "Invalid translation file. Please check the format.",
       "fileRequired": "Please select a translation file",
-      "fontUploadFailed": "Failed to upload font"
+      "fontUploadFailed": "Failed to upload font",
+      "prayerCalculationUnavailable": "Prayer times cannot be calculated for these coordinates and date. Check your location and calculation method.",
+      "hijriDateUnavailable": "The Hijri date is outside the supported calendar range.",
+      "invalidCoordinates": "Enter a valid latitude (-90 to 90) and longitude (-180 to 180).",
+      "widgetSyncFailed": "Android prayer data could not be saved. Your last valid schedule remains available; retry by reopening the app."
     },
     "update": {
       "availableTitle": "Update available",
@@ -297,6 +334,9 @@
     },
     "qaza": {
       "title": "Qaza Tracker",
+      "editCount": "Edit count",
+      "increaseCount": "Increase count",
+      "decreaseCount": "Decrease count",
       "fajr": "Fajr",
       "dhuhr": "Dhuhr",
       "asr": "Asr",

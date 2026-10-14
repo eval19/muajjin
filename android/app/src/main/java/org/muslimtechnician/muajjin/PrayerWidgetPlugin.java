@@ -2,96 +2,62 @@ package org.muslimtechnician.muajjin;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import org.json.JSONObject;
 
 @CapacitorPlugin(name = "PrayerWidget")
 public class PrayerWidgetPlugin extends Plugin {
-
     @PluginMethod
-    public void updateWidgetData(PluginCall call) {
-        Context context = getContext();
-        if (context == null) {
-            call.reject("Context is null");
-            return;
-        }
-
-        SharedPreferences prefs = context.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-
-        String statusLabel = call.getString("statusLabel", "NEXT SALAT");
-        String currentName = call.getString("currentName", "Dhuhr");
-        String currentTime = call.getString("currentTime", "--:--");
-        String nextTitle = call.getString("nextTitle", "Starts in");
-        String nextName = call.getString("nextName", "Asr");
-        String timeRemaining = call.getString("timeRemaining", "");
-        Integer progressPercent = call.getInt("progressPercent", 0);
-        Long targetTimestamp = null;
-        try {
-            Double d = call.getDouble("targetTimestamp");
-            if (d != null) {
-                targetTimestamp = d.longValue();
-            }
-        } catch (Exception ignored) {}
-
-        String locationName = call.getString("locationName", "RIYADH GOVERNORATE");
-        String hijriDate = call.getString("hijriDate", "");
-        String activePrayerId = call.getString("activePrayerId", "dhuhr");
-
-        editor.putString("status_label", statusLabel);
-        editor.putString("current_name", currentName);
-        editor.putString("current_time", currentTime);
-        editor.putString("next_title", nextTitle);
-        editor.putString("next_name", nextName);
-        editor.putString("time_remaining", timeRemaining);
-        editor.putInt("progress_percent", progressPercent != null ? progressPercent : 0);
-        if (targetTimestamp != null) {
-            editor.putLong("target_timestamp", targetTimestamp);
-        }
-        editor.putString("location_name", locationName);
-        editor.putString("hijri_date", hijriDate);
-        editor.putString("active_prayer_id", activePrayerId);
-
-        JSObject prayers = call.getObject("prayers");
-        if (prayers != null) {
-            editor.putString("fajr_time", prayers.optString("fajr", "--:--"));
-            editor.putString("sunrise_time", prayers.optString("sunrise", "--:--"));
-            editor.putString("dhuhr_time", prayers.optString("dhuhr", "--:--"));
-            editor.putString("asr_time", prayers.optString("asr", "--:--"));
-            editor.putString("maghrib_time", prayers.optString("maghrib", "--:--"));
-            editor.putString("isha_time", prayers.optString("isha", "--:--"));
-        }
-
-        JSObject timestamps = call.getObject("prayerTimestamps");
-        if (timestamps != null) {
-            editor.putLong("ts_fajr", (long) timestamps.optDouble("fajr", 0));
-            editor.putLong("ts_sunrise", (long) timestamps.optDouble("sunrise", 0));
-            editor.putLong("ts_dhuhr", (long) timestamps.optDouble("dhuhr", 0));
-            editor.putLong("ts_asr", (long) timestamps.optDouble("asr", 0));
-            editor.putLong("ts_maghrib", (long) timestamps.optDouble("maghrib", 0));
-            editor.putLong("ts_isha", (long) timestamps.optDouble("isha", 0));
-            editor.putLong("ts_next_fajr", (long) timestamps.optDouble("nextFajr", 0));
-        }
-
-        String scheduleJson = call.getString("prayerScheduleJson");
-        if (scheduleJson != null && !scheduleJson.isEmpty()) {
-            editor.putString("prayer_schedule_json", scheduleJson);
-        }
-
-        editor.apply();
-
-        // Refresh state from timestamps and update all widgets
-        PrayerWidgetHelper.refreshStateFromTimestamps(context);
-        PrayerWidgetHelper.updateAllWidgets(context);
-        PrayerNotificationHelper.updateLiveUpdateNotification(context);
-        PrayerWidgetHelper.scheduleNextAlarm(context);
-
-        JSObject ret = new JSObject();
-        ret.put("success", true);
-        call.resolve(ret);
+    public void getSystemClockFormat(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("timeFormat", android.text.format.DateFormat.is24HourFormat(getContext()) ? "24h" : "12h");
+        call.resolve(result);
+    }
+    @PluginMethod
+    public void updateSchedule(PluginCall call) {
+        Context context=getContext();if(context==null){call.reject("Context is null");return;}
+        Context application=context.getApplicationContext();
+        PrayerUpdateCoordinator.execute(()->{
+            try {
+                String revision=NativePresentation.text(call.getData(),"revision",1024);
+                JSONObject calculation=call.getObject("calculation"),wire=call.getObject("schedule");
+                if(calculation==null||wire==null) throw new IllegalArgumentException("Calculation and schedule are required");
+                PrayerSchedule.Calculation config=NativeScheduleStore.calculation(calculation);
+                PrayerSchedule schedule=NativeScheduleStore.schedule(wire);
+                java.util.TimeZone zone=java.util.TimeZone.getDefault();
+                long now=System.currentTimeMillis();
+                if(schedule.validFrom>now || schedule.validUntil<=now)
+                    throw new IllegalArgumentException("Schedule must cover the current device time");
+                // IANA aliases differ between WebView and Android. Recalculate
+                // locally on a zone change rather than reject valid coordinates.
+                if(!schedule.timezone.equals(zone.getID()) || schedule.dayAt(now,zone)==null)
+                    schedule=PrayerSchedule.renew(now,zone,config);
+                SharedPreferences prefs=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
+                // Validation is complete before a single durable transaction replaces either value.
+                NativeScheduleStore.saveSchedule(prefs,schedule,config,revision);
+                JSObject result=new JSObject();result.put("success",true);call.resolve(result);
+                PrayerUpdateCoordinator.dispatchNow(application,false);
+            } catch(Exception error){call.reject("Unable to save prayer schedule: "+error.getMessage(),error);}
+        });
+    }
+    @PluginMethod
+    public void updatePresentation(PluginCall call) {
+        Context context=getContext();if(context==null){call.reject("Context is null");return;}
+        Context application=context.getApplicationContext();
+        PrayerUpdateCoordinator.execute(()->{
+            try {
+                String revision=NativePresentation.text(call.getData(),"revision",1024);
+                JSONObject wire=call.getObject("presentation");if(wire==null)throw new IllegalArgumentException("Presentation is required");
+                NativePresentation presentation=NativePresentation.parse(wire);
+                SharedPreferences prefs=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
+                NativeScheduleStore.savePresentation(prefs,presentation,revision);
+                JSObject result=new JSObject();result.put("success",true);call.resolve(result);
+                PrayerUpdateCoordinator.dispatchNow(application,false);
+            } catch(Exception error){call.reject("Unable to save prayer presentation: "+error.getMessage(),error);}
+        });
     }
 }

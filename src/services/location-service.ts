@@ -1,10 +1,7 @@
-/**
- * Location Detection Service
- * Provides automatic location detection using GPS and IP-based methods
- */
-
-import { NativeGeolocation, Position } from '@/plugins/native-geolocation';
+import { NativeGeolocation } from '@/plugins/native-geolocation';
+import type { Position, PermissionStatus } from '@/plugins/native-geolocation';
 import { Capacitor } from '@capacitor/core';
+import { z } from 'zod';
 
 export interface LocationResult {
   latitude: number;
@@ -12,359 +9,171 @@ export interface LocationResult {
   city: string;
   country: string;
   method: 'gps' | 'ip' | 'manual';
+  addressUnavailable?: boolean;
 }
 
-export interface LocationError {
-  message: string;
-  code?: number;
-  type: 'gps' | 'ip' | 'geocoding' | 'unknown';
+const coordinatesSchema = z.object({
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+});
+const addressSchema = z.object({
+  city: z.string().max(256).optional(), town: z.string().max(256).optional(),
+  village: z.string().max(256).optional(), suburb: z.string().max(256).optional(),
+  county: z.string().max(256).optional(), country: z.string().max(256).optional(),
+});
+
+function checkCancellation(signal: AbortSignal): void {
+  if (signal.aborted) throw new Error('errors.locationCancelled');
 }
 
-const LOCATION_DETECTION_TIMEOUT_MS = 25000;
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  errorMessage: string,
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      reject(new Error(errorMessage));
-    }, timeoutMs);
-
-    promise
-      .then((value) => {
-        clearTimeout(timeoutId);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      });
-  });
+function gpsError(error: unknown): Error {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  if (code === 1 || code === 'PERMISSION_DENIED') return new Error('errors.locationPermissionDenied');
+  if (code === 3 || code === 'LOCATION_TIMEOUT') return new Error('errors.locationTimeout');
+  return new Error('errors.locationUnavailable');
 }
 
-/**
- * Get location using GPS (Capacitor Geolocation or browser navigator.geolocation)
- * @returns Promise<LocationResult>
- */
-async function getLocationByGPS(): Promise<Omit<LocationResult, 'method'>> {
+async function fetchLocationJson(url: string, signal: AbortSignal): Promise<unknown> {
+  checkCancellation(signal);
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal.addEventListener('abort', cancel, { once: true });
+  const timeout = setTimeout(cancel, 5000);
   try {
-    // Check if running in native Capacitor app
-    const isNative = Capacitor.isNativePlatform();
-
-    if (isNative) {
-      // Use Native Geolocation for native apps
-      // Request permissions first
-      const permissionResult = await NativeGeolocation.requestPermissions();
-
-      if (
-        permissionResult.location === 'denied' ||
-        permissionResult.coarseLocation === 'denied'
-      ) {
-        throw {
-          message:
-            'Location permission denied. Please enable location access in app settings.',
-          type: 'gps',
-          code: 1,
-        } as LocationError;
-      }
-
-      // Get current position
-      const position: Position = await NativeGeolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      });
-
-      const { latitude, longitude } = position.coords;
-
-      try {
-        // Reverse geocode to get city and country
-        const address = await reverseGeocode(latitude, longitude);
-        return {
-          latitude,
-          longitude,
-          city: address.city || 'Unknown',
-          country: address.country || 'Unknown',
-        };
-      } catch (geocodingError) {
-        // If geocoding fails, still return coordinates
-        return {
-          latitude,
-          longitude,
-          city: 'Unknown',
-          country: 'Unknown',
-        };
-      }
-    } else {
-      // Use browser Geolocation for web
-      return await getLocationByBrowser();
-    }
-  } catch (error: any) {
-    // If Capacitor geolocation fails, try browser as fallback
-
-    if (!Capacitor.isNativePlatform()) {
-      throw error;
-    }
-
-    // Try browser geolocation as fallback
-    try {
-      return await getLocationByBrowser();
-    } catch (browserError) {
-      throw {
-        message: error.message || 'Unable to retrieve location',
-        code: error.code,
-        type: 'gps',
-      } as LocationError;
-    }
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error('errors.locationNetworkFailed');
+    const result: unknown = await response.json();
+    checkCancellation(signal);
+    return result;
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener('abort', cancel);
   }
 }
 
-/**
- * Force a fresh GPS location read without IP fallback.
- * Use this when the user explicitly refreshes their current location.
- */
-export async function refreshLocationByGPS(): Promise<LocationResult> {
-  const gpsLocation = await getLocationByGPS();
-
-  return {
-    ...gpsLocation,
-    method: 'gps',
-  };
-}
-
-/**
- * Fallback to browser geolocation for web or when Capacitor fails
- */
-async function getLocationByBrowser(): Promise<Omit<LocationResult, 'method'>> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject({
-        message: 'Geolocation is not supported by your browser',
-        type: 'gps',
-      } as LocationError);
-      return;
+async function readGps(signal: AbortSignal): Promise<Position> {
+  checkCancellation(signal);
+  if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('NativeGeolocation')) {
+    // The OS permission sheet is not ours to dismiss. An obsolete intent
+    // stops waiting and cannot start GPS when the permission answer arrives.
+    const permissions = await new Promise<PermissionStatus>((resolve, reject) => {
+      const cancel = () => reject(new Error('errors.locationCancelled'));
+      signal.addEventListener('abort', cancel, { once: true });
+      NativeGeolocation.requestPermissions().then(resolve, reject)
+        .finally(() => signal.removeEventListener('abort', cancel));
+    });
+    checkCancellation(signal);
+    if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
+      throw new Error('errors.locationPermissionDenied');
     }
-
-    // Options for GPS detection
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0,
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        try {
-          // Reverse geocode to get city and country
-          const address = await reverseGeocode(latitude, longitude);
-          resolve({
-            latitude,
-            longitude,
-            city: address.city || 'Unknown',
-            country: address.country || 'Unknown',
-          });
-        } catch (geocodingError) {
-          // If geocoding fails, still return coordinates
-          resolve({
-            latitude,
-            longitude,
-            city: 'Unknown',
-            country: 'Unknown',
-          });
-        }
-      },
-      (error) => {
-        let errorMessage = 'Unable to retrieve location';
-
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage =
-              'Location permission denied. Please enable location access.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-        }
-
-        reject({
-          message: errorMessage,
-          code: error.code,
-          type: 'gps',
-        } as LocationError);
-      },
-      options,
-    );
-  });
-}
-
-/**
- * Get location using IP-based geolocation (fallback)
- * Fallback order: ip-api.com (higher limit) → ipwhois.app (HTTPS/CORS-friendly)
- * @returns Promise<LocationResult>
- */
-async function getLocationByIP(): Promise<Omit<LocationResult, 'method'>> {
-  try {
-    // Try ip-api.com first (higher rate limit, but HTTP only)
-    const response = await fetch(
-      'http://ip-api.com/json/?fields=status,message,country,countryCode,city,lat,lon',
-    );
-
-    if (!response.ok) {
-      throw new Error(`IP API returned ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.status !== 'success') {
-      throw new Error(data.message || 'IP geolocation failed');
-    }
-
-    return {
-      latitude: data.lat || 0,
-      longitude: data.lon || 0,
-      city: data.city || 'Unknown',
-      country: data.country || 'Unknown',
-    };
-  } catch (ipApiError) {
-    try {
-      // Fallback to ipwhois.app (HTTPS, CORS-friendly for GitHub Pages)
-      const response = await fetch('https://ipwhois.app/json/');
-
-      if (!response.ok) {
-        throw new Error(`IP API fallback returned ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error('IP geolocation fallback failed');
-      }
-
-      return {
-        latitude: data.latitude || 0,
-        longitude: data.longitude || 0,
-        city: data.city || 'Unknown',
-        country: data.country || 'Unknown',
+    const requestId = crypto.randomUUID();
+    return new Promise<Position>((resolve, reject) => {
+      const cancel = () => {
+        void NativeGeolocation.cancelPosition({ requestId }).catch(() => {
+          console.warn('Native location cancellation failed; its bounded timeout remains active');
+        });
+        reject(new Error('errors.locationCancelled'));
       };
-    } catch (fallbackError) {
-      throw {
-        message:
-          'All IP geolocation methods failed. Please enter location manually.',
-        type: 'ip',
-      } as LocationError;
-    }
+      signal.addEventListener('abort', cancel, { once: true });
+      NativeGeolocation.getCurrentPosition({ requestId, enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
+        .then(resolve, (error: unknown) => reject(gpsError(error)))
+        .finally(() => signal.removeEventListener('abort', cancel));
+    });
   }
-}
-
-/**
- * Reverse geocode coordinates to get city and country names
- * Uses OpenStreetMap Nominatim API (free, no API key required)
- * Rate limit: 1 request per second
- * @param latitude - Latitude coordinate
- * @param longitude - Longitude coordinate
- * @returns Promise<{ city: string; country: string }>
- */
-async function reverseGeocode(
-  latitude: number,
-  longitude: number,
-): Promise<{ city: string; country: string }> {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=en`,
-      {
-        headers: {
-          'User-Agent': 'Muajjin-Prayer-Times-App', // Required by Nominatim policy
-        },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Nominatim API returned ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    // Extract city and country from address
-    const address = data.address || {};
-    const city =
-      address.city ||
-      address.town ||
-      address.village ||
-      address.suburb ||
-      address.county ||
-      '';
-    const country = address.country || '';
-
-    return {
-      city,
-      country,
+  if (!navigator.geolocation) throw new Error('errors.locationUnavailable');
+  return new Promise<Position>((resolve, reject) => {
+    let watch: number | undefined;
+    let finished = false;
+    const finish = (position?: GeolocationPosition, error?: Error) => {
+      if (finished) return;
+      finished = true;
+      if (watch !== undefined) navigator.geolocation.clearWatch(watch);
+      signal.removeEventListener('abort', cancel);
+      if (position) resolve(position);
+      else reject(error);
     };
-  } catch (error) {
-    throw {
-      message: 'Failed to get location name from coordinates.',
-      type: 'geocoding',
-    } as LocationError;
+    const cancel = () => finish(undefined, new Error('errors.locationCancelled'));
+    signal.addEventListener('abort', cancel, { once: true });
+    watch = navigator.geolocation.watchPosition(
+      (position) => finish(position),
+      (error) => finish(undefined, gpsError(error)),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+    // Also handle adapters that deliver their first result synchronously.
+    if (finished) navigator.geolocation.clearWatch(watch);
+  });
+}
+
+async function getLocationByGPS(signal: AbortSignal, deadlineExpired: () => boolean): Promise<LocationResult> {
+  const position = await readGps(signal);
+  checkCancellation(signal);
+  const coordinates = coordinatesSchema.parse(position.coords);
+  try {
+    const data = z.object({ address: addressSchema }).parse(await fetchLocationJson(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordinates.latitude}&lon=${coordinates.longitude}&accept-language=en`, signal,
+    ));
+    const { address } = data;
+    const city = address.city || address.town || address.village || address.suburb || address.county || 'Unknown';
+    return { latitude: coordinates.latitude, longitude: coordinates.longitude, city, country: address.country || 'Unknown', method: 'gps', addressUnavailable: city === 'Unknown' || !address.country };
+  } catch {
+    if (!deadlineExpired()) checkCancellation(signal);
+    return { latitude: coordinates.latitude, longitude: coordinates.longitude, city: 'Unknown', country: 'Unknown', method: 'gps', addressUnavailable: true };
   }
 }
 
-/**
- * Detect location automatically with GPS and IP fallback
- * Primary: GPS (high accuracy)
- * Fallback: IP-based location (WiFi/Mobile internet)
- * @returns Promise<LocationResult>
- */
-export async function detectLocation(): Promise<LocationResult> {
-  return withTimeout(
-    (async () => {
-      try {
-        // Try GPS first (high accuracy, 15 second timeout)
-        const gpsLocation = await getLocationByGPS();
-
-        return {
-          ...gpsLocation,
-          method: 'gps' as const,
-        };
-      } catch (gpsError) {
-        try {
-          // Fallback to IP-based location
-          const ipLocation = await getLocationByIP();
-
-          return {
-            ...ipLocation,
-            method: 'ip' as const,
-          };
-        } catch (ipError) {
-          // Both methods failed
-          throw new Error('errors.locationAutoDetectFailed');
-        }
-      }
-    })(),
-    LOCATION_DETECTION_TIMEOUT_MS,
-    'errors.locationTimeout',
-  );
+async function getLocationByIP(signal: AbortSignal): Promise<LocationResult> {
+  // Endpoint changes require separate approval. Keep both existing providers;
+  // HTTPS hosts may block the legacy cleartext request and use the fallback.
+  const providers = [
+    'http://ip-api.com/json/?fields=status,message,country,countryCode,city,lat,lon',
+    'https://ipwhois.app/json/',
+  ];
+  for (const [index, url] of providers.entries()) {
+    try {
+      const data = z.object({
+        status: z.string().optional(), success: z.boolean().optional(),
+        lat: z.number().optional(), lon: z.number().optional(),
+        latitude: z.number().optional(), longitude: z.number().optional(),
+        city: z.string().max(256).optional(), country: z.string().max(256).optional(),
+      }).parse(await fetchLocationJson(url, signal));
+      if (index === 0 ? data.status !== 'success' : data.success !== true) continue;
+      const coordinates = coordinatesSchema.parse(index === 0
+        ? { latitude: data.lat, longitude: data.lon }
+        : { latitude: data.latitude, longitude: data.longitude });
+      return { latitude: coordinates.latitude, longitude: coordinates.longitude, city: data.city || 'Unknown', country: data.country || 'Unknown', method: 'ip', addressUnavailable: !data.city || !data.country };
+    } catch {
+      checkCancellation(signal);
+    }
+  }
+  throw new Error('errors.locationNetworkFailed');
 }
 
-/**
- * Reverse geocode coordinates to get location name
- * Can be called independently if you already have coordinates
- * @param latitude - Latitude coordinate
- * @param longitude - Longitude coordinate
- * @returns Promise<{ city: string; country: string }>
- */
-export async function getLocationName(
-  latitude: number,
-  longitude: number,
-): Promise<{ city: string; country: string }> {
-  return reverseGeocode(latitude, longitude);
+/** A user-requested, one-shot acquisition. Abort stops GPS and in-flight fetches. */
+export async function detectLocation(signal?: AbortSignal): Promise<LocationResult> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const cancel = () => controller.abort();
+  if (signal?.aborted) cancel();
+  signal?.addEventListener('abort', cancel, { once: true });
+  const timeout = setTimeout(() => { timedOut = true; cancel(); }, 25000);
+  try {
+    try {
+      return await getLocationByGPS(controller.signal, () => timedOut);
+    } catch (error) {
+      checkCancellation(controller.signal);
+      try {
+        return await getLocationByIP(controller.signal);
+      } catch {
+        checkCancellation(controller.signal);
+        if (error instanceof Error && ['errors.locationPermissionDenied', 'errors.locationTimeout', 'errors.locationUnavailable'].includes(error.message)) throw error;
+        throw new Error('errors.locationNetworkFailed');
+      }
+    }
+  } catch (error) {
+    if (timedOut) throw new Error('errors.locationTimeout');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', cancel);
+  }
 }

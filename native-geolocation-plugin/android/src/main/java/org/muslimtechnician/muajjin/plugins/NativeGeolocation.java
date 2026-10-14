@@ -23,8 +23,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.PermissionCallback;
 import com.getcapacitor.annotation.Permission;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import android.util.Log;
+import java.util.HashMap;
+import java.util.Map;
 
 @CapacitorPlugin(
     name = "NativeGeolocation",
@@ -38,7 +39,11 @@ public class NativeGeolocation extends Plugin {
     private static final String TAG = "NativeGeolocation";
     private LocationManager locationManager;
     private SensorManager sensorManager;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Map<String, PositionRequest> positionRequests = new HashMap<>();
+    private volatile boolean destroyed;
+    private volatile boolean paused;
+    private final Map<PluginCall, Runnable> headingCleanup = new HashMap<>();
 
     @Override
     public void load() {
@@ -48,180 +53,148 @@ public class NativeGeolocation extends Plugin {
 
     @PluginMethod
     public void getCurrentPosition(PluginCall call) {
-        if (!hasRequiredPermissions()) {
-            requestAllPermissions(call, "locationPermsCallback");
-            return;
-        }
+        mainHandler.post(() -> {
+            if (destroyed) { call.reject("Location request cancelled", "LOCATION_CANCELLED"); return; }
+            String id = call.getString("requestId", call.getCallbackId());
+            if (id.isEmpty() || id.length() > 128 || positionRequests.containsKey(id)) {
+                call.reject("Invalid or duplicate location request", "INVALID_REQUEST");
+                return;
+            }
+            PositionRequest request = new PositionRequest(id, call);
+            positionRequests.put(id, request);
+            bridge.saveCall(call);
+            if (!hasLocationPermission()) {
+                requestAllPermissions(call, "locationPermsCallback");
+            } else {
+                request.start();
+            }
+        });
+    }
 
-        boolean enableHighAccuracy = call.getBoolean("enableHighAccuracy", true);
-        long timeout = call.getLong("timeout", 15000L);
-        long maximumAge = call.getLong("maximumAge", 0L);
-
-        getCurrentPositionInternal(call, enableHighAccuracy, timeout, maximumAge);
+    private boolean hasLocationPermission() {
+        return getContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            getContext().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     @PermissionCallback
     private void locationPermsCallback(PluginCall call) {
-        if (!hasRequiredPermissions()) {
-            call.reject("User denied location permission");
-            return;
-        }
-        boolean enableHighAccuracy = call.getBoolean("enableHighAccuracy", true);
-        long timeout = call.getLong("timeout", 15000L);
-        long maximumAge = call.getLong("maximumAge", 0L);
-        getCurrentPositionInternal(call, enableHighAccuracy, timeout, maximumAge);
+        mainHandler.post(() -> {
+            PositionRequest request = positionRequests.get(call.getString("requestId", call.getCallbackId()));
+            if (request == null) return; // Cancelled while the permission sheet was open.
+            if (!hasLocationPermission()) request.finish(null, "Location permission denied", "PERMISSION_DENIED");
+            else request.start();
+        });
     }
 
-    private void getCurrentPositionInternal(PluginCall call, boolean enableHighAccuracy, long timeout, long maximumAge) {
-        try {
-            // Check if location is enabled
-            if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
-                !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                call.reject("Location services are disabled");
-                return;
-            }
+    @PluginMethod
+    public void cancelPosition(PluginCall call) {
+        String id = call.getString("requestId");
+        mainHandler.post(() -> {
+            PositionRequest request = positionRequests.get(id);
+            if (request != null) request.finish(null, "Location request cancelled", "LOCATION_CANCELLED");
+            call.resolve();
+        });
+    }
 
-            // Get best available location from cache
-            Location bestLocation = null;
-            long minTimeThreshold = maximumAge <= 0
-                ? Long.MAX_VALUE
-                : System.currentTimeMillis() - maximumAge;
-
-            try {
-                Location gpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                Location networkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-                if (gpsLocation != null && gpsLocation.getTime() >= minTimeThreshold) {
-                    bestLocation = gpsLocation;
-                }
-                if (networkLocation != null) {
-                    boolean networkLocationIsFresh = networkLocation.getTime() >= minTimeThreshold;
-                    if (networkLocationIsFresh &&
-                        (bestLocation == null || networkLocation.getTime() > bestLocation.getTime())) {
-                        bestLocation = networkLocation;
-                    }
-                }
-            } catch (SecurityException e) {
-                call.reject("Security exception: " + e.getMessage());
-                return;
-            }
-
-            if (bestLocation != null) {
-                // We have a recent cached location
-                call.resolve(createPositionResult(bestLocation));
-                return;
-            }
-
-            // No recent cached location, request a fresh one
-            final PluginCall pendingCall = call;
-            bridge.saveCall(call);
-            final Handler handler = new Handler(Looper.getMainLooper());
-            final boolean[] resolved = { false };
-            final Location[] bestFreshLocation = { null };
-            final float desiredAccuracyMeters = enableHighAccuracy ? 25f : 100f;
-
-            LocationListener locationListener = new LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    try {
-                        if (resolved[0]) {
-                            return;
-                        }
-
-                        if (
-                            bestFreshLocation[0] == null ||
-                            location.getAccuracy() < bestFreshLocation[0].getAccuracy() ||
-                            (
-                                location.getAccuracy() == bestFreshLocation[0].getAccuracy() &&
-                                location.getTime() > bestFreshLocation[0].getTime()
-                            )
-                        ) {
-                            bestFreshLocation[0] = location;
-                        }
-
-                        boolean isGoodEnough = location.hasAccuracy() && location.getAccuracy() <= desiredAccuracyMeters;
-                        boolean isGpsFix = LocationManager.GPS_PROVIDER.equals(location.getProvider());
-
-                        if (isGoodEnough || (enableHighAccuracy && isGpsFix && location.hasAccuracy() && location.getAccuracy() <= 50f)) {
-                            resolved[0] = true;
-                            handler.removeCallbacksAndMessages(null);
-                            locationManager.removeUpdates(this);
-                            PluginCall savedCall = bridge.getSavedCall(pendingCall.getCallbackId());
-                            if (savedCall != null) {
-                                savedCall.resolve(createPositionResult(bestFreshLocation[0]));
-                                bridge.releaseCall(savedCall);
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Already resolved or rejected
-                    }
-                }
-
-                @Override
-                public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                @Override
-                public void onProviderEnabled(String provider) {}
-
-                @Override
-                public void onProviderDisabled(String provider) {}
-            };
-
-            // Request location updates
-            try {
-                long minTime = 0;
-                float minDistance = 0;
-
-                if (enableHighAccuracy && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.GPS_PROVIDER,
-                        minTime,
-                        minDistance,
-                        locationListener,
-                        Looper.getMainLooper()
-                    );
-                }
-
-                if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.NETWORK_PROVIDER,
-                        minTime,
-                        minDistance,
-                        locationListener,
-                        Looper.getMainLooper()
-                    );
-                }
-
-                // Set timeout
-                handler.postDelayed(() -> {
-                    try {
-                        if (resolved[0]) {
-                            return;
-                        }
-
-                        resolved[0] = true;
-                        locationManager.removeUpdates(locationListener);
-                        PluginCall savedCall = bridge.getSavedCall(pendingCall.getCallbackId());
-                        if (savedCall != null) {
-                            if (bestFreshLocation[0] != null) {
-                                savedCall.resolve(createPositionResult(bestFreshLocation[0]));
-                            } else {
-                                savedCall.reject("Location request timed out");
-                            }
-                            bridge.releaseCall(savedCall);
-                        }
-                    } catch (Exception e) {
-                        // Already resolved or rejected
-                    }
-                }, timeout);
-
-            } catch (SecurityException e) {
-                call.reject("Security exception: " + e.getMessage());
-            }
-
-        } catch (Exception e) {
-            call.reject("Error getting location: " + e.getMessage());
+    private final class PositionRequest implements LocationListener {
+        final String id;
+        final PluginCall call;
+        final boolean highAccuracy;
+        final Runnable deadline;
+        Location best;
+        PositionRequest(String id, PluginCall call) {
+            this.id = id; this.call = call;
+            highAccuracy = call.getBoolean("enableHighAccuracy", true);
+            deadline = () -> finish(best, "Location request timed out", "LOCATION_TIMEOUT");
         }
+        void start() {
+            try {
+                if (locationManager == null) {
+                    finish(null, "Location manager unavailable", "POSITION_UNAVAILABLE"); return;
+                }
+                boolean gps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                boolean network = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                if (!gps && !network) {
+                    finish(null, "Location services are disabled", "POSITION_UNAVAILABLE"); return;
+                }
+                long maximumAge = call.getLong("maximumAge", 0L);
+                if (maximumAge > 0) {
+                    long now = System.currentTimeMillis();
+                    Location cachedGps = gps ? locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER) : null;
+                    Location cachedNetwork = network ? locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) : null;
+                    if (cachedGps != null && now >= cachedGps.getTime() && now - cachedGps.getTime() <= maximumAge) best = cachedGps;
+                    if (cachedNetwork != null && now >= cachedNetwork.getTime() && now - cachedNetwork.getTime() <= maximumAge &&
+                        (best == null || cachedNetwork.getTime() > best.getTime())) best = cachedNetwork;
+                    if (best != null) { finish(best, null, null); return; }
+                }
+                if (gps && (highAccuracy || !network)) locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this, Looper.getMainLooper());
+                if (network) locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this, Looper.getMainLooper());
+                mainHandler.postDelayed(deadline, Math.max(1L, Math.min(30000L, call.getLong("timeout", 15000L))));
+            } catch (SecurityException error) {
+                finish(null, "Location permission denied", "PERMISSION_DENIED");
+            } catch (RuntimeException error) {
+                finish(null, "Location provider unavailable", "POSITION_UNAVAILABLE");
+            }
+        }
+        @Override public void onLocationChanged(Location location) {
+            if (positionRequests.get(id) != this) return;
+            if (best == null || location.getAccuracy() < best.getAccuracy() ||
+                (location.getAccuracy() == best.getAccuracy() && location.getTime() > best.getTime())) best = location;
+            float desiredAccuracy = highAccuracy ? 25f : 100f;
+            if (location.hasAccuracy() && (location.getAccuracy() <= desiredAccuracy ||
+                (highAccuracy && LocationManager.GPS_PROVIDER.equals(location.getProvider()) && location.getAccuracy() <= 50f)))
+                finish(best, null, null);
+        }
+        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+        @Override public void onProviderEnabled(String provider) {}
+        @Override public void onProviderDisabled(String provider) {}
+        void cleanup() {
+            mainHandler.removeCallbacks(deadline);
+            if (locationManager != null) {
+                try { locationManager.removeUpdates(this); }
+                catch (SecurityException error) { Log.w(TAG, "Permission revoked during location cleanup"); }
+            }
+        }
+        void finish(Location location, String message, String code) {
+            if (!positionRequests.remove(id, this)) return;
+            cleanup();
+            if (location != null) call.resolve(createPositionResult(location));
+            else call.reject(message, code);
+            bridge.releaseCall(call);
+        }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        destroyed = true;
+        mainHandler.post(() -> {
+            for (PositionRequest request : positionRequests.values()) {
+                request.cleanup();
+                request.call.reject("Location request cancelled", "LOCATION_CANCELLED");
+                bridge.releaseCall(request.call);
+            }
+            positionRequests.clear();
+            cancelHeadings();
+        });
+        super.handleOnDestroy();
+    }
+
+    private void cancelHeadings() {
+        java.util.Iterator<Runnable> requests = headingCleanup.values().iterator();
+        while (requests.hasNext()) {
+            Runnable cancel = requests.next();
+            requests.remove();
+            cancel.run();
+        }
+    }
+    @Override protected void handleOnPause() {
+        paused = true;
+        mainHandler.post(this::cancelHeadings);
+        super.handleOnPause();
+    }
+    @Override protected void handleOnResume() {
+        paused = false;
+        super.handleOnResume();
     }
 
     private JSObject createPositionResult(Location location) {
@@ -268,14 +241,14 @@ public class NativeGeolocation extends Plugin {
         return bestLocation;
     }
 
-    @PluginMethod
-    public void requestPermissions(PluginCall call) {
-        // Let Capacitor handle the permission request automatically
-        requestAllPermissions(call, "locationPermsCallback");
-    }
 
     @PluginMethod
     public void getCurrentHeading(PluginCall call) {
+        mainHandler.post(() -> readCurrentHeading(call));
+    }
+
+    private void readCurrentHeading(PluginCall call) {
+        if (destroyed || paused) { call.reject("Compass request cancelled"); return; }
         if (sensorManager == null) {
             call.reject("Sensor manager unavailable");
             return;
@@ -300,14 +273,12 @@ public class NativeGeolocation extends Plugin {
         final float[] orientation = new float[3];
         final float[] gravityReading = new float[3];
         final float[] magneticReading = new float[3];
-        final boolean[] hasGravity = { false };
-        final boolean[] hasMagnetic = { false };
-        final boolean[] resolved = { false };
 
         final PluginCall pendingCall = call;
         bridge.saveCall(call);
 
-        final SensorEventListener listener = new SensorEventListener() {
+        final class HeadingListener implements SensorEventListener {
+            boolean hasGravity, hasMagnetic, resolved;
             @Override
             public void onSensorChanged(SensorEvent event) {
                 boolean canResolve = false;
@@ -320,13 +291,13 @@ public class NativeGeolocation extends Plugin {
                     canResolve = true;
                 } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                     System.arraycopy(event.values, 0, gravityReading, 0, gravityReading.length);
-                    hasGravity[0] = true;
+                    hasGravity = true;
                 } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
                     System.arraycopy(event.values, 0, magneticReading, 0, magneticReading.length);
-                    hasMagnetic[0] = true;
+                    hasMagnetic = true;
                 }
 
-                if (!canResolve && hasGravity[0] && hasMagnetic[0]) {
+                if (!canResolve && hasGravity && hasMagnetic) {
                     canResolve = SensorManager.getRotationMatrix(
                         rotationMatrix,
                         null,
@@ -335,7 +306,7 @@ public class NativeGeolocation extends Plugin {
                     );
                 }
 
-                if (!canResolve || resolved[0]) {
+                if (!canResolve || resolved) {
                     return;
                 }
 
@@ -385,7 +356,9 @@ public class NativeGeolocation extends Plugin {
                     heading = (heading + geomagneticField.getDeclination() + 360.0) % 360.0;
                 }
 
-                resolved[0] = true;
+                resolved = true;
+                mainHandler.removeCallbacksAndMessages(pendingCall);
+                headingCleanup.remove(pendingCall);
                 sensorManager.unregisterListener(this);
 
                 PluginCall savedCall = bridge.getSavedCall(pendingCall.getCallbackId());
@@ -400,7 +373,17 @@ public class NativeGeolocation extends Plugin {
             @Override
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
             }
-        };
+        }
+        final HeadingListener listener = new HeadingListener();
+        headingCleanup.put(pendingCall, () -> {
+            if (listener.resolved) return;
+            listener.resolved = true;
+            mainHandler.removeCallbacksAndMessages(pendingCall);
+            headingCleanup.remove(pendingCall);
+            sensorManager.unregisterListener(listener);
+            pendingCall.reject("Compass request cancelled");
+            bridge.releaseCall(pendingCall);
+        });
 
         if (geomagneticRotationVectorSensor != null) {
             sensorManager.registerListener(
@@ -417,10 +400,10 @@ public class NativeGeolocation extends Plugin {
             sensorManager.registerListener(listener, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
         }
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (resolved[0]) {
-                return;
-            }
+        mainHandler.postAtTime(() -> {
+            if (listener.resolved) return;
+            listener.resolved = true;
+            headingCleanup.remove(pendingCall);
 
             sensorManager.unregisterListener(listener);
             PluginCall savedCall = bridge.getSavedCall(pendingCall.getCallbackId());
@@ -428,6 +411,6 @@ public class NativeGeolocation extends Plugin {
                 savedCall.reject("Compass heading is unavailable");
                 bridge.releaseCall(savedCall);
             }
-        }, 4000);
+        }, pendingCall, android.os.SystemClock.uptimeMillis() + 4000);
     }
 }

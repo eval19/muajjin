@@ -8,48 +8,15 @@ import { DEFAULT_CONTAINER_ORDER } from '@/constants/default-settings';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { calculatePrayerTimesLocally } from '@/services/prayer-times-local';
-import { PrayerTime, ProhibitedTime, UserSettings } from '@/types';
 import { EContainerType } from '@/types/enums';
+import { derivePrayerDay } from '@/utils/time-utils';
+import { useLocalDate } from '@/hooks/use-visible-clock';
 import {
-  adjustTime,
-  getProhibitedTimes,
-  setTranslationFunction,
-} from '@/utils/time-utils';
-import { calculateHijriDate, formatHijriDateLocal } from '@/utils/hijri-utils';
-import { syncPrayerTimesToWidget } from '@/services/widget-sync-service';
-import {
-  Fragment,
-  type FC,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-
-/**
- * Migrate old settings property names and values to the current shape.
- * - Handles legacy "sehriAdjustment" → "suhoorAdjustment".
- * - Normalizes madhab values so Shafi = 0, Hanafi = 1.
- */
-const migrateSettings = (settings: UserSettings): Partial<UserSettings> => {
-  const migrated: Partial<UserSettings> = {};
-
-  // Legacy sehriAdjustment → suhoorAdjustment
-  if (
-    (settings as any).sehriAdjustment !== undefined &&
-    settings.suhoorAdjustment === undefined
-  ) {
-    migrated.suhoorAdjustment = (settings as any).sehriAdjustment;
-  }
-
-  // Normalize madhab: any legacy value 2 should become 0 (Shafi)
-  if ((settings as any).madhab === 2) {
-    migrated.madhab = 0;
-  }
-
-  return migrated;
-};
+  buildWidgetPresentation,
+  syncPrayerTimesToWidget,
+} from '@/services/widget-sync-service';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { FC } from 'react';
 
 // Default visible containers - all visible by default
 const defaultVisibleContainers: Record<string, boolean> = {
@@ -62,9 +29,11 @@ const defaultVisibleContainers: Record<string, boolean> = {
 };
 
 const HomeDashboardPage: FC = () => {
-  const { t, getSalatName, mounted } = useTranslation();
-  const { settings, updateSettings } = useApp();
-  const [containerOrder, setContainerOrder] = useLocalStorage<string[]>(
+  const { t, activeTranslation, direction, mounted } = useTranslation();
+  const { settings } = useApp();
+  const date = useLocalDate();
+  const [bridgeFailed, setBridgeFailed] = useState(false);
+  const [containerOrder] = useLocalStorage<string[]>(
     'muajjin-container-order',
     DEFAULT_CONTAINER_ORDER,
   );
@@ -72,200 +41,35 @@ const HomeDashboardPage: FC = () => {
     'muajjin-visible-containers',
     defaultVisibleContainers,
   );
-  const [salatTimes, setSalatTimes] = useState<PrayerTime[]>([]);
-  const [prohibitedTimes, setProhibitedTimes] = useState<ProhibitedTime[]>([]);
-  const [suhoorTime, setSuhoorTime] = useState<string>('');
-  const [iftarTime, setIftarTime] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [loadedWithTranslation, setLoadedWithTranslation] = useState(false);
-  const [lastCalculatedDate, setLastCalculatedDate] = useState<string>('');
-  const hasMigratedRef = useRef(false);
-
-  // Migrate old settings property names (one-time migration)
-  useEffect(() => {
-    // Only run once
-    if (hasMigratedRef.current) return;
-    hasMigratedRef.current = true;
-
-    const migrated = migrateSettings(settings);
-    if (Object.keys(migrated).length > 0) {
-      updateSettings(migrated);
+  const result = useMemo(() => {
+    try {
+      return { day: derivePrayerDay(date, settings, t), error: null };
+    } catch (error) {
+      return { day: null, error };
     }
-  }, [settings, updateSettings]);
+  }, [date, settings, t]);
+  const presentation = useMemo(() => buildWidgetPresentation(
+    settings, t, activeTranslation?.meta.languageCode ?? 'en', direction,
+  ), [settings, t, activeTranslation, direction]);
 
-  const loadSalatTimes = useCallback(
-    (settings: UserSettings) => {
-      setIsLoading(true);
-
-      // Calculate salat times locally using adhan library (no API call!)
-      const timings = calculatePrayerTimesLocally(new Date(), settings);
-
-      // Create salat times array with jamaah times from settings
-      const salats: PrayerTime[] = [
-        {
-          id: 'fajr',
-          name: getSalatName('Fajr'),
-          start: timings.Fajr,
-          end: adjustTime(timings.Shuruq, -1),
-          jamaah: settings.jamaahTimes.Fajr,
-        },
-        {
-          id: 'dhuhr',
-          name: getSalatName('Dhuhr'),
-          start: timings.Dhuhr,
-          end: adjustTime(timings.Asr, -1),
-          jamaah: settings.jamaahTimes.Dhuhr,
-        },
-        {
-          id: 'asr',
-          name: getSalatName('Asr'),
-          start: timings.Asr,
-          end: adjustTime(timings.Maghrib, -1),
-          jamaah: settings.jamaahTimes.Asr,
-        },
-        {
-          id: 'maghrib',
-          name: getSalatName('Maghrib'),
-          start: timings.Maghrib,
-          end: adjustTime(timings.Isha, -1),
-          jamaah: settings.jamaahTimes.Maghrib,
-        },
-        {
-          id: 'isha',
-          name: getSalatName('Isha'),
-          start: timings.Isha,
-          end: adjustTime(timings.Fajr, -1),
-          jamaah: settings.jamaahTimes.Isha,
-        },
-      ];
-
-      setSalatTimes(salats);
-      setSuhoorTime(adjustTime(timings.Fajr, settings.suhoorAdjustment));
-      setIftarTime(adjustTime(timings.Maghrib, settings.iftarAdjustment));
-      setLastCalculatedDate(new Date().toDateString());
-
-      try {
-        const hijri = calculateHijriDate(
-          new Date(),
-          settings.hijriAdjustment,
-          timings.Maghrib,
-          settings.hijriDateChangeAtMaghrib,
-        );
-        const hijriDateStr = formatHijriDateLocal(hijri);
-        syncPrayerTimesToWidget({
-          salats,
-          timings,
-          settings,
-          hijriDateStr,
-          force: true,
-        });
-      } catch (e) {
-        console.debug('Error syncing widget in loadSalatTimes:', e);
-      }
-
-      setIsLoading(false);
-    },
-    [getSalatName],
-  ); // getSalatName changes with translations, so recreate when it changes
-
-  // Load salat times on component mount and when translation changes
+  // Native owns time transitions. Deliver only actual settings/presentation intent.
   useEffect(() => {
-    // Only load after translations are mounted
     if (!mounted) return;
+    let live = true;
+    void syncPrayerTimesToWidget({ settings, presentation }).then(() => {
+      if (live) setBridgeFailed(false);
+    }).catch(() => {
+      if (live) setBridgeFailed(true);
+    });
+    return () => { live = false; };
+  }, [settings, presentation, mounted, date]);
 
-    // Initialize the translation function for timeUtils (use general 't', not 'getSalatName')
-    setTranslationFunction(t);
-
-    // If already loaded with this translation, don't reload
-    if (loadedWithTranslation) return;
-
-    loadSalatTimes(settings);
-    // Also reload prohibited times to ensure they're translated
-    const timings = calculatePrayerTimesLocally(new Date(), settings);
-    setProhibitedTimes(getProhibitedTimes(timings));
-    setLoadedWithTranslation(true);
-  }, [loadSalatTimes, loadedWithTranslation, mounted, t, settings]); // Reload when translation function changes or first mounted
-
-  // Check for date change every minute and reload salat times at midnight
-  useEffect(() => {
-    const checkDateChange = () => {
-      const currentDate = new Date().toDateString();
-      if (lastCalculatedDate && currentDate !== lastCalculatedDate) {
-        loadSalatTimes(settings);
-      }
-    };
-
-    // Check immediately
-    checkDateChange();
-
-    // Check every minute
-    const timer = setInterval(checkDateChange, 60000);
-
-    return () => clearInterval(timer);
-  }, [lastCalculatedDate, loadSalatTimes, settings]);
-
-  // Keep widget fresh with zero battery consumption when app is backgrounded
-  useEffect(() => {
-    if (salatTimes.length === 0) return;
-
-    let interval: NodeJS.Timeout | null = null;
-
-    const performSync = () => {
-      const timings = calculatePrayerTimesLocally(new Date(), settings);
-      let hijriDateStr = '';
-      try {
-        const hijri = calculateHijriDate(
-          new Date(),
-          settings.hijriAdjustment,
-          timings.Maghrib,
-          settings.hijriDateChangeAtMaghrib,
-        );
-        hijriDateStr = formatHijriDateLocal(hijri);
-      } catch (e) {}
-
-      syncPrayerTimesToWidget({
-        salats: salatTimes,
-        timings,
-        settings,
-        hijriDateStr,
-      });
-    };
-
-    const startTimer = () => {
-      performSync();
-      if (!interval) {
-        interval = setInterval(performSync, 30000);
-      }
-    };
-
-    const stopTimer = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopTimer();
-      } else {
-        startTimer();
-      }
-    };
-
-    if (!document.hidden) {
-      startTimer();
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      stopTimer();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [salatTimes, settings]);
+  const salatTimes = result.day?.prayers ?? [];
+  const prohibitedTimes = result.day?.prohibitedTimes ?? [];
 
   // Render containers based on user order
   const renderContainers = () => {
+    if (!result.day) return null;
     return (
       <Fragment>
         {containerOrder.map((containerId, index) => {
@@ -282,13 +86,12 @@ const HomeDashboardPage: FC = () => {
                   className="duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <DateTimeContainer
+                    date={date}
                     hijriAdjustment={settings.hijriAdjustment}
                     hijriDateChangeAtMaghrib={settings.hijriDateChangeAtMaghrib}
-                    maghribTime={
-                      salatTimes.find((p) => p.id === 'maghrib')?.start
-                    }
+                    maghribTimestamp={result.day.maghribForHijri}
                     location={{
-                      city: settings.city || 'Dhaka',
+                      city: settings.city ?? '',
                       country: '',
                     }}
                     timeFormat={settings.timeFormat}
@@ -302,8 +105,7 @@ const HomeDashboardPage: FC = () => {
                   className="duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <CurrentPrayerContainer
-                    allPrayers={salatTimes}
-                    prohibitedTimes={prohibitedTimes}
+                    allPrayers={result.day.timeline}
                     timeFormat={settings.timeFormat}
                   />
                 </div>
@@ -315,7 +117,7 @@ const HomeDashboardPage: FC = () => {
                   className="duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <NextPrayerContainer
-                    allPrayers={salatTimes}
+                    allPrayers={result.day.timeline}
                     timeFormat={settings.timeFormat}
                   />
                 </div>
@@ -328,6 +130,7 @@ const HomeDashboardPage: FC = () => {
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <PrayerTimesContainer
                     salats={salatTimes}
+                    allPrayers={result.day.timeline}
                     timeFormat={settings.timeFormat}
                   />
                 </div>
@@ -340,6 +143,7 @@ const HomeDashboardPage: FC = () => {
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <ProhibitedTimesContainer
                     prohibitedTimes={prohibitedTimes}
+                    timeline={result.day.prohibitedTimeline}
                     timeFormat={settings.timeFormat}
                   />
                 </div>
@@ -351,8 +155,9 @@ const HomeDashboardPage: FC = () => {
                   className="duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ animationDelay: `${index * 100}ms` }}>
                   <FastingTimesContainer
-                    suhoorTime={suhoorTime}
-                    iftarTime={iftarTime}
+                    suhoorTime={result.day.suhoorTime}
+                    iftarTime={result.day.iftarTime}
+                    events={result.day.fastingEvents}
                     timeFormat={settings.timeFormat}
                   />
                 </div>
@@ -369,7 +174,8 @@ const HomeDashboardPage: FC = () => {
     <div className="min-h-screen bg-background">
       {/* Main Content */}
       <div className="mx-auto max-w-md space-y-6 px-5 py-6">
-        {isLoading || !mounted ? (
+        {bridgeFailed && <div role="alert" className="rounded-lg border border-destructive/50 p-4 text-destructive">{t('errors.widgetSyncFailed')}</div>}
+        {!mounted ? (
           <div className="flex h-[60vh] animate-pulse flex-col items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div
@@ -383,8 +189,12 @@ const HomeDashboardPage: FC = () => {
                 style={{ animationDelay: '300ms' }}></div>
             </div>
           </div>
-        ) : (
+        ) : result.day ? (
           renderContainers()
+        ) : (
+          <div role="alert" className="rounded-lg border border-destructive/50 p-4 text-destructive">
+            {t('errors.prayerCalculationUnavailable')}
+          </div>
         )}
       </div>
     </div>

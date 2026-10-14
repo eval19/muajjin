@@ -3,8 +3,9 @@ import { SettingsPageLayout } from '@/components/settings/settings-page-layout';
 import { SettingsSaveButton } from '@/components/settings/settings-save-button';
 import { SettingsSection } from '@/components/settings/settings-section';
 import { useTranslation } from '@/contexts/translation-context';
-import { UserSettings } from '@/types';
-import { type FC, useEffect, useState } from 'react';
+import type { UserSettings } from '@/types';
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/app-context';
 
@@ -21,8 +22,7 @@ const FastingSettings: FC = () => {
   }, [settings]);
 
   const handleSave = () => {
-    updateSettings(localSettings);
-    navigate(-1);
+    if (updateSettings(localSettings)) navigate(-1);
   };
 
   const updateSetting = <K extends keyof UserSettings>(

@@ -35,8 +35,26 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       port: 8080,
+      watch: {
+        ignored: ['**/.tools/**', '**/android/**', '**/reproducible-output/**'],
+      },
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'native-build-inputs',
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'build-info.json',
+            source: JSON.stringify({
+              mode: mode === 'github' ? 'github' : 'nongithub',
+              sourceDateEpoch: SOURCE_DATE_EPOCH,
+            }),
+          });
+        },
+      },
+    ],
     resolve: {
       alias: [
         {

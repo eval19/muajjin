@@ -1,4 +1,4 @@
-import {
+import type {
   HeadingResult,
   NativeGeolocationPlugin,
   Position,
@@ -7,6 +7,7 @@ import {
 } from './definitions';
 
 export class NativeGeolocationWeb implements NativeGeolocationPlugin {
+  private requests = new Map<string, { watch: number; cancel: () => void }>();
   async getCurrentPosition(options?: PositionOptions): Promise<Position> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -20,8 +21,20 @@ export class NativeGeolocationWeb implements NativeGeolocationPlugin {
         maximumAge: options?.maximumAge ?? 0,
       };
 
-      navigator.geolocation.getCurrentPosition(
+      const id = options?.requestId ?? crypto.randomUUID();
+      if (this.requests.has(id)) { reject(new Error('Duplicate location request')); return; }
+      let finished = false;
+      const cleanup = () => {
+        if (finished) return false;
+        finished = true;
+        const request = this.requests.get(id);
+        if (request) navigator.geolocation.clearWatch(request.watch);
+        this.requests.delete(id);
+        return true;
+      };
+      const watch = navigator.geolocation.watchPosition(
         (position) => {
+          if (!cleanup()) return;
           resolve({
             coords: {
               latitude: position.coords.latitude,
@@ -35,11 +48,17 @@ export class NativeGeolocationWeb implements NativeGeolocationPlugin {
           });
         },
         (error) => {
+          if (!cleanup()) return;
           reject(new Error(`Geolocation error: ${error.message}`));
         },
         geoOptions,
       );
+      this.requests.set(id, { watch, cancel: () => { cleanup(); reject(new Error('errors.locationCancelled')); } });
     });
+  }
+
+  async cancelPosition(options: { requestId: string }): Promise<void> {
+    this.requests.get(options.requestId)?.cancel();
   }
 
   async requestPermissions(): Promise<PermissionStatus> {

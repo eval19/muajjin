@@ -1,232 +1,193 @@
-import { registerPlugin } from '@capacitor/core';
-import { PrayerTime, UserSettings } from '@/types';
-import { calculatePrayerTimesLocally, LocalPrayerTimes } from '@/services/prayer-times-local';
-import { formatTime, getCurrentSalat, getNextSalat } from '@/utils/time-utils';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { UserSettings } from '@/types';
+import { calculatePrayerInstants } from '@/services/prayer-times-local';
+import { addLocalDays, localDateKey } from '@/utils/time-utils';
+import english from '@/i18n/template-en.json';
 
+export interface WidgetScheduleDay {
+  date: string;
+  previousIsha: number;
+  fajr: number;
+  sunrise: number;
+  dhuhr: number;
+  asr: number;
+  maghrib: number;
+  isha: number;
+  nextFajr: number;
+}
+export interface WidgetPresentation {
+  schema: 2;
+  language: string;
+  direction: 'ltr' | 'rtl';
+  timeFormat: UserSettings['timeFormat'];
+  locationName: string;
+  hijriAdjustment: number;
+  hijriDateChangeAtMaghrib: boolean;
+  labels: Record<string, string>;
+  months: string[];
+}
+export interface PrayerSchedulePayload {
+  revision: string;
+  calculation: {
+    engine: 'adhan-4.4.3';
+    timezonePolicy: 'device';
+    latitude: number;
+    longitude: number;
+    method: number;
+    madhab: number;
+  };
+  schedule: {
+    schema: 2;
+    timezone: string;
+    validFrom: number;
+    validUntil: number;
+    days: WidgetScheduleDay[];
+  };
+}
 export interface PrayerWidgetPluginInterface {
-  updateWidgetData(options: {
-    statusLabel: string;
-    currentName: string;
-    currentTime: string;
-    nextTitle: string;
-    nextName: string;
-    timeRemaining: string;
-    progressPercent: number;
-    targetTimestamp: number;
-    locationName: string;
-    hijriDate: string;
-    activePrayerId: string;
-    prayers: Record<string, string>;
-    prayerTimestamps?: Record<string, number>;
-    prayerScheduleJson?: string;
-  }): Promise<{ success: boolean }>;
+  updateSchedule(payload: PrayerSchedulePayload): Promise<{ success: boolean }>;
+  updatePresentation(payload: { revision: string; presentation: WidgetPresentation }): Promise<{ success: boolean }>;
 }
-
-const PrayerWidget = registerPlugin<PrayerWidgetPluginInterface>('PrayerWidget');
-
-let lastSyncedMinute = -1;
-let lastSyncedDataHash = '';
-
-function parseTimeToDate(timeStr: string, baseDate = new Date()): Date {
-  const [h, m] = (timeStr || '00:00').split(':').map(Number);
-  const d = new Date(baseDate);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return d;
-}
-
-export const syncPrayerTimesToWidget = async (params: {
-  salats: PrayerTime[];
-  timings: LocalPrayerTimes;
+interface SyncRequest {
   settings: UserSettings;
-  hijriDateStr?: string;
-  force?: boolean;
-}) => {
-  const { salats, timings, settings, hijriDateStr, force } = params;
-  if (!salats || salats.length === 0 || !timings) return;
+  presentation: WidgetPresentation;
+}
 
-  const now = new Date();
-  const currentMinute = now.getMinutes();
-
-  const currentSalat = getCurrentSalat(salats);
-  const nextSalat = getNextSalat(salats);
-
-  let statusLabel: string;
-  let currentName: string;
-  let currentTime: string;
-  let nextTitle: string;
-  let nextName: string;
-  let timeRemaining: string;
-  let progressPercent: number;
-  let targetTimestamp: number;
-  let activePrayerId: string;
-
-  if (currentSalat) {
-    // Mode 1: Inside an active prayer window
-    statusLabel = 'CURRENT SALAT';
-    currentName = currentSalat.name;
-    currentTime = formatTime(currentSalat.start, settings.timeFormat);
-    nextName = nextSalat?.name || '';
-    nextTitle = `Next: ${nextName}`;
-    activePrayerId = currentSalat.id;
-
-    // Calculate end of current salat
-    let endTime: Date;
-    if (currentSalat.id === 'isha') {
-      const ishaStart = parseTimeToDate(currentSalat.start, now);
-      if (now.getHours() >= ishaStart.getHours()) {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        endTime = parseTimeToDate(currentSalat.end || timings.Fajr, tomorrow);
-      } else {
-        endTime = parseTimeToDate(currentSalat.end || timings.Fajr, now);
-      }
-    } else {
-      endTime = parseTimeToDate(currentSalat.end || nextSalat?.start || '12:00', now);
-    }
-
-    targetTimestamp = endTime.getTime();
-    const diffMs = Math.max(0, targetTimestamp - now.getTime());
-    const totalMins = Math.floor(diffMs / 60000);
-    const hours = Math.floor(totalMins / 60);
-    const mins = totalMins % 60;
-    timeRemaining = hours > 0 ? `in ${hours}h ${String(mins).padStart(2, '0')}m` : `in ${mins}m`;
-
-    const startTime = parseTimeToDate(currentSalat.start, now);
-    if (currentSalat.id === 'isha' && now.getHours() < parseTimeToDate(currentSalat.start, now).getHours()) {
-      startTime.setDate(startTime.getDate() - 1);
-    }
-    const totalDuration = Math.max(1, targetTimestamp - startTime.getTime());
-    const elapsed = Math.max(0, now.getTime() - startTime.getTime());
-    progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
-  } else {
-    // Mode 2: Outside any prayer (e.g. Duha between Sunrise & Dhuhr, or gap between prayers)
-    statusLabel = 'NEXT SALAT';
-    const targetSalat = nextSalat || salats[0];
-    currentName = targetSalat.name;
-    currentTime = formatTime(targetSalat.start, settings.timeFormat);
-    nextName = targetSalat.name;
-    nextTitle = 'Starts in';
-    activePrayerId = targetSalat.id;
-
-    let targetStartTime = parseTimeToDate(targetSalat.start, now);
-    if (targetStartTime.getTime() <= now.getTime()) {
-      targetStartTime.setDate(targetStartTime.getDate() + 1);
-    }
-
-    targetTimestamp = targetStartTime.getTime();
-    const diffMs = Math.max(0, targetTimestamp - now.getTime());
-    const totalMins = Math.floor(diffMs / 60000);
-    const hours = Math.floor(totalMins / 60);
-    const mins = totalMins % 60;
-    timeRemaining = hours > 0 ? `in ${hours}h ${String(mins).padStart(2, '0')}m` : `in ${mins}m`;
-
-    // Calculate progress from previous event (e.g. Sunrise) to next salat
-    let prevEventTime: Date;
-    if (targetSalat.id === 'dhuhr' && timings.Shuruq) {
-      prevEventTime = parseTimeToDate(timings.Shuruq, now);
-    } else {
-      const prevIdx = salats.findIndex((s) => s.id === targetSalat.id);
-      const prevSalat = prevIdx > 0 ? salats[prevIdx - 1] : salats[salats.length - 1];
-      prevEventTime = parseTimeToDate(prevSalat.start, now);
-      if (prevEventTime.getTime() > now.getTime()) {
-        prevEventTime.setDate(prevEventTime.getDate() - 1);
-      }
-    }
-
-    const totalDuration = Math.max(1, targetTimestamp - prevEventTime.getTime());
-    const elapsed = Math.max(0, now.getTime() - prevEventTime.getTime());
-    progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
-  }
-
-  const fajrDate = parseTimeToDate(timings.Fajr, now);
-  const sunriseDate = parseTimeToDate(timings.Shuruq, now);
-  const dhuhrDate = parseTimeToDate(timings.Dhuhr, now);
-  const asrDate = parseTimeToDate(timings.Asr, now);
-  const maghribDate = parseTimeToDate(timings.Maghrib, now);
-  const ishaDate = parseTimeToDate(timings.Isha, now);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const nextFajrDate = parseTimeToDate(timings.Fajr, tomorrow);
-
-  const prayerTimestamps: Record<string, number> = {
-    fajr: fajrDate.getTime(),
-    sunrise: sunriseDate.getTime(),
-    dhuhr: dhuhrDate.getTime(),
-    asr: asrDate.getTime(),
-    maghrib: maghribDate.getTime(),
-    isha: ishaDate.getTime(),
-    nextFajr: nextFajrDate.getTime(),
+export function buildWidgetPresentation(
+  settings: UserSettings,
+  translate: (key: string) => string,
+  language: string,
+  direction: 'ltr' | 'rtl',
+): WidgetPresentation {
+  const keys: Record<string, string> = {
+    fajr: 'salats.fajr', sunrise: 'salats.shuruq', dhuhr: 'salats.dhuhr',
+    asr: 'salats.asr', maghrib: 'salats.maghrib', isha: 'salats.isha',
+    current: 'salatTimes.current', next: 'salatTimes.next',
+    now: 'nativeWidget.now', in: 'nativeWidget.in', at: 'nativeWidget.at',
+    startsIn: 'nativeWidget.startsIn', am: 'common.am', pm: 'common.pm',
+    remainingHours: 'nativeWidget.remainingHours', remainingMinutes: 'nativeWidget.remainingMinutes',
+    recovery: 'nativeWidget.recovery',
   };
-
-  const prayersMap: Record<string, string> = {
-    fajr: formatTime(timings.Fajr, settings.timeFormat),
-    sunrise: formatTime(timings.Shuruq, settings.timeFormat),
-    dhuhr: formatTime(timings.Dhuhr, settings.timeFormat),
-    asr: formatTime(timings.Asr, settings.timeFormat),
-    maghrib: formatTime(timings.Maghrib, settings.timeFormat),
-    isha: formatTime(timings.Isha, settings.timeFormat),
+  const labels: Record<string, string> = {};
+  for (const [name, key] of Object.entries(keys)) {
+    const value = translate(key);
+    let fallback: unknown = english.translations;
+    for (const part of key.split('.')) fallback = (fallback as Record<string, unknown>)[part];
+    labels[name] = value && value !== key ? value : String(fallback);
+  }
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const key = `hijri.months.${index + 1}`;
+    const value = translate(key);
+    return value && value !== key ? value : english.translations.hijri.months[String(index + 1) as keyof typeof english.translations.hijri.months];
+  });
+  return {
+    schema: 2, language, direction, timeFormat: settings.timeFormat,
+    locationName: settings.city ?? '', hijriAdjustment: settings.hijriAdjustment,
+    hijriDateChangeAtMaghrib: settings.hijriDateChangeAtMaghrib, labels, months,
   };
+}
 
-  const locationName = (settings.city || 'Muajjin').toUpperCase();
-  const hijriDate = hijriDateStr || '';
-
-  const dataHash = `${statusLabel}_${currentName}_${currentTime}_${timeRemaining}_${progressPercent}_${locationName}`;
-  if (!force && lastSyncedMinute === currentMinute && lastSyncedDataHash === dataHash) {
-    return;
-  }
-
-  lastSyncedMinute = currentMinute;
-  lastSyncedDataHash = dataHash;
-
-  const daysArray = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    const dayTimings = calculatePrayerTimesLocally(d, settings);
-
-    const fDate = parseTimeToDate(dayTimings.Fajr, d);
-    const sDate = parseTimeToDate(dayTimings.Shuruq, d);
-    const dhDate = parseTimeToDate(dayTimings.Dhuhr, d);
-    const aDate = parseTimeToDate(dayTimings.Asr, d);
-    const mDate = parseTimeToDate(dayTimings.Maghrib, d);
-    const iDate = parseTimeToDate(dayTimings.Isha, d);
-
-    daysArray.push({
-      date: d.toISOString().split('T')[0],
-      fajr: fDate.getTime(),
-      fajrTime: formatTime(dayTimings.Fajr, settings.timeFormat),
-      sunrise: sDate.getTime(),
-      sunriseTime: formatTime(dayTimings.Shuruq, settings.timeFormat),
-      dhuhr: dhDate.getTime(),
-      dhuhrTime: formatTime(dayTimings.Dhuhr, settings.timeFormat),
-      asr: aDate.getTime(),
-      asrTime: formatTime(dayTimings.Asr, settings.timeFormat),
-      maghrib: mDate.getTime(),
-      maghribTime: formatTime(dayTimings.Maghrib, settings.timeFormat),
-      isha: iDate.getTime(),
-      ishaTime: formatTime(dayTimings.Isha, settings.timeFormat),
+export function buildWidgetSchedule(settings: UserSettings, now: Date): PrayerSchedulePayload {
+  const first = new Date(now);
+  first.setHours(0, 0, 0, 0);
+  first.setDate(first.getDate() - 2);
+  const calculation: PrayerSchedulePayload['calculation'] = {
+    engine: 'adhan-4.4.3', timezonePolicy: 'device',
+    latitude: settings.latitude === undefined ? 21.3891 : settings.latitude!,
+    longitude: settings.longitude === undefined ? 39.8579 : settings.longitude!,
+    method: settings.method, madhab: settings.madhab,
+  };
+  let previousIsha = calculatePrayerInstants(addLocalDays(first, -1), settings).isha.getTime();
+  let current = calculatePrayerInstants(first, settings);
+  const days: WidgetScheduleDay[] = [];
+  for (let index = 0; index < 30; index++) {
+    const date = addLocalDays(first, index);
+    const following = calculatePrayerInstants(addLocalDays(date, 1), settings);
+    days.push({
+      date: localDateKey(date), previousIsha,
+      fajr: current.fajr.getTime(), sunrise: current.sunrise.getTime(),
+      dhuhr: current.dhuhr.getTime(), asr: current.asr.getTime(),
+      maghrib: current.maghrib.getTime(), isha: current.isha.getTime(), nextFajr: following.fajr.getTime(),
     });
+    previousIsha = current.isha.getTime();
+    current = following;
   }
-  const prayerScheduleJson = JSON.stringify(daysArray);
+  const schedule: PrayerSchedulePayload['schedule'] = {
+    schema: 2, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    validFrom: first.getTime(), validUntil: addLocalDays(first, 30).getTime(), days,
+  };
+  return { revision: JSON.stringify({ calculation, timezone: schedule.timezone, validFrom: schedule.validFrom }), calculation, schedule };
+}
 
-  try {
-    await PrayerWidget.updateWidgetData({
-      statusLabel,
-      currentName,
-      currentTime,
-      nextTitle,
-      nextName,
-      timeRemaining,
-      progressPercent,
-      targetTimestamp,
-      locationName,
-      hijriDate,
-      activePrayerId,
-      prayers: prayersMap,
-      prayerTimestamps,
-      prayerScheduleJson,
+/** Serial delivery means the latest intent wins; only durable acknowledgments are cached. */
+export function createWidgetSync(
+  adapter: PrayerWidgetPluginInterface,
+  supported: () => boolean,
+  clock: () => Date = () => new Date(),
+): (request: SyncRequest) => Promise<void> {
+  let desired: SyncRequest | undefined;
+  let running: Promise<void> | undefined;
+  let successfulSchedule: { key: string; validFrom: number; validUntil: number } | undefined;
+  let successfulPresentation: string | undefined;
+  let presentationRevision = 0;
+
+  const drain = async () => {
+    while (desired) {
+      const request = desired;
+      desired = undefined;
+      try {
+        const now = clock();
+        const settings = request.settings;
+        const key = JSON.stringify({
+          engine: 'adhan-4.4.3', timezonePolicy: 'device',
+          latitude: settings.latitude === undefined ? 21.3891 : settings.latitude,
+          longitude: settings.longitude === undefined ? 39.8579 : settings.longitude,
+          method: settings.method, madhab: settings.madhab,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+        const nearExpiry = addLocalDays(now, 2).getTime();
+        if (!successfulSchedule || successfulSchedule.key !== key || now.getTime() < successfulSchedule.validFrom || nearExpiry >= successfulSchedule.validUntil) {
+          const payload = buildWidgetSchedule(settings, now);
+          const response = await adapter.updateSchedule(payload);
+          if (!response.success) throw new Error('Schedule was not durably acknowledged');
+          successfulSchedule = { key, validFrom: payload.schedule.validFrom, validUntil: payload.schedule.validUntil };
+        }
+        // A newer locale/settings intent can arrive while native storage is in flight.
+        if (desired) continue;
+        const presentationKey = JSON.stringify(request.presentation);
+        if (successfulPresentation !== presentationKey) {
+          const response = await adapter.updatePresentation({ revision: `presentation:${++presentationRevision}`, presentation: request.presentation });
+          if (!response.success) throw new Error('Presentation was not durably acknowledged');
+          successfulPresentation = presentationKey;
+        }
+      } catch {
+        if (desired) continue;
+        throw new Error('errors.widgetSyncFailed');
+      }
+    }
+  };
+  const sync = (request: SyncRequest): Promise<void> => {
+    if (!supported()) return Promise.resolve();
+    desired = request;
+    if (!running) running = drain().finally(() => {
+      running = undefined;
+      // A synchronous cache hit can finish before a same-turn newer intent arrives.
+      if (desired) return sync(desired);
     });
-  } catch (error) {
-    console.debug('PrayerWidget sync skipped (non-native or web):', error);
-  }
-};
+    return running;
+  };
+  return sync;
+}
+
+const PrayerWidget = registerPlugin<PrayerWidgetPluginInterface & {
+  getSystemClockFormat(): Promise<{ timeFormat: '12h' | '24h' }>;
+}>('PrayerWidget');
+export const syncPrayerTimesToWidget = createWidgetSync(PrayerWidget, () =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('PrayerWidget'),
+);
+
+export async function readNativeSystemTimeFormat(): Promise<'12h' | '24h'> {
+  const result = await PrayerWidget.getSystemClockFormat();
+  if (result.timeFormat !== '12h' && result.timeFormat !== '24h') throw new Error('Invalid native system clock format');
+  return result.timeFormat;
+}

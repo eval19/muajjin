@@ -1,57 +1,63 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { createPersistentStore } from '@/utils/persistent-storage';
+import type { PersistentStore, StorageSnapshot, StorageUpdate } from '@/utils/persistent-storage';
+import { normalizeStorageValue } from '@/utils/settings-storage';
+
+const stores = new Map<string, PersistentStore<unknown>>();
+const reported = new WeakSet<object>();
+
+function browserStorage() {
+  if (typeof window === 'undefined') throw new Error('Storage unavailable');
+  return window.localStorage;
+}
+
+function getStore<T>(key: string, initialValue: T): PersistentStore<T> {
+  const existing = stores.get(key);
+  if (existing) return existing as PersistentStore<T>;
+  const normalize = (value: unknown) => {
+    let legacyOnboarding = false;
+    if (key === 'muajjin-settings') {
+      try { legacyOnboarding = browserStorage().getItem('muajjin-onboarding-completed') === 'true'; }
+      catch { /* The store reports unavailable storage without discarding saved state. */ }
+    }
+    return normalizeStorageValue(key, value, initialValue, legacyOnboarding);
+  };
+  const store = createPersistentStore(key, initialValue, normalize, browserStorage);
+  stores.set(key, store as PersistentStore<unknown>);
+  return store;
+}
+
+export interface LocalStorageStatus {
+  error: string | null;
+  reset: (extraKeys?: string[]) => boolean;
+}
 
 export function useLocalStorage<T>(
   key: string,
   initialValue: T,
-): [T, (value: T | ((val: T) => T)) => void] {
-  // Get from local storage then parse
-  const readValue = (): T => {
-    if (typeof window === 'undefined') {
-      return initialValue;
-    }
-
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  };
-
-  // State to store our value
-  const [storedValue, setStoredValue] = useState<T>(readValue);
-
-  // Return a wrapped version of useState's setter function that persists the new value to localStorage
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      // Allow value to be a function so we have the same API as useState
-      const valueToStore =
-        value instanceof Function ? value(storedValue) : value;
-
-      // Save state
-      setStoredValue(valueToStore);
-
-      // Save to local storage
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      }
-    } catch (error) {
-      console.warn(`Error setting localStorage key "${key}":`, error);
-    }
-  };
-
-  // Listen for changes to this localStorage key in other windows/tabs
+): [T, (value: StorageUpdate<T>) => boolean, LocalStorageStatus] {
+  // One owner per key makes synchronous functional updates and same-tab consumers consistent.
+  const store = useMemo(() => getStore(key, initialValue), [key, initialValue]);
+  const snapshot: StorageSnapshot<T> = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
-        setStoredValue(JSON.parse(e.newValue));
+    const receive = (event: StorageEvent) => {
+      if ((event.key === key || event.key === null) && event.storageArea === window.localStorage) {
+        store.receiveExternal(event.key === null ? null : event.newValue);
       }
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [key]);
-
-  return [storedValue, setValue];
+    window.addEventListener('storage', receive);
+    // Catch changes between initial render and subscription, including external deletion.
+    try { store.receiveExternal(window.localStorage.getItem(key)); }
+    catch { /* Initialization already provides a surfaced storage error. */ }
+    store.persistMigration();
+    return () => window.removeEventListener('storage', receive);
+  }, [key, store]);
+  useEffect(() => {
+    if (snapshot.error && !reported.has(snapshot)) {
+      reported.add(snapshot);
+      toast({ title: 'Device data could not be saved or loaded', description: snapshot.error, variant: 'destructive' });
+    }
+  }, [snapshot]);
+  return [snapshot.value, store.set, { error: snapshot.error, reset: store.reset }];
 }

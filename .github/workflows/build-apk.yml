@@ -1,90 +1,137 @@
-name: Build Debug APK with Widgets
+name: Quality gates
 
 on:
+  pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
+      full_native:
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  changes:
     runs-on: ubuntu-latest
-
+    outputs:
+      native: ${{ steps.surface.outputs.native }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js LTS
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: lts/*
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - name: Determine affected native surface
+        id: surface
+        env:
+          FULL_NATIVE: ${{ inputs.full_native || github.event_name == 'workflow_dispatch' }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          base = os.environ.get('BASE', '')
+          full = os.environ['FULL_NATIVE'] == 'true' or not base or set(base) == {'0'}
+          paths = [] if full else subprocess.check_output(['git', 'diff', '--name-only', base, os.environ['HEAD']], text=True).splitlines()
+          native = full or any(path.startswith(('android/', 'native-geolocation-plugin/', 'src/', 'public/', 'tests/', 'scripts/', '.github/workflows/')) or path in ('package.json', 'bun.lock', '.bun-version', 'capacitor.config.ts', 'vite.config.ts', 'tailwind.config.ts') for path in paths)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('native=' + str(native).lower() + '\n')
+          PY
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+  web:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [nongithub, github]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build web assets
-        run: bun run build:github
-
-      - name: Sync to Android (Capacitor)
-        run: bunx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Accept Android SDK licenses
-        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-
-      - name: Build Debug APK
+      - run: bun install --frozen-lockfile
+      - name: Declare build inputs
+        id: version
         run: |
-          cd android
-          ./gradlew assembleDebug --stacktrace
-
-      - name: Prepare APK for Release
+          echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+          echo "version=$(bun -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test:domain
+      - name: Build selected distribution
+        env:
+          BUILD_MODE: ${{ matrix.mode }}
         run: |
-          mkdir -p release-output
-          APK_PATH=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
-          cp "$APK_PATH" release-output/Muajjin-v2.7.1-widgets.apk
-
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
+          if [[ "$BUILD_MODE" == github ]]; then bun run build:github; else bun run build; fi
+      - uses: actions/upload-artifact@v4
         with:
-          name: muajjin-widget-debug-apk
-          path: release-output/Muajjin-v2.7.1-widgets.apk
+          name: web-${{ steps.version.outputs.version }}-${{ matrix.mode }}
+          path: dist/
           if-no-files-found: error
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+  native:
+    needs: [changes, web]
+    if: needs.changes.outputs.native == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [nongithub, github]
+    steps:
+      - uses: actions/checkout@v4
         with:
-          tag_name: v2.7.1-widgets
-          name: "Muajjin v2.7.1 with Home Screen Widgets"
-          body: |
-            ### 🕌 Muajjin v2.7.1 - Widgets Suite & Android 16 Live Updates
-            - **2x2 Square Widget Perfected:** Clear separation between next prayer (top right) and current prayer (bottom right).
-            - **Android 16 Live Update & Super Island (Part 5):** Ongoing silent countdown on lock screen and dynamic island capsule.
-            - **4 Distinct Sizes + Full Table:** 2x1 Strip, 2x2 Square, 4x1 Banner, 4x2 Wide Card with 6-chip schedule strip, and 4x4 Full Table.
-            - **Fixed Dual Palette (Light & Dark):** High-contrast emerald/mint theme with instant system dark mode support.
-            - **Warm State Alert (Sheet 2):** Turns amber during the final 15 minutes before prayer window closure.
-            - **Live Hardware Chronometer:** Ticks every second with tabular fixed-width digits and zero battery drain.
-            - **Direct APK:** Download `Muajjin-v2.7.1-widgets.apk` below and install directly on your Android phone.
-          files: release-output/Muajjin-v2.7.1-widgets.apk
-          draft: false
-          prerelease: false
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bun install --frozen-lockfile
+      - name: Declare artifact identity and epoch
+        id: identity
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          BUILD_MODE: ${{ matrix.mode }}
+        run: |
+          echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+          echo "path=$(python3 -B scripts/build-identity.py --mode "$BUILD_MODE" --variant debug --path)" >> "$GITHUB_OUTPUT"
+          echo "name=$(python3 -B scripts/build-identity.py --mode "$BUILD_MODE" --variant debug)" >> "$GITHUB_OUTPUT"
+      - name: Build and sync selected web assets
+        env:
+          BUILD_MODE: ${{ matrix.mode }}
+        run: |
+          if [[ "$BUILD_MODE" == github ]]; then bun run build:github; else bun run build; fi
+          bun run sync:android
+      - name: Native unit regressions and debug assembly
+        env:
+          BUILD_MODE: ${{ matrix.mode }}
+        run: bash android/gradlew -p android testDebugUnitTest assembleDebug -PbuildMode="$BUILD_MODE" -PsourceDateEpoch="$SOURCE_DATE_EPOCH" --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.identity.outputs.name }}
+          path: ${{ steps.identity.outputs.path }}
+          if-no-files-found: error

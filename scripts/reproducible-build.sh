@@ -1,180 +1,107 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Print usage
 usage() {
-  cat << EOF
-Usage: $0 [OPTIONS]
+  cat <<'EOF'
+Usage: bun run reproducible:build --mode github|nongithub (--time EPOCH | --tag TAG) [--install] [--output NEW_DIRECTORY]
 
-Build reproducible APK with deterministic timestamps.
+Build an UNSIGNED release APK. Requires Bun 1.2.2, Node >=22.12,
+JDK 21, Python 3 (PYTHON override), SDK platform/build-tools 36/36.0.0
+and the checked-in Gradle 8.14.3 wrapper. No signing or publishing occurs.
 
-Options:
-  -t, --time TIMESTAMP    Set SOURCE_DATE_EPOCH (Unix epoch seconds)
-                          If not provided, uses SOURCE_DATE_EPOCH env var
-  -g, --tag TAG           Derive SOURCE_DATE_EPOCH from a git tag's commit time
-  -m, --mode MODE         Build mode: 'github' (default) or 'nongithub'
-  -h, --help              Show this help message
+SIDE EFFECTS: --install explicitly permits a frozen dependency install;
+otherwise existing local dependencies are required. Every build replaces dist,
+syncs Capacitor's generated Android assets/config, runs Gradle clean/release
+assembly (Gradle may populate/download caches), and creates a NEW output folder.
+It does not restore these generated files. Outputs/metadata survive failure;
+no temporary extraction files are created. Run in a disposable clean checkout
+for controlled comparisons. Existing output folders are never overwritten.
 
-Build Modes:
-  github      Includes update checker (for GitHub releases)
-  nongithub   No update checker (for F-Droid, direct download)
-
-Examples:
-  # Build for GitHub release
-  $0 -t 1609459200 -m github
-
-  # Build for F-Droid
-  $0 -t 1609459200 -m nongithub
-
-  # Derive timestamp from a release tag
-  $0 -g v2.5.1 -m github
-
-  # Use environment variable
-  export SOURCE_DATE_EPOCH=1609459200
-  $0
-
-  # Use git commit timestamp
-  $0 -t \$(git show -s --format=%ct HEAD)
-
+--mode is required; no implicit GitHub distribution.
+--time is the actual build epoch in seconds, not a release publication date.
+--tag uses that local tag's commit epoch and requires matching HEAD.
+Environment SOURCE_DATE_EPOCH alone is deliberately not an input.
+Default output: reproducible-output/<mode>-<epoch>
 EOF
-  exit 1
 }
-
-# Parse command-line arguments
-BUILD_MODE="github"
-GIT_TAG=""
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -t|--time)
-      SOURCE_DATE_EPOCH="$2"
-      shift 2
-      ;;
-    -g|--tag)
-      GIT_TAG="$2"
-      shift 2
-      ;;
-    -m|--mode)
-      BUILD_MODE="$2"
-      shift 2
-      ;;
-    -h|--help)
-      usage
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      usage
-      ;;
+fail() { printf 'Error: %s\n' "$*" >&2; exit 1; }
+mode='' epoch='' tag='' output='' install=false
+while (($#)); do
+  case "$1" in
+    --mode|-m|--time|-t|--tag|-g|--output)
+      (($# >= 2)) && [[ "$2" != --* ]] || fail "Missing value for $1"
+      case "$1" in
+        --mode|-m) [[ -z "$mode" ]] || fail 'Duplicate mode'; mode="$2" ;;
+        --time|-t) [[ -z "$epoch" ]] || fail 'Duplicate time'; epoch="$2" ;;
+        --tag|-g) [[ -z "$tag" ]] || fail 'Duplicate tag'; tag="$2" ;;
+        --output) [[ -z "$output" ]] || fail 'Duplicate output'; output="$2" ;;
+      esac
+      shift 2 ;;
+    --install) install=true; shift ;;
+    --help|-h) usage; exit 0 ;;
+    *) fail "Unknown option: $1" ;;
   esac
 done
-
-# Validate build mode
-if [[ "$BUILD_MODE" != "github" && "$BUILD_MODE" != "nongithub" ]]; then
-  echo "Error: Invalid build mode '$BUILD_MODE'" >&2
-  echo "Use: 'github' or 'nongithub'" >&2
-  exit 1
+[[ "$mode" == github || "$mode" == nongithub ]] || fail '--mode github|nongithub is required'
+[[ -z "$tag" || -z "$epoch" ]] || fail 'Choose --time OR --tag, not both'
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$root"
+if [[ -n "$tag" ]]; then
+  commit="$(git rev-parse --verify "refs/tags/$tag^{commit}")" || fail 'Local tag not found'
+  [[ "$commit" == "$(git rev-parse HEAD)" ]] || fail 'HEAD does not match supplied tag'
+  epoch="$(git show -s --format=%ct "$commit")"
 fi
-
-ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-cd "$ROOT_DIR"
-
-# Derive timestamp from tag, if requested
-if [[ -n "$GIT_TAG" && -z "${SOURCE_DATE_EPOCH:-}" ]]; then
-  if ! git rev-parse -q --verify "refs/tags/$GIT_TAG" >/dev/null 2>&1; then
-    echo "Error: Tag not found: $GIT_TAG" >&2
-    echo "Fetch tags or use an existing local tag." >&2
-    exit 1
-  fi
-
-  TAG_COMMIT="$(git rev-list -n 1 "$GIT_TAG")"
-  HEAD_COMMIT="$(git rev-parse HEAD)"
-  if [[ "$TAG_COMMIT" != "$HEAD_COMMIT" ]]; then
-    echo "Error: Current HEAD does not match tag '$GIT_TAG'." >&2
-    echo "  HEAD: $HEAD_COMMIT" >&2
-    echo "  TAG : $TAG_COMMIT" >&2
-    echo "Run: git checkout $GIT_TAG" >&2
-    exit 1
-  fi
-
-  SOURCE_DATE_EPOCH="$(git show -s --format=%ct "$TAG_COMMIT")"
-fi
-
-# Check if timestamp is set (either from arg or env)
-SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-}
-if [[ -z "$SOURCE_DATE_EPOCH" ]]; then
-  echo "Error: SOURCE_DATE_EPOCH not set" >&2
-  echo "" >&2
-  echo "Provide it via:" >&2
-  echo "  -t flag: $0 -t 1609459200" >&2
-  echo "  -g flag: $0 -g v2.5.1" >&2
-  echo "  env var: export SOURCE_DATE_EPOCH=1609459200" >&2
-  echo "" >&2
-  echo "Get a timestamp:" >&2
-  echo "  Fixed date: 1609459200 (Jan 1, 2021)" >&2
-  echo "  Git commit: \$(git show -s --format=%ct HEAD)" >&2
-  echo "  Current time: \$(date +%s)" >&2
-  exit 1
-fi
-
-# Validate timestamp is a number
-if ! [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]]; then
-  echo "Error: SOURCE_DATE_EPOCH must be a number (got: $SOURCE_DATE_EPOCH)" >&2
-  exit 1
-fi
-
-export SOURCE_DATE_EPOCH
-echo "Using SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
-echo "Build mode: $BUILD_MODE"
-if [[ -n "$GIT_TAG" ]]; then
-  echo "Tag: $GIT_TAG"
-fi
-# make Vite aware of the timestamp for deterministic metadata
-export VITE_BUILD_TIMESTAMP="$SOURCE_DATE_EPOCH"
-
-# Reuse Bun lockfile for determinism
-bun install --frozen-lockfile
-
-# Build the web bundle with the appropriate mode
-if [[ "$BUILD_MODE" == "github" ]]; then
-  bun run build:github
-else
-  bun run build
-fi
-
-# Sync Capacitor assets
-bunx cap sync android
-
-# Build Android release APK with the same timestamp
-cd android
-./gradlew clean assembleRelease -PsourceDateEpoch="$SOURCE_DATE_EPOCH" --stacktrace
-cd "$ROOT_DIR"
-
-# Collect deterministic artifact metadata
-SUFFIX="${BUILD_MODE}"
-CHECKSUM_FILE="reproducible-checksums-${SUFFIX}.txt"
-: > "$CHECKSUM_FILE"
-
-apk_path="android/app/build/outputs/apk/release/app-release.apk"
-if [[ -f "$apk_path" ]]; then
-  printf "APK\n" >> "$CHECKSUM_FILE"
-  sha256sum "$apk_path" >> "$CHECKSUM_FILE"
-  sha512sum "$apk_path" >> "$CHECKSUM_FILE"
-fi
-
-if [[ -d dist ]]; then
-  printf "\nWeb bundle\n" >> "$CHECKSUM_FILE"
-  find dist -type f -print0 | sort -z | xargs -0 sha256sum >> "$CHECKSUM_FILE"
-fi
-
-# Add build metadata
-cat >> "$CHECKSUM_FILE" << EOF
-
-Build Metadata
-SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH
-BUILD_MODE=$BUILD_MODE
-GIT_TAG=${GIT_TAG:-}
-EOF
-
-echo ""
-echo "✅ Build complete!"
-echo "APK: $apk_path"
-echo "Checksums: $CHECKSUM_FILE"
+[[ "$epoch" =~ ^[0-9]+$ ]] || fail 'An explicit numeric --time or valid --tag is required'
+for command in bun node java git; do command -v "$command" >/dev/null || fail "Missing tool: $command"; done
+python="${PYTHON:-python3}"
+command -v "$python" >/dev/null || fail 'Python 3 is required; set PYTHON to its executable on Windows'
+[[ "$(bun --version)" == 1.2.2 ]] || fail 'Bun must match pinned 1.2.2'
+node -e 'const [major,minor]=process.versions.node.split(".").map(Number); if(major<22||(major===22&&minor<12)) throw Error("Node >=22.12 required")'
+epoch="$(node -e 'const n=Number(process.argv[1]); if(!Number.isSafeInteger(n)||n<0) throw Error("Epoch must be a nonnegative safe integer"); console.log(n)' "$epoch")"
+java_version="$(java -version 2>&1)"
+[[ "$java_version" == *'version "21.'* || "$java_version" == *'version "21"'* ]] || fail 'JDK 21 is required'
+sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+[[ -n "$sdk" && -d "$sdk/platforms/android-36" && -d "$sdk/build-tools/36.0.0" ]] || fail 'SDK platform 36 and build-tools 36.0.0 are required'
+if "$install"; then bun install --frozen-lockfile; fi
+[[ -f node_modules/@capacitor/cli/bin/capacitor && -f node_modules/vite/package.json ]] || fail 'Local dependencies missing; use --install explicitly'
+export SOURCE_DATE_EPOCH="$epoch"
+output="${output:-reproducible-output/$mode-$epoch}"
+[[ ! -e "$output" ]] || fail "Output already exists: $output"
+mkdir -p "$(dirname "$output")"
+mkdir "$output"
+output="$(cd "$output" && pwd)"
+apk="$("$python" -B scripts/build-identity.py --mode "$mode" --variant release --path)"
+metadata="$output/build-metadata.txt"
+{
+  printf 'SOURCE_DATE_EPOCH=%s\nBUILD_MODE=%s\nVARIANT=release-unsigned\nGIT_TAG=%s\nGIT_COMMIT=%s\n' "$epoch" "$mode" "$tag" "$(git rev-parse HEAD)"
+  printf 'TRACKED_SOURCE_DELTA_SHA256='; git diff --binary HEAD | sha256sum
+  printf 'TRACKED_SOURCE_STATUS\n'; git status --porcelain --untracked-files=no
+  printf 'UNTRACKED_SOURCE_STATUS (review locally before making a source claim)\n'; git ls-files --others --exclude-standard
+  printf 'UNTRACKED_SOURCE_SHA256\n'; git ls-files --others --exclude-standard -z | xargs -0 -r sha256sum
+  printf 'BUN='; bun --version
+  printf 'NODE='; node --version
+  printf 'PYTHON='; "$python" --version
+  printf '%s\n' "$java_version"
+  printf 'LOCAL_PACKAGE_VERSIONS\n'
+  node -e 'for(const p of ["@capacitor/cli","@capacitor/core","@capacitor/android","vite","typescript"]) console.log(p+"="+require("./node_modules/"+p+"/package.json").version)'
+  printf 'LOCKFILE_SHA256='; sha256sum bun.lock
+  printf 'ANDROID_SDK=%s\n' "$sdk"
+  cat "$sdk/platforms/android-36/source.properties" "$sdk/build-tools/36.0.0/source.properties"
+  java -jar "$sdk/build-tools/36.0.0/lib/apksigner.jar" version
+  aapt2="$sdk/build-tools/36.0.0/aapt2"
+  [[ -f "$aapt2" ]] || aapt2="$aapt2.exe"
+  "$aapt2" version
+  bash android/gradlew -p android --version
+} > "$metadata"
+printf 'Build replaces dist/Capacitor generated assets and cleans Android outputs. Mode=%s Epoch=%s\n' "$mode" "$epoch"
+if [[ "$mode" == github ]]; then bun run build:github; else bun run build; fi
+bun run sync:android
+bash android/gradlew -p android clean assembleRelease -PsourceDateEpoch="$epoch" -PbuildMode="$mode" -PsignRelease=false --stacktrace
+[[ -f "$apk" ]] || fail "Expected explicit artifact missing: $apk"
+cp "$apk" "$output/$(basename "$apk")"
+{
+  printf '\nAPK_SHA256\n'; sha256sum "$output/$(basename "$apk")"
+  printf 'APK_SHA512\n'; sha512sum "$output/$(basename "$apk")"
+  printf 'WEB_PAYLOAD_SHA256\n'; find dist -type f -print0 | sort -z | xargs -0 sha256sum
+} >> "$metadata"
+printf 'Unsigned artifact: %s/%s\nBuild inputs and checksums: %s\nNo signature validity or reproducibility comparison claimed by this build command.\n' "$output" "$(basename "$apk")" "$metadata"

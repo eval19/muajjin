@@ -1,44 +1,26 @@
 import { Card } from '@/components/ui/card';
 import { useTranslation } from '@/contexts/translation-context';
 import { PrayerTime } from '@/types';
-import { formatTime, getCurrentSalat } from '@/utils/time-utils';
-import { type FC, useCallback, useEffect, useState } from 'react';
+import { formatTime, getCurrentSalat, prayerBoundaries } from '@/utils/time-utils';
+import { useBoundaryClock } from '@/hooks/use-visible-clock';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 
 interface PrayerTimesContainerProps {
   salats: PrayerTime[];
+  allPrayers: PrayerTime[];
   timeFormat?: 'system' | '12h' | '24h';
 }
 
 export const PrayerTimesContainer: FC<PrayerTimesContainerProps> = ({
   salats,
+  allPrayers,
   timeFormat = 'system',
 }) => {
   const { t } = useTranslation();
-  const [currentPrayer, setCurrentPrayer] = useState<PrayerTime | null>(null);
-
-  const isSamePrayer = (a: PrayerTime | null, b: PrayerTime | null) => {
-    if (!a || !b) return a === b;
-    return (
-      a.id === b.id &&
-      a.start === b.start &&
-      a.end === b.end &&
-      a.jamaah === b.jamaah
-    );
-  };
-
-  const updateCurrentPrayer = useCallback(() => {
-    if (salats.length === 0) return;
-    const nextCurrent = getCurrentSalat(salats);
-    setCurrentPrayer((prev) =>
-      isSamePrayer(prev, nextCurrent) ? prev : nextCurrent,
-    );
-  }, [salats]);
-
-  useEffect(() => {
-    updateCurrentPrayer();
-    const timer = setInterval(updateCurrentPrayer, 1000);
-    return () => clearInterval(timer);
-  }, [updateCurrentPrayer]);
+  const boundaries = useMemo(() => prayerBoundaries(allPrayers), [allPrayers]);
+  const now = useBoundaryClock(boundaries);
+  const currentPrayer = getCurrentSalat(allPrayers, now);
 
   return (
     <div>
@@ -58,7 +40,7 @@ export const PrayerTimesContainer: FC<PrayerTimesContainerProps> = ({
             const jamaahTime = salat.jamaah || salat.start;
             return (
               <div
-                key={salat.name}
+                key={salat.id}
                 className={`grid grid-cols-4 gap-2 p-3 ${
                   isCurrent && 'border-l-4 border-l-primary bg-primary/5'
                 }`}>
@@ -68,15 +50,15 @@ export const PrayerTimesContainer: FC<PrayerTimesContainerProps> = ({
                 </p>
 
                 <p className={`text-center ${isCurrent && 'font-medium'}`}>
-                  {formatTime(salat.start, timeFormat)}
+                  {formatTime(salat.start, timeFormat, t)}
                 </p>
 
                 <p className="text-center font-semibold text-primary">
-                  {salat.jamaah ? formatTime(jamaahTime, timeFormat) : '—'}
+                  {salat.jamaah ? formatTime(jamaahTime, timeFormat, t) : '—'}
                 </p>
 
                 <p className="text-center">
-                  {salat.end ? formatTime(salat.end, timeFormat) : '—'}
+                  {salat.end ? formatTime(salat.end, timeFormat, t) : '—'}
                 </p>
               </div>
             );

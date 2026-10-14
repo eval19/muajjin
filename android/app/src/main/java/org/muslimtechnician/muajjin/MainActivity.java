@@ -27,6 +27,13 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        // Reconcile permissions and time even when an OEM omits a broadcast.
+        PrayerUpdateCoordinator.dispatch(this, true);
+    }
+
+    @Override
     public void onBackPressed() {
         // Let Capacitor handle the back press
         super.onBackPressed();

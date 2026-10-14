@@ -15,9 +15,10 @@ import { subscribeUpdateChecks } from '@/features/update-checker/services/update
 import {
   fetchLatestRelease,
   isNewerVersion,
-  ReleaseInfo,
 } from '@/features/update-checker/services/update-service';
-import { type FC, useCallback, useEffect, useRef, useState } from 'react';
+import type { ReleaseInfo } from '@/features/update-checker/services/update-service';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FC } from 'react';
 import packageInfo from '../../../../package.json';
 
 const IGNORED_RELEASE_KEY = 'muajjin-update-ignored';

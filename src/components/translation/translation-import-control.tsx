@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/contexts/translation-context';
+import { MAX_TRANSLATION_BYTES } from '@/utils/translation-validation';
 import { Upload } from 'lucide-react';
-import { Fragment, ReactNode, useRef } from 'react';
+import { Fragment, useRef } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 
 interface TranslationImportControlProps {
@@ -22,14 +24,19 @@ export function TranslationImportControl({
   const { t, importTranslation } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_TRANSLATION_BYTES) {
+      toast.error(t('settings.importError'), { description: 'Translation file too large (maximum 1 MB).' });
+      event.currentTarget.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target?.result as string);
+        const json: unknown = JSON.parse(e.target?.result as string);
         const result = importTranslation(json);
         const importSuccess = requireIdForSuccess
           ? result.success && Boolean(result.id)
@@ -51,6 +58,7 @@ export function TranslationImportControl({
         toast.error(t('errors.invalidFile'));
       }
     };
+    reader.onerror = () => toast.error(t('settings.importError'));
 
     reader.readAsText(file);
   };

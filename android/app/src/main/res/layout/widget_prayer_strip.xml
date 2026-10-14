@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_strip_root"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card_bg"
@@ -13,8 +15,10 @@
     <!-- Normal Label (Accent) -->
     <TextView
         android:id="@+id/tv_strip_label"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="Asr in"
         android:textColor="@color/w_accent"
         android:textSize="12sp"
@@ -24,8 +28,10 @@
     <!-- Warm State Label (Warning Amber) -->
     <TextView
         android:id="@+id/tv_strip_label_warm"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="Asr in"
         android:textColor="@color/w_warm_text"
         android:textSize="12sp"

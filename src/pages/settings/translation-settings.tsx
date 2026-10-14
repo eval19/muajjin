@@ -28,8 +28,7 @@ const TranslationSettings: FC = () => {
         ),
       )
     ) {
-      deleteTranslation(id);
-      toast.success(t('settings.translationDeleted'));
+      if (deleteTranslation(id)) toast.success(t('settings.translationDeleted'));
     }
   };
 

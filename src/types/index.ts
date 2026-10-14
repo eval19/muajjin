@@ -4,11 +4,14 @@ export interface PrayerTime {
   start: string; // "HH:MM" in 24h format (use formatTime() for display)
   end?: string; // "HH:MM" in 24h format
   jamaah?: string; // "HH:MM" in 24h format (user optional)
+  startTimestamp?: number; // Actual epoch milliseconds, never parsed from display.
+  endTimestamp?: number; // Inclusive end: the millisecond before the next boundary.
+  jamaahTimestamp?: number;
 }
 
 export interface UserSettings {
   method: number;
-  madhab: number;
+  madhab: number | null; // null: onboarding has not selected a calculation rule.
   jamaahTimes: {
     Fajr?: string; // Stored as string "HH:MM" for user input
     Dhuhr?: string;
@@ -20,8 +23,8 @@ export interface UserSettings {
   iftarAdjustment: number;
   hijriAdjustment: number;
   hijriDateChangeAtMaghrib: boolean;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null; // null: damaged persisted coordinate, requires repair.
+  longitude?: number | null;
   city?: string;
   country?: string;
   manualLocation: boolean;
@@ -33,6 +36,8 @@ export interface ProhibitedTime {
   name: string;
   start: string; // "HH:MM" in 24h format
   end: string; // "HH:MM" in 24h format
+  startTimestamp?: number;
+  endTimestamp?: number; // Inclusive complete end minute.
 }
 
 export type CalculationMethod = {

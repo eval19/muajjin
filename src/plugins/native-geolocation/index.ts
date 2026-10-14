@@ -1,54 +1,10 @@
 import { registerPlugin } from '@capacitor/core';
+import { NativeGeolocationWeb } from './web';
+import type { NativeGeolocationPlugin } from './definitions';
 
-export type {
-  PositionOptions,
-  Position,
-  Coordinates,
-  PermissionStatus,
-  PermissionState,
-  HeadingResult,
-} from './definitions';
+const NativeGeolocation = registerPlugin<NativeGeolocationPlugin>('NativeGeolocation', {
+  web: async () => new NativeGeolocationWeb(),
+});
 
-export interface NativeGeolocationPlugin {
-  getCurrentPosition(options?: PositionOptions): Promise<Position>;
-  getCurrentHeading(): Promise<HeadingResult>;
-  requestPermissions(): Promise<PermissionStatus>;
-}
-
-interface Position {
-  coords: Coordinates;
-  timestamp: number;
-}
-
-interface Coordinates {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  altitude?: number;
-  heading?: number;
-  speed?: number;
-}
-
-interface PermissionStatus {
-  coarseLocation: PermissionState;
-  location: PermissionState;
-}
-
-interface HeadingResult {
-  heading: number;
-}
-
-type PermissionState =
-  | 'granted'
-  | 'denied'
-  | 'prompt'
-  | 'prompt-with-rationale';
-
-const NativeGeolocation = registerPlugin<NativeGeolocationPlugin>(
-  'NativeGeolocation',
-  {
-    web: () => import('./web').then((m) => new m.NativeGeolocationWeb()),
-  },
-);
-
+export type { PositionOptions, Position, Coordinates, PermissionStatus, PermissionState, HeadingResult } from './definitions';
 export { NativeGeolocation };

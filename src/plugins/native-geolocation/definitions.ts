@@ -1,5 +1,3 @@
-import { registerPlugin } from '@capacitor/core';
-
 export interface NativeGeolocationPlugin {
   /**
    * Get the current device location
@@ -7,6 +5,7 @@ export interface NativeGeolocationPlugin {
    * @returns Promise with position data
    */
   getCurrentPosition(options?: PositionOptions): Promise<Position>;
+  cancelPosition(options: { requestId: string }): Promise<void>;
 
   /**
    * Get the current compass heading in degrees
@@ -37,6 +36,7 @@ export interface PositionOptions {
    * @default 0
    */
   maximumAge?: number;
+  requestId?: string;
 }
 
 export interface Position {
@@ -108,12 +108,3 @@ export type PermissionState =
   | 'prompt'
   | 'prompt-with-rationale';
 
-const NativeGeolocation = registerPlugin<NativeGeolocationPlugin>(
-  'NativeGeolocation',
-  {
-    web: () => import('./web').then((m) => new m.NativeGeolocationWeb()),
-  },
-);
-
-export * from './definitions';
-export { NativeGeolocation };

@@ -4,7 +4,7 @@ import {
   CalculationMethod,
   Madhab as AdhanMadhab,
 } from 'adhan';
-import { UserSettings } from '@/types';
+import type { UserSettings } from '@/types';
 
 export interface LocalPrayerTimes {
   Fajr: string;
@@ -14,6 +14,77 @@ export interface LocalPrayerTimes {
   Ghurub: string;
   Maghrib: string;
   Isha: string;
+}
+
+export interface PrayerInstants {
+  fajr: Date;
+  sunrise: Date;
+  dhuhr: Date;
+  asr: Date;
+  maghrib: Date;
+  isha: Date;
+}
+
+const METHOD_FACTORIES = {
+  1: CalculationMethod.Karachi,
+  2: CalculationMethod.NorthAmerica,
+  3: CalculationMethod.MuslimWorldLeague,
+  4: CalculationMethod.UmmAlQura,
+  5: CalculationMethod.Egyptian,
+  7: CalculationMethod.Tehran,
+  8: CalculationMethod.Dubai,
+  9: CalculationMethod.Kuwait,
+  10: CalculationMethod.Qatar,
+  11: CalculationMethod.Singapore,
+  12: CalculationMethod.MoonsightingCommittee,
+  15: CalculationMethod.MoonsightingCommittee,
+};
+
+/**
+ * The supplied date selects a local Gregorian calendar day. Adhan returns
+ * actual instants; display uses the device timezone, not a location timezone.
+ * Only absent coordinates use the initial Makkah default.
+ */
+export function calculatePrayerInstants(
+  date: Date,
+  settings: UserSettings,
+): PrayerInstants {
+  if (!Number.isFinite(date.getTime())) {
+    throw new RangeError('Invalid prayer calculation date');
+  }
+  const latitude = settings.latitude === undefined ? 21.3891 : settings.latitude;
+  const longitude = settings.longitude === undefined ? 39.8579 : settings.longitude;
+  if (
+    typeof latitude !== 'number' || !Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+    typeof longitude !== 'number' || !Number.isFinite(longitude) || Math.abs(longitude) > 180
+  ) {
+    throw new RangeError('Invalid prayer calculation coordinates');
+  }
+  const factory = METHOD_FACTORIES[settings.method as keyof typeof METHOD_FACTORIES];
+  if (!factory) throw new RangeError('Unsupported prayer calculation method');
+  if (settings.madhab !== 0 && settings.madhab !== 1) {
+    throw new RangeError('Unsupported prayer calculation madhab');
+  }
+  const parameters = factory();
+  parameters.madhab = settings.madhab === 1 ? AdhanMadhab.Hanafi : AdhanMadhab.Shafi;
+  const times = new PrayerTimes(new Coordinates(latitude, longitude), date, parameters);
+  const instants: PrayerInstants = {
+    fajr: times.fajr,
+    sunrise: times.sunrise,
+    dhuhr: times.dhuhr,
+    asr: times.asr,
+    maghrib: times.maghrib,
+    isha: times.isha,
+  };
+  let previous = -Infinity;
+  for (const instant of Object.values(instants)) {
+    const timestamp = instant.getTime();
+    if (!Number.isFinite(timestamp) || timestamp <= previous) {
+      throw new RangeError('Prayer times are unavailable for this date and location');
+    }
+    previous = timestamp;
+  }
+  return instants;
 }
 
 /**
@@ -26,68 +97,24 @@ export function calculatePrayerTimesLocally(
   date: Date,
   settings: UserSettings,
 ): LocalPrayerTimes {
-  // Get coordinates from settings
-  const latitude = settings.latitude || 21.3891; // Default: Makkah
-  const longitude = settings.longitude || 39.8579;
-
-  // Create coordinates using adhan Coordinates class
-  const coordinates = new Coordinates(latitude, longitude);
-
-  // Get calculation parameters using adhan CalculationMethod
-  const params = getCalculationMethod(settings.method);
-
-  // Set madhab using adhan Madhab enum
-  // 0 = Shafi'i, Maliki, Hanbali (default)
-  // 1 = Hanafi (Asr is later)
-  params.madhab =
-    settings.madhab === 1 ? AdhanMadhab.Hanafi : AdhanMadhab.Shafi;
-
-  // Calculate prayer times using adhan PrayerTimes class
-  const prayerTimes = new PrayerTimes(coordinates, date, params);
-
-  // Format to "HH:MM" strings (24-hour)
+  const instants = calculatePrayerInstants(date, settings);
   return {
-    Fajr: formatTime(prayerTimes.fajr),
-    Shuruq: formatTime(prayerTimes.sunrise),
-    Dhuhr: formatTime(prayerTimes.dhuhr),
-    Asr: formatTime(prayerTimes.asr),
-    Ghurub: formatTime(prayerTimes.maghrib), // Ghurub is sunset (same as Maghrib time)
-    Maghrib: formatTime(prayerTimes.maghrib),
-    Isha: formatTime(prayerTimes.isha),
+    Fajr: formatPrayerClock(instants.fajr),
+    Shuruq: formatPrayerClock(instants.sunrise),
+    Dhuhr: formatPrayerClock(instants.dhuhr),
+    Asr: formatPrayerClock(instants.asr),
+    Ghurub: formatPrayerClock(instants.maghrib),
+    Maghrib: formatPrayerClock(instants.maghrib),
+    Isha: formatPrayerClock(instants.isha),
   };
 }
 
-/**
- * Get calculation parameters for the specified method ID
- * Only includes methods supported by the adhan library
- */
-function getCalculationMethod(methodId: number) {
-  // Type-safe method mapping using adhan CalculationMethod
-  const methods: Record<
-    number,
-    ReturnType<(typeof CalculationMethod)[keyof typeof CalculationMethod]>
-  > = {
-    1: CalculationMethod.Karachi(),
-    2: CalculationMethod.NorthAmerica(),
-    3: CalculationMethod.MuslimWorldLeague(),
-    4: CalculationMethod.UmmAlQura(),
-    5: CalculationMethod.Egyptian(),
-    7: CalculationMethod.Tehran(),
-    8: CalculationMethod.Dubai(),
-    9: CalculationMethod.Kuwait(),
-    10: CalculationMethod.Qatar(),
-    11: CalculationMethod.Singapore(),
-    12: CalculationMethod.MoonsightingCommittee(),
-    15: CalculationMethod.MoonsightingCommittee(),
-  };
-
-  return methods[methodId] || CalculationMethod.Karachi();
-}
 
 /**
  * Format Date object to "HH:MM" string (24-hour format)
  */
-function formatTime(date: Date): string {
+export function formatPrayerClock(date: Date): string {
+  if (!Number.isFinite(date.getTime())) throw new RangeError('Invalid prayer display instant');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${hours}:${minutes}`;

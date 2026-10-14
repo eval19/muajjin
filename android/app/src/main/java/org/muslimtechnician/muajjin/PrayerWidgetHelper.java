@@ -6,301 +6,100 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
+import java.util.Calendar;
+import java.util.TimeZone;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
-public class PrayerWidgetHelper {
+public final class PrayerWidgetHelper {
     public static final String PREFS_NAME = "MuajjinPrayerData";
+    static final Class<?>[] PROVIDERS = {PrayerWidgetStripProvider.class,PrayerWidgetSmallProvider.class,
+        PrayerWidgetBannerProvider.class,PrayerWidgetMediumProvider.class,PrayerWidgetLargeProvider.class,
+        PrayerLockSmallProvider.class,PrayerLockMediumProvider.class};
 
-    public static class WidgetTimelineState {
-        public String label = "Asr in";
-        public String nextName = "Asr";
-        public String nextTime = "15:12";
-        public String footerText = "Now: Dhuhr";
-        public String contextLine2 = "Asr at 15:12";
-        public long targetTimestamp = 0;
-        public long startTimestamp = 0;
-        public boolean isWarm = false;
-        public int progress = 500;
-        public String activePrayerId = "dhuhr";
-
-        public long fajrTs, sunriseTs, dhuhrTs, asrTs, maghribTs, ishaTs;
-        public String fajrStr = "04:35";
-        public String sunriseStr = "05:52";
-        public String dhuhrStr = "11:47";
-        public String asrStr = "15:12";
-        public String maghribStr = "17:42";
-        public String ishaStr = "19:12";
-    }
-
-    public static void updateAllWidgets(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-
-        // 1. Strip Widgets (2x1)
-        ComponentName stripComponent = new ComponentName(context, PrayerWidgetStripProvider.class);
-        int[] stripIds = manager.getAppWidgetIds(stripComponent);
-        if (stripIds != null && stripIds.length > 0) {
-            for (int id : stripIds) {
-                updateStripWidget(context, manager, id);
-            }
+    /** Immutable, fully formatted once per dispatch; no renderer reads/parses preferences. */
+    public static final class WidgetTimelineState {
+        public final long now,targetTimestamp,startTimestamp,chronometerBase;
+        public final boolean valid,isWarm;
+        public final int progress;
+        public final String label,nextName,nextTime,footerText,contextLine2,activePrayerId,nextPrayerId,hijriText,currentStartTime;
+        public final long fajrTs,sunriseTs,dhuhrTs,asrTs,maghribTs,ishaTs;
+        public final String fajrStr,sunriseStr,dhuhrStr,asrStr,maghribStr,ishaStr;
+        public final NativePresentation presentation;
+        final PrayerTimeline timeline;
+        public WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,long[] localEvents) {
+            this.presentation=presentation;this.timeline=timeline;this.now=now;valid=timeline!=null;
+            java.text.SimpleDateFormat clock=valid?presentation.clockFormatter(context):null;
+            targetTimestamp=valid?timeline.target:0;startTimestamp=valid?timeline.start:0;
+            chronometerBase=SystemClock.elapsedRealtime()+Math.max(0,targetTimestamp-now);
+            isWarm=valid&&timeline.warm;progress=valid?timeline.progress:0;
+            activePrayerId=valid?timeline.currentId:"";nextPrayerId=valid?timeline.nextId:"";
+            nextName=valid?presentation.label(nextPrayerId):presentation.label("recovery");
+            nextTime=presentation.clock(clock,targetTimestamp);
+            label=valid?nextName+" "+presentation.label("in"):presentation.label("recovery");
+            footerText=valid?(activePrayerId.isEmpty()?presentation.label("current")+": —":presentation.label("now")+": "+presentation.label(activePrayerId)):presentation.label("recovery");
+            contextLine2=valid?nextName+" "+presentation.label("at")+" "+nextTime:"";
+            currentStartTime=valid&&!activePrayerId.isEmpty()?presentation.clock(clock,startTimestamp):"";
+            fajrTs=valid?localEvents[0]:0;sunriseTs=valid?localEvents[1]:0;dhuhrTs=valid?localEvents[2]:0;
+            asrTs=valid?localEvents[3]:0;maghribTs=valid?localEvents[4]:0;ishaTs=valid?localEvents[5]:0;
+            fajrStr=presentation.clock(clock,fajrTs);sunriseStr=presentation.clock(clock,sunriseTs);
+            dhuhrStr=presentation.clock(clock,dhuhrTs);asrStr=presentation.clock(clock,asrTs);
+            maghribStr=presentation.clock(clock,maghribTs);ishaStr=presentation.clock(clock,ishaTs);
+            String hijri="";
+            try {
+                Calendar date=Calendar.getInstance(TimeZone.getDefault());date.setTimeInMillis(now);
+                Calendar sunset=(Calendar)date.clone();sunset.setTimeInMillis(maghribTs);
+                boolean sunsetToday=valid && date.get(Calendar.YEAR)==sunset.get(Calendar.YEAR) &&
+                    date.get(Calendar.DAY_OF_YEAR)==sunset.get(Calendar.DAY_OF_YEAR);
+                // Unknown Maghrib cannot safely apply a rollover. The civil date is still fresh.
+                hijri=presentation.hijri(NativeHijriCalculator.calculate(date,presentation.hijriAdjustment,
+                    sunsetToday&&presentation.hijriDateChangeAtMaghrib,now,maghribTs));
+            } catch(IllegalArgumentException error) { Log.w("MuajjinWidget","Hijri date outside supported range",error); }
+            hijriText=hijri;
         }
-
-        // 2. Square Widgets (2x2)
-        ComponentName squareComponent = new ComponentName(context, PrayerWidgetSmallProvider.class);
-        int[] squareIds = manager.getAppWidgetIds(squareComponent);
-        if (squareIds != null && squareIds.length > 0) {
-            for (int id : squareIds) {
-                updateSquareWidget(context, manager, id);
-            }
-        }
-
-        // 3. Banner Widgets (4x1)
-        ComponentName bannerComponent = new ComponentName(context, PrayerWidgetBannerProvider.class);
-        int[] bannerIds = manager.getAppWidgetIds(bannerComponent);
-        if (bannerIds != null && bannerIds.length > 0) {
-            for (int id : bannerIds) {
-                updateBannerWidget(context, manager, id);
-            }
-        }
-
-        // 4. Wide Card Widgets (4x2)
-        ComponentName wideComponent = new ComponentName(context, PrayerWidgetMediumProvider.class);
-        int[] wideIds = manager.getAppWidgetIds(wideComponent);
-        if (wideIds != null && wideIds.length > 0) {
-            for (int id : wideIds) {
-                updateWideWidget(context, manager, id);
-            }
-        }
-
-        // 5. Full Table Widgets (4x4)
-        ComponentName largeComponent = new ComponentName(context, PrayerWidgetLargeProvider.class);
-        int[] largeIds = manager.getAppWidgetIds(largeComponent);
-        if (largeIds != null && largeIds.length > 0) {
-            for (int id : largeIds) {
-                updateLargeWidget(context, manager, id);
-            }
-        }
-
-        // 6. Lock Small Widgets (Keyguard)
-        ComponentName lockSmallComponent = new ComponentName(context, PrayerLockSmallProvider.class);
-        int[] lockSmallIds = manager.getAppWidgetIds(lockSmallComponent);
-        if (lockSmallIds != null && lockSmallIds.length > 0) {
-            for (int id : lockSmallIds) {
-                updateLockSmallWidget(context, manager, id);
-            }
-        }
-
-        // 7. Lock Medium Widgets (Keyguard)
-        ComponentName lockMedComponent = new ComponentName(context, PrayerLockMediumProvider.class);
-        int[] lockMedIds = manager.getAppWidgetIds(lockMedComponent);
-        if (lockMedIds != null && lockMedIds.length > 0) {
-            for (int id : lockMedIds) {
-                updateLockMediumWidget(context, manager, id);
+        public String chipClock(String id) {
+            switch(id) {
+                case "fajr":return fajrStr;case "sunrise":return sunriseStr;case "dhuhr":return dhuhrStr;
+                case "asr":return asrStr;case "maghrib":return maghribStr;case "isha":return ishaStr;
+                default:return "--:--";
             }
         }
     }
 
-    public static void refreshStateFromTimestamps(Context context) {
-        // Reads cache and recalculates current timeline
-        getTimelineState(context);
+    static int[][] widgetIds(Context context,AppWidgetManager manager) {
+        int[][] ids=new int[PROVIDERS.length][];
+        for(int i=0;i<ids.length;i++) ids[i]=manager.getAppWidgetIds(new ComponentName(context,PROVIDERS[i]));
+        return ids;
     }
-
-    public static WidgetTimelineState getTimelineState(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        long now = System.currentTimeMillis();
-
-        WidgetTimelineState state = new WidgetTimelineState();
-
-        // 1. Try 30-day cached schedule JSON
-        String scheduleJson = prefs.getString("prayer_schedule_json", null);
-        boolean parsed = false;
-        if (scheduleJson != null && !scheduleJson.isEmpty()) {
-            parsed = parseScheduleJson(context, prefs, scheduleJson, now, state);
-        }
-
-        // 2. Fallback to single-day stored timestamps
-        if (!parsed) {
-            parseSingleDayFallback(context, prefs, now, state);
-        }
-
-        // 3. Compute Progress (0 to 1000)
-        long total = state.targetTimestamp - state.startTimestamp;
-        long elapsed = now - state.startTimestamp;
-        if (total > 0 && elapsed >= 0) {
-            state.progress = (int) Math.min(1000, Math.max(0, (elapsed * 1000) / total));
-        } else {
-            state.progress = 500;
-        }
-
-        // 4. Compute Warm State: Last 15 min before window close (Sunrise, Asr, Maghrib, Isha, Fajr)
-        // NOT Dhuhr's start after sunrise
-        long diffMs = state.targetTimestamp - now;
-        state.isWarm = (diffMs > 0 && diffMs <= 15 * 60 * 1000L && !"dhuhr".equalsIgnoreCase(state.nextName));
-
-        return state;
-    }
-
-    private static boolean parseScheduleJson(Context context, SharedPreferences prefs, String jsonStr, long now, WidgetTimelineState state) {
-        try {
-            JSONArray days = new JSONArray(jsonStr);
-            if (days.length() == 0) return false;
-
-            for (int i = 0; i < days.length(); i++) {
-                JSONObject day = days.getJSONObject(i);
-                long fajr = day.getLong("fajr");
-                long sunrise = day.getLong("sunrise");
-                long dhuhr = day.getLong("dhuhr");
-                long asr = day.getLong("asr");
-                long maghrib = day.getLong("maghrib");
-                long isha = day.getLong("isha");
-
-                long nextFajr = (i + 1 < days.length()) ? days.getJSONObject(i + 1).getLong("fajr") : (isha + 8 * 3600 * 1000L);
-
-                if (now < nextFajr) {
-                    state.fajrTs = fajr;
-                    state.sunriseTs = sunrise;
-                    state.dhuhrTs = dhuhr;
-                    state.asrTs = asr;
-                    state.maghribTs = maghrib;
-                    state.ishaTs = isha;
-
-                    state.fajrStr = formatClockTime(context, fajr, day.optString("fajrTime", "04:35"));
-                    state.sunriseStr = formatClockTime(context, sunrise, day.optString("sunriseTime", "05:52"));
-                    state.dhuhrStr = formatClockTime(context, dhuhr, day.optString("dhuhrTime", "11:47"));
-                    state.asrStr = formatClockTime(context, asr, day.optString("asrTime", "15:12"));
-                    state.maghribStr = formatClockTime(context, maghrib, day.optString("maghribTime", "17:42"));
-                    state.ishaStr = formatClockTime(context, isha, day.optString("ishaTime", "19:12"));
-
-                    applyTimelinePeriod(context, now, fajr, sunrise, dhuhr, asr, maghrib, isha, nextFajr, state);
-                    return true;
-                }
+    public static void updateAllWidgets(Context context,WidgetTimelineState state,int[][] ids) {
+        AppWidgetManager manager=AppWidgetManager.getInstance(context);
+        for(int i=0;i<ids.length;i++) for(int id:ids[i]) {
+            switch(i) {
+                case 0:updateStripWidget(context,manager,id,state);break;
+                case 1:updateSquareWidget(context,manager,id,state);break;
+                case 2:updateBannerWidget(context,manager,id,state);break;
+                case 3:updateWideWidget(context,manager,id,state);break;
+                case 4:updateLargeWidget(context,manager,id,state);break;
+                case 5:updateLockSmallWidget(context,manager,id,state);break;
+                case 6:updateLockMediumWidget(context,manager,id,state);break;
+                default:throw new IllegalArgumentException("Unknown widget variant");
             }
-        } catch (Exception ignored) {}
-        return false;
-    }
-
-    private static void parseSingleDayFallback(Context context, SharedPreferences prefs, long now, WidgetTimelineState state) {
-        long fajr = prefs.getLong("ts_fajr", 0);
-        long sunrise = prefs.getLong("ts_sunrise", 0);
-        long dhuhr = prefs.getLong("ts_dhuhr", 0);
-        long asr = prefs.getLong("ts_asr", 0);
-        long maghrib = prefs.getLong("ts_maghrib", 0);
-        long isha = prefs.getLong("ts_isha", 0);
-        long nextFajr = prefs.getLong("ts_next_fajr", isha + 8 * 3600 * 1000L);
-
-        state.fajrTs = fajr;
-        state.sunriseTs = sunrise;
-        state.dhuhrTs = dhuhr;
-        state.asrTs = asr;
-        state.maghribTs = maghrib;
-        state.ishaTs = isha;
-
-        state.fajrStr = formatClockTime(context, fajr, prefs.getString("fajr_time", "04:35"));
-        state.sunriseStr = formatClockTime(context, sunrise, prefs.getString("sunrise_time", "05:52"));
-        state.dhuhrStr = formatClockTime(context, dhuhr, prefs.getString("dhuhr_time", "11:47"));
-        state.asrStr = formatClockTime(context, asr, prefs.getString("asr_time", "15:12"));
-        state.maghribStr = formatClockTime(context, maghrib, prefs.getString("maghrib_time", "17:42"));
-        state.ishaStr = formatClockTime(context, isha, prefs.getString("isha_time", "19:12"));
-
-        applyTimelinePeriod(context, now, fajr, sunrise, dhuhr, asr, maghrib, isha, nextFajr, state);
-    }
-
-    private static void applyTimelinePeriod(Context context, long now, long fajr, long sunrise, long dhuhr, long asr, long maghrib, long isha, long nextFajr, WidgetTimelineState state) {
-        if (now < fajr) {
-            state.label = "Fajr in";
-            state.nextName = "Fajr";
-            state.targetTimestamp = fajr;
-            state.startTimestamp = isha > 0 ? isha : (fajr - 8 * 3600 * 1000L);
-            state.footerText = "Now: Isha";
-            state.nextTime = state.fajrStr;
-            state.activePrayerId = "isha";
-        } else if (now < sunrise) {
-            state.label = "Sunrise in";
-            state.nextName = "Sunrise";
-            state.targetTimestamp = sunrise;
-            state.startTimestamp = fajr;
-            state.footerText = "Now: Fajr";
-            state.nextTime = state.sunriseStr;
-            state.activePrayerId = "fajr";
-        } else if (now < dhuhr) {
-            state.label = "Dhuhr in";
-            state.nextName = "Dhuhr";
-            state.targetTimestamp = dhuhr;
-            state.startTimestamp = sunrise;
-            state.footerText = "After sunrise";
-            state.nextTime = state.dhuhrStr;
-            state.activePrayerId = ""; // No prayer open between sunrise and dhuhr
-        } else if (now < asr) {
-            state.label = "Asr in";
-            state.nextName = "Asr";
-            state.targetTimestamp = asr;
-            state.startTimestamp = dhuhr;
-            state.footerText = "Now: Dhuhr";
-            state.nextTime = state.asrStr;
-            state.activePrayerId = "dhuhr";
-        } else if (now < maghrib) {
-            state.label = "Maghrib in";
-            state.nextName = "Maghrib";
-            state.targetTimestamp = maghrib;
-            state.startTimestamp = asr;
-            state.footerText = "Now: Asr";
-            state.nextTime = state.maghribStr;
-            state.activePrayerId = "asr";
-        } else if (now < isha) {
-            state.label = "Isha in";
-            state.nextName = "Isha";
-            state.targetTimestamp = isha;
-            state.startTimestamp = maghrib;
-            state.footerText = "Now: Maghrib";
-            state.nextTime = state.ishaStr;
-            state.activePrayerId = "maghrib";
-        } else {
-            state.label = "Fajr in";
-            state.nextName = "Fajr";
-            state.targetTimestamp = nextFajr > now ? nextFajr : (isha + 8 * 3600 * 1000L);
-            state.startTimestamp = isha;
-            state.footerText = "Now: Isha";
-            state.nextTime = formatClockTime(context, nextFajr, state.fajrStr);
-            state.activePrayerId = "isha";
-        }
-
-        state.contextLine2 = state.nextName + " at " + state.nextTime;
-    }
-
-    private static String formatClockTime(Context context, long epochMs, String defaultStr) {
-        if (epochMs <= 0) return defaultStr;
-        try {
-            boolean is24 = android.text.format.DateFormat.is24HourFormat(context);
-            DateFormat df = new SimpleDateFormat(is24 ? "HH:mm" : "h:mm a", Locale.getDefault());
-            return df.format(new Date(epochMs));
-        } catch (Exception e) {
-            return defaultStr;
         }
     }
 
-    private static void setupChronometer(RemoteViews views, int viewId, long targetTimestamp) {
-        long now = System.currentTimeMillis();
-        long diff = targetTimestamp - now;
-        if (diff > 0) {
-            long base = SystemClock.elapsedRealtime() + diff;
-            views.setChronometerCountDown(viewId, true);
-            views.setChronometer(viewId, base, null, true);
-        } else {
-            views.setChronometerCountDown(viewId, false);
-            views.setTextViewText(viewId, "0:00:00");
-        }
+    private static void setupChronometer(RemoteViews views,int viewId,WidgetTimelineState state) {
+        long diff=state.targetTimestamp-state.now;
+        views.setChronometerCountDown(viewId,true);
+        views.setChronometer(viewId,state.chronometerBase,null,diff>0);
+        if(diff<=0) views.setTextViewText(viewId,"—");
+    }
+
+    private static void applyDirection(RemoteViews views,int root,WidgetTimelineState state) {
+        views.setInt(root,"setLayoutDirection","rtl".equals(state.presentation.direction)?View.LAYOUT_DIRECTION_RTL:View.LAYOUT_DIRECTION_LTR);
     }
 
     private static boolean isHeightUnderThreshold(AppWidgetManager manager, int appWidgetId, int thresholdDp) {
@@ -318,8 +117,7 @@ public class PrayerWidgetHelper {
     }
 
     // 1. Strip (2x1)
-    public static void updateStripWidget(Context context, AppWidgetManager manager, int appWidgetId) {
-        WidgetTimelineState state = getTimelineState(context);
+    public static void updateStripWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_strip);
 
         if (state.isWarm) {
@@ -340,19 +138,19 @@ public class PrayerWidgetHelper {
             views.setProgressBar(R.id.pb_strip_progress, 1000, state.progress, false);
         }
 
-        setupChronometer(views, R.id.tv_strip_countdown, state.targetTimestamp);
+        setupChronometer(views, R.id.tv_strip_countdown, state);
         views.setOnClickPendingIntent(R.id.widget_strip_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_strip_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
     // 2. Square (2x2)
-    public static void updateSquareWidget(Context context, AppWidgetManager manager, int appWidgetId) {
+    public static void updateSquareWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         if (isHeightUnderThreshold(manager, appWidgetId, 100)) {
-            updateStripWidget(context, manager, appWidgetId);
+            updateStripWidget(context, manager, appWidgetId, state);
             return;
         }
 
-        WidgetTimelineState state = getTimelineState(context);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_square);
 
         if (state.isWarm) {
@@ -373,28 +171,19 @@ public class PrayerWidgetHelper {
             views.setProgressBar(R.id.pb_square_progress, 1000, state.progress, false);
         }
 
-        setupChronometer(views, R.id.tv_square_countdown, state.targetTimestamp);
+        setupChronometer(views, R.id.tv_square_countdown, state);
         views.setTextViewText(R.id.tv_square_next_time, state.nextTime);
         views.setTextViewText(R.id.tv_square_footer_left, state.footerText);
-        views.setTextViewText(R.id.tv_square_footer_right, getCurrentPrayerStartTime(state));
+        views.setTextViewText(R.id.tv_square_footer_right, state.currentStartTime);
 
         views.setOnClickPendingIntent(R.id.widget_square_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_square_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
-    private static String getCurrentPrayerStartTime(WidgetTimelineState state) {
-        if ("fajr".equalsIgnoreCase(state.activePrayerId)) return state.fajrStr;
-        if ("sunrise".equalsIgnoreCase(state.activePrayerId)) return state.sunriseStr;
-        if ("dhuhr".equalsIgnoreCase(state.activePrayerId)) return state.dhuhrStr;
-        if ("asr".equalsIgnoreCase(state.activePrayerId)) return state.asrStr;
-        if ("maghrib".equalsIgnoreCase(state.activePrayerId)) return state.maghribStr;
-        if ("isha".equalsIgnoreCase(state.activePrayerId)) return state.ishaStr;
-        return "";
-    }
 
     // 3. Banner (4x1)
-    public static void updateBannerWidget(Context context, AppWidgetManager manager, int appWidgetId) {
-        WidgetTimelineState state = getTimelineState(context);
+    public static void updateBannerWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_banner);
 
         if (state.isWarm) {
@@ -415,22 +204,22 @@ public class PrayerWidgetHelper {
             views.setProgressBar(R.id.pb_banner_progress, 1000, state.progress, false);
         }
 
-        setupChronometer(views, R.id.tv_banner_countdown, state.targetTimestamp);
+        setupChronometer(views, R.id.tv_banner_countdown, state);
         views.setTextViewText(R.id.tv_banner_footer_top, state.footerText);
         views.setTextViewText(R.id.tv_banner_footer_bottom, state.contextLine2);
 
         views.setOnClickPendingIntent(R.id.widget_banner_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_banner_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
     // 4. Wide Card (4x2)
-    public static void updateWideWidget(Context context, AppWidgetManager manager, int appWidgetId) {
+    public static void updateWideWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         if (isHeightUnderThreshold(manager, appWidgetId, 100)) {
-            updateBannerWidget(context, manager, appWidgetId);
+            updateBannerWidget(context, manager, appWidgetId, state);
             return;
         }
 
-        WidgetTimelineState state = getTimelineState(context);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_wide);
 
         if (state.isWarm) {
@@ -451,7 +240,7 @@ public class PrayerWidgetHelper {
             views.setProgressBar(R.id.pb_wide_progress, 1000, state.progress, false);
         }
 
-        setupChronometer(views, R.id.tv_wide_countdown, state.targetTimestamp);
+        setupChronometer(views, R.id.tv_wide_countdown, state);
         views.setTextViewText(R.id.tv_wide_footer_top, state.footerText);
         views.setTextViewText(R.id.tv_wide_footer_bottom, state.contextLine2);
 
@@ -459,66 +248,31 @@ public class PrayerWidgetHelper {
         renderChips(context, views, state);
 
         views.setOnClickPendingIntent(R.id.widget_wide_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_wide_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
-    public static String formatChipTime(Context context, long epochMs, String fallbackStr) {
-        if (epochMs > 0) {
-            try {
-                boolean is24 = android.text.format.DateFormat.is24HourFormat(context);
-                DateFormat df = new SimpleDateFormat(is24 ? "HH:mm" : "h:mm", Locale.getDefault());
-                return df.format(new Date(epochMs));
-            } catch (Exception ignored) {}
-        }
-        if (fallbackStr != null) {
-            return fallbackStr.replaceAll("(?i)\\s*[ap]m", "").trim();
-        }
-        return "--:--";
-    }
 
     private static void renderChips(Context context, RemoteViews views, WidgetTimelineState state) {
-        renderSingleChip(context, views, R.id.chip_fajr, R.id.tv_chip_fajr_name, R.id.tv_chip_fajr_time,
-            "Fajr", formatChipTime(context, state.fajrTs, state.fajrStr), state.fajrTs, state.startTimestamp, state.targetTimestamp, "fajr".equalsIgnoreCase(state.activePrayerId));
-
-        renderSingleChip(context, views, R.id.chip_sunrise, R.id.tv_chip_sunrise_name, R.id.tv_chip_sunrise_time,
-            "Sunrise", formatChipTime(context, state.sunriseTs, state.sunriseStr), state.sunriseTs, state.startTimestamp, state.targetTimestamp, false);
-
-        renderSingleChip(context, views, R.id.chip_dhuhr, R.id.tv_chip_dhuhr_name, R.id.tv_chip_dhuhr_time,
-            "Dhuhr", formatChipTime(context, state.dhuhrTs, state.dhuhrStr), state.dhuhrTs, state.startTimestamp, state.targetTimestamp, "dhuhr".equalsIgnoreCase(state.activePrayerId));
-
-        renderSingleChip(context, views, R.id.chip_asr, R.id.tv_chip_asr_name, R.id.tv_chip_asr_time,
-            "Asr", formatChipTime(context, state.asrTs, state.asrStr), state.asrTs, state.startTimestamp, state.targetTimestamp, "asr".equalsIgnoreCase(state.activePrayerId));
-
-        renderSingleChip(context, views, R.id.chip_maghrib, R.id.tv_chip_maghrib_name, R.id.tv_chip_maghrib_time,
-            "Maghrib", formatChipTime(context, state.maghribTs, state.maghribStr), state.maghribTs, state.startTimestamp, state.targetTimestamp, "maghrib".equalsIgnoreCase(state.activePrayerId));
-
-        renderSingleChip(context, views, R.id.chip_isha, R.id.tv_chip_isha_name, R.id.tv_chip_isha_time,
-            "Isha", formatChipTime(context, state.ishaTs, state.ishaStr), state.ishaTs, state.startTimestamp, state.targetTimestamp, "isha".equalsIgnoreCase(state.activePrayerId));
+        renderSingleChip(context, views, R.id.chip_fajr, R.id.tv_chip_fajr_name, R.id.tv_chip_fajr_time,"fajr",state.fajrTs,state);
+        renderSingleChip(context, views, R.id.chip_sunrise, R.id.tv_chip_sunrise_name, R.id.tv_chip_sunrise_time,"sunrise",state.sunriseTs,state);
+        renderSingleChip(context, views, R.id.chip_dhuhr, R.id.tv_chip_dhuhr_name, R.id.tv_chip_dhuhr_time,"dhuhr",state.dhuhrTs,state);
+        renderSingleChip(context, views, R.id.chip_asr, R.id.tv_chip_asr_name, R.id.tv_chip_asr_time,"asr",state.asrTs,state);
+        renderSingleChip(context, views, R.id.chip_maghrib, R.id.tv_chip_maghrib_name, R.id.tv_chip_maghrib_time,"maghrib",state.maghribTs,state);
+        renderSingleChip(context, views, R.id.chip_isha, R.id.tv_chip_isha_name, R.id.tv_chip_isha_time,"isha",state.ishaTs,state);
     }
 
-    private static void renderSingleChip(
-        Context context,
-        RemoteViews views,
-        int chipId,
-        int nameId,
-        int timeId,
-        String name,
-        String timeStr,
-        long eventTs,
-        long currentWindowStartTs,
-        long nextTargetTs,
-        boolean isCurrentPrayer
-    ) {
-        views.setTextViewText(nameId, name);
-        views.setTextViewText(timeId, timeStr);
-
-        long now = System.currentTimeMillis();
+    private static void renderSingleChip(Context context,RemoteViews views,int chipId,int nameId,int timeId,String prayerId,long eventTs,WidgetTimelineState state) {
+        views.setTextViewText(nameId, state.presentation.label(prayerId));
+        views.setTextViewText(timeId, state.chipClock(prayerId));
+        long now=state.now,currentWindowStartTs=state.startTimestamp;
+        boolean isCurrentPrayer=state.valid&&prayerId.equals(state.activePrayerId)&&eventTs==state.startTimestamp;
 
         if (isCurrentPrayer) {
             views.setInt(chipId, "setBackgroundResource", R.drawable.widget_chip_current);
             views.setTextColor(nameId, context.getColor(R.color.w_accent));
             views.setTextColor(timeId, context.getColor(R.color.w_accent));
-        } else if (eventTs == nextTargetTs || (eventTs > now && eventTs <= nextTargetTs + 1000)) {
+        } else if (state.valid && prayerId.equals(state.nextPrayerId) && eventTs==state.targetTimestamp) {
             views.setInt(chipId, "setBackgroundResource", R.drawable.widget_chip_next);
             views.setTextColor(nameId, context.getColor(R.color.w_text_secondary));
             views.setTextColor(timeId, context.getColor(R.color.w_text_secondary));
@@ -534,19 +288,20 @@ public class PrayerWidgetHelper {
     }
 
     // 5. Preserved Full Schedule Table (4x4)
-    public static void updateLargeWidget(Context context, AppWidgetManager manager, int appWidgetId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        WidgetTimelineState state = getTimelineState(context);
+    public static void updateLargeWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_prayer_large);
 
-        String location = prefs.getString("location_name", "RIYADH GOVERNORATE");
-        String hijri = prefs.getString("hijri_date", "");
-
-        views.setTextViewText(R.id.tv_large_location, location);
-        views.setTextViewText(R.id.tv_large_hijri, hijri);
+        views.setTextViewText(R.id.tv_large_location, state.presentation.locationName);
+        views.setTextViewText(R.id.tv_large_hijri, state.hijriText);
+        views.setTextViewText(R.id.tv_name_fajr,state.presentation.label("fajr"));
+        views.setTextViewText(R.id.tv_name_sunrise,state.presentation.label("sunrise"));
+        views.setTextViewText(R.id.tv_name_dhuhr,state.presentation.label("dhuhr"));
+        views.setTextViewText(R.id.tv_name_asr,state.presentation.label("asr"));
+        views.setTextViewText(R.id.tv_name_maghrib,state.presentation.label("maghrib"));
+        views.setTextViewText(R.id.tv_name_isha,state.presentation.label("isha"));
         views.setTextViewText(R.id.tv_large_current_pill, state.footerText);
-        views.setTextViewText(R.id.tv_large_summary, state.nextName + " · " + state.nextTime);
-        setupChronometer(views, R.id.tv_large_countdown, state.targetTimestamp);
+        views.setTextViewText(R.id.tv_large_summary, state.valid?state.nextName+" · "+state.nextTime:state.nextName);
+        setupChronometer(views, R.id.tv_large_countdown, state);
         views.setProgressBar(R.id.pb_large_progress, 1000, state.progress, false);
 
         views.setTextViewText(R.id.tv_time_fajr, state.fajrStr);
@@ -561,97 +316,75 @@ public class PrayerWidgetHelper {
         views.setInt(R.id.row_dhuhr, "setBackgroundResource", "dhuhr".equalsIgnoreCase(state.activePrayerId) ? R.drawable.widget_active_row : 0);
         views.setInt(R.id.row_asr, "setBackgroundResource", "asr".equalsIgnoreCase(state.activePrayerId) ? R.drawable.widget_active_row : 0);
         views.setInt(R.id.row_maghrib, "setBackgroundResource", "maghrib".equalsIgnoreCase(state.activePrayerId) ? R.drawable.widget_active_row : 0);
-        views.setInt(R.id.row_isha, "setBackgroundResource", "isha".equalsIgnoreCase(state.activePrayerId) ? R.drawable.widget_active_row : 0);
+        views.setInt(R.id.row_isha, "setBackgroundResource", "isha".equals(state.activePrayerId) && state.ishaTs==state.startTimestamp ? R.drawable.widget_active_row : 0);
 
         views.setOnClickPendingIntent(R.id.widget_large_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_large_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
     // 6. Lock Small (Keyguard)
-    public static void updateLockSmallWidget(Context context, AppWidgetManager manager, int appWidgetId) {
-        WidgetTimelineState state = getTimelineState(context);
+    public static void updateLockSmallWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_lock_small);
 
         views.setTextViewText(R.id.tv_lock_small_label, state.label);
-        setupChronometer(views, R.id.tv_lock_small_countdown, state.targetTimestamp);
-        views.setTextViewText(R.id.tv_lock_small_time, "at " + state.nextTime);
+        setupChronometer(views, R.id.tv_lock_small_countdown, state);
+        views.setTextViewText(R.id.tv_lock_small_time, state.valid?state.presentation.label("at")+" "+state.nextTime:"");
 
         views.setOnClickPendingIntent(R.id.widget_lock_small_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_lock_small_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
     // 7. Lock Medium (Keyguard)
-    public static void updateLockMediumWidget(Context context, AppWidgetManager manager, int appWidgetId) {
-        WidgetTimelineState state = getTimelineState(context);
+    public static void updateLockMediumWidget(Context context, AppWidgetManager manager, int appWidgetId, WidgetTimelineState state) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_lock_medium);
 
         views.setTextViewText(R.id.tv_lock_med_label, state.label);
-        setupChronometer(views, R.id.tv_lock_med_countdown, state.targetTimestamp);
+        setupChronometer(views, R.id.tv_lock_med_countdown, state);
         views.setTextViewText(R.id.tv_lock_med_current, state.footerText);
         views.setTextViewText(R.id.tv_lock_med_next, state.contextLine2);
 
         views.setOnClickPendingIntent(R.id.widget_lock_medium_root, getOpenAppIntent(context));
+        applyDirection(views,R.id.widget_lock_medium_root,state);
         manager.updateAppWidget(appWidgetId, views);
     }
 
-    public static void scheduleNextAlarm(Context context) {
-        WidgetTimelineState state = getTimelineState(context);
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-
-        long now = System.currentTimeMillis();
-
-        // 1. Exact boundary alarm (WAKEUP)
-        if (state.targetTimestamp > now) {
-            Intent intent = new Intent(context, PrayerWidgetAlarmReceiver.class);
-            intent.setAction(PrayerWidgetAlarmReceiver.ACTION_PRAYER_TRANSITION);
-            PendingIntent pi = PendingIntent.getBroadcast(
-                context,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-
+    private static long scheduledTransition=0,scheduledCosmetic=0;
+    private static boolean scheduledExact=false;
+    private static PendingIntent alarmIntent(Context context,int request,String action) {
+        Intent intent=new Intent(context,PrayerWidgetAlarmReceiver.class);intent.setAction(action);
+        return PendingIntent.getBroadcast(context,request,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    public static void cancelAlarms(Context context) {
+        AlarmManager am=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+        if(am!=null) {
+            am.cancel(alarmIntent(context,0,PrayerWidgetAlarmReceiver.ACTION_PRAYER_TRANSITION));
+            am.cancel(alarmIntent(context,1,PrayerWidgetAlarmReceiver.ACTION_BAR_PROGRESS_REFRESH));
+        }
+        scheduledTransition=scheduledCosmetic=0;
+    }
+    public static void scheduleNextAlarm(Context context,WidgetTimelineState state,boolean force) {
+        if(!state.valid) {cancelAlarms(context);return;}
+        AlarmManager am=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(am==null)return;
+        boolean exact=Build.VERSION.SDK_INT<Build.VERSION_CODES.S||am.canScheduleExactAlarms();
+        if(force||scheduledTransition!=state.targetTimestamp||scheduledExact!=exact) {
+            PendingIntent pi=alarmIntent(context,0,PrayerWidgetAlarmReceiver.ACTION_PRAYER_TRANSITION);
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        if (am.canScheduleExactAlarms()) {
-                            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, state.targetTimestamp, pi);
-                        } else {
-                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, state.targetTimestamp, pi);
-                        }
-                    } else {
-                        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, state.targetTimestamp, pi);
-                    }
-                } else {
-                    am.setExact(AlarmManager.RTC_WAKEUP, state.targetTimestamp, pi);
-                }
-            } catch (SecurityException se) {
-                am.set(AlarmManager.RTC_WAKEUP, state.targetTimestamp, pi);
+                if(exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
+            } catch(SecurityException denied) {
+                exact=false;
+                Log.w("MuajjinWidget","Exact permission denied; transition delivery is approximate",denied);
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
             }
+            scheduledTransition=state.targetTimestamp;scheduledExact=exact;
         }
-
-        // 2. Bar refresh & Warm state switch alarm (NON-WAKEUP AlarmManager.RTC)
-        long windowLength = state.targetTimestamp - state.startTimestamp;
-        if (windowLength <= 0) windowLength = 3600_000L;
-        long interval = Math.max(60_000L, Math.min(300_000L, windowLength / 120));
-
-        long nextBarTrigger = now + interval;
-        long warmTrigger = state.targetTimestamp - 15 * 60 * 1000L;
-        if (warmTrigger > now && warmTrigger < nextBarTrigger && !"dhuhr".equalsIgnoreCase(state.nextName)) {
-            nextBarTrigger = warmTrigger;
-        }
-
-        if (nextBarTrigger < state.targetTimestamp) {
-            Intent barIntent = new Intent(context, PrayerWidgetAlarmReceiver.class);
-            barIntent.setAction(PrayerWidgetAlarmReceiver.ACTION_BAR_PROGRESS_REFRESH);
-            PendingIntent barPi = PendingIntent.getBroadcast(
-                context,
-                1,
-                barIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-            am.set(AlarmManager.RTC, nextBarTrigger, barPi);
+        long next=state.timeline.cosmeticTrigger();
+        PendingIntent bar=alarmIntent(context,1,PrayerWidgetAlarmReceiver.ACTION_BAR_PROGRESS_REFRESH);
+        if(next==0) {am.cancel(bar);scheduledCosmetic=0;}
+        else if(force||scheduledCosmetic<=state.now||scheduledCosmetic>next) {
+            am.set(AlarmManager.RTC,next,bar);scheduledCosmetic=next;
         }
     }
 }
