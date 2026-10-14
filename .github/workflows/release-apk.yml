@@ -96,7 +96,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Muajjin ${{ github.ref_name }} (Enhanced Edition)"
+          name: "Muajjin ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           files: |
             release-artifacts/**/*.apk
@@ -104,14 +104,12 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ### 🕌 Muajjin ${{ github.ref_name }} (Enhanced Edition)
+            ### Muajjin ${{ github.ref_name }}
 
-            An enhanced, ultra-efficient, and truly offline-first Salat & Saum companion for Android and Web.
+            This release adds Android home screen widgets and improves offline reliability and battery usage.
 
-            #### 🌟 Highlights & Key Improvements
-            - 🔄 **True Indefinite Offline Schedule Renewal:** Built-in native Java calculation engine (porting `adhan 4.4.3` and Umm al-Qura). Widgets and alarms recalculate indefinitely offline without ever needing to reopen the app.
-            - ⚡ **Zero-Waste Battery & CPU Performance:** Replaced 1-second interval loops with an event-driven boundary clock scheduler. Background alarms automatically power down when no widgets or notifications are active.
-            - 🎯 **Mathematical & Calculation Fixes:** Fixed equator/prime-meridian (`0,0`) coordinates bug, true astronomical next-day Fajr calculation, overnight Isha boundary precision, and isolated madhab parameters.
-            - 💾 **Crash-Proof Asset Storage:** User-uploaded custom fonts (up to 5MB) moved from `localStorage` base64 strings into native binary IndexedDB storage with strict WOFF2 validation.
-            - 📱 **Refined Widget Suite:** All 7 widget variants optimized, including a redesigned 3-column × 2-row large widget grid preventing text clipping in Arabic/RTL and compact screens.
+            - Android home screen widgets in multiple sizes (strip, square, banner, wide, and full table)
+            - Offline prayer calculation renewal so widgets keep updating without reopening the app
+            - Reduced battery consumption by stopping background updates when no widgets are on screen
+            - Fixed prayer time transitions, next Fajr calculation, and coordinate edge cases
 

@@ -2,10 +2,10 @@
   <img src="public/icon.png" width="120" alt="Muajjin App Icon">
 </p>
 
-<h1 align="center">Muajjin (Enhanced Edition)</h1>
+<h1 align="center">Muajjin</h1>
 
 <p align="center">
-An enhanced, ultra-efficient, and truly offline-first Salat & Saum companion for Android and Web.
+Privacy-focused, offline prayer and fasting times companion with Android home screen widgets.
 </p>
 
 <p align="center">
@@ -21,39 +21,21 @@ An enhanced, ultra-efficient, and truly offline-first Salat & Saum companion for
 
 ## Overview
 
-**Muajjin (Enhanced Edition)** is an open-source, privacy-focused Islamic prayer times and fasting companion app maintained by [@eval19](https://github.com/eval19/muajjin). Originally based on the clean minimalist foundation by [MuslimTechnician](https://github.com/MuslimTechnician/muajjin), this edition has been thoroughly re-engineered for **indefinite offline reliability**, **drastically reduced battery and CPU consumption**, and **flawless native Android widget integration**.
+Muajjin is a lightweight, offline-first prayer times and fasting companion app built with React and packaged for Android via Capacitor.
 
-All prayer and fasting calculations remain 100% on-device and private. GPS address lookup, IP fallback, and self-updater checks remain strictly optional; see [the privacy policy](docs/PRIVACY_POLICY.md).
-
-## What Sets This Edition Apart
-
-Compared to standard web wrappers and upstream releases, this edition incorporates major architectural improvements:
-
-* 🔄 **True Indefinite Offline Schedule Renewal:**
-  Built-in native Java calculation engine (porting `adhan 4.4.3` and Umm al-Qura). When the 30-day cached schedule runs out, Android widgets and alarms recalculate prayer times completely offline in the background without needing to reopen the app or connect to the internet.
-* ⚡ **Zero-Waste Battery & CPU Performance:**
-  Continuous 1-second interval loops and repetitive 30-second full-month syncs across the bridge have been replaced with an event-driven boundary clock scheduler (`useBoundaryClock`). Timers stop completely when the app is minimized or hidden. Background alarms shut off when no widgets or notifications are active.
-* 🎯 **Mathematical & Edge-Case Correctness:**
-  Fixed zero-coordinate equator/prime-meridian (`0,0`) handling, true astronomical next-day Fajr calculation, overnight Isha boundary precision, and isolated madhab parameters so settings never leak between calls.
-* 💾 **Crash-Proof Asset & Storage Engine:**
-  Heavy user-uploaded font files (up to 5MB) were moved from slow, quota-limited `localStorage` base64 strings into high-speed binary IndexedDB storage with strict WOFF2 header verification and atomic rollback.
-* 📱 **Refined Android Widget Suite:**
-  All 7 widget variants have been optimized, including a redesigned 3-column × 2-row large widget grid that eliminates text clipping and ellipsis across compact screens and Arabic/RTL layouts.
-
----
+This fork adds Android home screen widgets and improves offline reliability, battery consumption, and calculation edge cases.
 
 ## Features
 
-- 🕌 Accurate Salat time calculation based on location
-- 📍 Automatic GPS location with IP-based fallback & manual coordinates
-- ⏰ Current Salat highlighting and next Salat countdown
-- 🌙 Suhoor and Iftar times for Saum
-- 📅 Hijri date display with Maghrib rollover
-- 🎨 Automatic light and dark theme support
-- 📱 Native Android app via Capacitor with 7 distinct widget variants
-- ☁️ Update checks in the GitHub distribution only
-- 🧭 Qibla Compass integration
-- 📈 Qaza Tracker integration
+- Local prayer time calculations (no internet required)
+- Android home screen widgets in multiple sizes (small strip, 2x2 square, banner, wide card with chips, and full daily table)
+- Suhoor and Iftar times for fasting
+- Hijri calendar display with Maghrib date transition
+- Next prayer countdown
+- Qibla compass and Qaza tracker
+- Light and dark theme support
+- Low battery footprint: background alarms stop completely when no widgets or notifications are active
+- Offline schedule renewal: widgets keep calculating upcoming prayer times without needing the app to be reopened
 
 ---
 
