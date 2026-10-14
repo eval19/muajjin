@@ -16,6 +16,8 @@ interface AppContextType {
   resetSettings: () => boolean;
   storageError: string | null;
   systemTimeFormat: '12h' | '24h';
+  bridgeFailed: boolean;
+  setBridgeFailed: (failed: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings, status] = useLocalStorage<AppSettings>('muajjin-settings', defaultAppSettings);
   const [systemTimeFormat, publishSystemTimeFormat] = useState(getSystemTimeFormat);
+  const [bridgeFailed, setBridgeFailed] = useState(false);
   useEffect(() => {
     let disposed = false;
     let revision = 0;
@@ -69,7 +72,7 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }), [setSettings]);
   const resetSettings = useCallback(() => reset(['muajjin-onboarding-completed']), [reset]);
   return (
-    <AppContext.Provider value={{ settings, updateSettings, resetSettings, storageError: status.error, systemTimeFormat }}>
+    <AppContext.Provider value={{ settings, updateSettings, resetSettings, storageError: status.error, systemTimeFormat, bridgeFailed, setBridgeFailed }}>
       {children}
     </AppContext.Provider>
   );

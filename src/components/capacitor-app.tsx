@@ -3,10 +3,63 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support';
 import { useTheme } from 'next-themes';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useApp } from '@/contexts/app-context';
+import { useTranslation } from '@/contexts/translation-context';
+import { useForegroundActive } from '@/hooks/use-visible-clock';
+import {
+  buildWidgetPresentation,
+  syncPrayerTimesToWidget,
+} from '@/services/widget-sync-service';
+
+function useWidgetSync() {
+  const { settings, setBridgeFailed } = useApp();
+  const { t, activeTranslation, direction } = useTranslation();
+  const foreground = useForegroundActive();
+  const [retryTrigger, setRetryTrigger] = useState(0);
+  const lastFailedRef = useRef(false);
+  const wasForegroundRef = useRef(foreground);
+
+  useEffect(() => {
+    if (foreground && !wasForegroundRef.current && lastFailedRef.current) {
+      setRetryTrigger((prev) => prev + 1);
+    }
+    wasForegroundRef.current = foreground;
+  }, [foreground]);
+
+  const presentation = useMemo(
+    () =>
+      buildWidgetPresentation(
+        settings,
+        t,
+        activeTranslation?.meta.languageCode ?? 'en',
+        direction,
+      ),
+    [settings, t, activeTranslation, direction],
+  );
+
+  useEffect(() => {
+    let live = true;
+    void syncPrayerTimesToWidget({ settings, presentation })
+      .then(() => {
+        if (!live) return;
+        lastFailedRef.current = false;
+        setBridgeFailed(false);
+      })
+      .catch(() => {
+        if (!live) return;
+        lastFailedRef.current = true;
+        setBridgeFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [settings, presentation, retryTrigger, setBridgeFailed]);
+}
 
 export function CapacitorApp({ children }: { children: ReactNode }) {
+  useWidgetSync();
   const { theme, resolvedTheme } = useTheme();
 
   // Handle status bar color based on theme (Android only)

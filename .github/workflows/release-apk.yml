@@ -21,14 +21,26 @@ permissions:
   contents: read
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   quality:
+    needs: resolve
     uses: ./.github/workflows/build-apk.yml
     with:
-      ref: ${{ inputs.ref || github.ref }}
+      ref: ${{ needs.resolve.outputs.sha }}
       full_native: true
 
   release:
-    needs: quality
+    needs: [resolve, quality]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -37,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ needs.resolve.outputs.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:

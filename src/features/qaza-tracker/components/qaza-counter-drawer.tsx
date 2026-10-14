@@ -94,6 +94,8 @@ export const QazaCounterDrawer: FC<QazaCounterDrawerProps> = ({
           ) : (
             <button
               aria-label={`${t('qaza.editCount')}: ${label}`}
+              aria-live="polite"
+              aria-atomic="true"
               onClick={onStartEdit}
               className={`flex min-h-[56px] min-w-[64px] items-center justify-center rounded-2xl px-3 text-[36px] font-bold tabular-nums tracking-tight transition-colors ${
                 activeCount > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'

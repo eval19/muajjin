@@ -127,4 +127,16 @@ public class PrayerTimelineTest {
             }
         }
     }
+    @Test(expected = IllegalArgumentException.class)
+    public void shiftedEpochTimestampsAreRejectedByConstructor() {
+        PrayerSchedule.Day[] days = schedule().days();
+        Calendar shifted = date(14);
+        shifted.add(Calendar.YEAR, 1);
+        long shiftedMidnight = shifted.getTimeInMillis();
+        days[0] = new PrayerSchedule.Day("2026-10-13", shiftedMidnight - 4*3600000L,
+            shiftedMidnight+5*3600000L, shiftedMidnight+6*3600000L, shiftedMidnight+12*3600000L,
+            shiftedMidnight+15*3600000L, shiftedMidnight+18*3600000L, shiftedMidnight+20*3600000L, shiftedMidnight+29*3600000L);
+        Calendar end = date(13); end.add(Calendar.DATE, 30);
+        new PrayerSchedule("UTC", date(13).getTimeInMillis(), end.getTimeInMillis(), days);
+    }
 }

@@ -11,11 +11,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { EContainerType } from '@/types/enums';
 import { derivePrayerDay } from '@/utils/time-utils';
 import { useLocalDate } from '@/hooks/use-visible-clock';
-import {
-  buildWidgetPresentation,
-  syncPrayerTimesToWidget,
-} from '@/services/widget-sync-service';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo } from 'react';
 import type { FC } from 'react';
 
 // Default visible containers - all visible by default
@@ -29,10 +25,9 @@ const defaultVisibleContainers: Record<string, boolean> = {
 };
 
 const HomeDashboardPage: FC = () => {
-  const { t, activeTranslation, direction, mounted } = useTranslation();
-  const { settings } = useApp();
+  const { t, mounted } = useTranslation();
+  const { settings, bridgeFailed } = useApp();
   const date = useLocalDate();
-  const [bridgeFailed, setBridgeFailed] = useState(false);
   const [containerOrder] = useLocalStorage<string[]>(
     'muajjin-container-order',
     DEFAULT_CONTAINER_ORDER,
@@ -48,21 +43,6 @@ const HomeDashboardPage: FC = () => {
       return { day: null, error };
     }
   }, [date, settings, t]);
-  const presentation = useMemo(() => buildWidgetPresentation(
-    settings, t, activeTranslation?.meta.languageCode ?? 'en', direction,
-  ), [settings, t, activeTranslation, direction]);
-
-  // Native owns time transitions. Deliver only actual settings/presentation intent.
-  useEffect(() => {
-    if (!mounted) return;
-    let live = true;
-    void syncPrayerTimesToWidget({ settings, presentation }).then(() => {
-      if (live) setBridgeFailed(false);
-    }).catch(() => {
-      if (live) setBridgeFailed(true);
-    });
-    return () => { live = false; };
-  }, [settings, presentation, mounted, date]);
 
   const salatTimes = result.day?.prayers ?? [];
   const prohibitedTimes = result.day?.prohibitedTimes ?? [];

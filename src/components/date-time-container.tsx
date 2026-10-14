@@ -59,7 +59,7 @@ export const DateTimeContainer: FC<DateTimeContainerProps> = ({
 
       {/* Date Row */}
       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        <span>{formatGregorianDateShort(now, activeTranslation?.meta.languageCode)}</span>
+        <span>{formatGregorianDateShort(now, activeTranslation?.meta.languageCode ?? 'en')}</span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground" />
         <span>{hijri
           ? `${hijri.day} ${monthLabel} ${hijri.year}`

@@ -16,7 +16,7 @@ Checked items mean the scoped implementation and documented local checks are del
 - [x] T11: atomic bounded imports, verified font migration and stale-load protection.
 - [x] T12: native language/clock/Hijri parity, RTL rendering and fresh background dates.
 - [x] T13: reference-proven dead code/dependency removal and caller cutover.
-- [x] T14: smaller valid assets and measured sync-work reductions; no startup-latency claim.
+- [x] T14: asset/code size audited and sync-work reduced; startup latency optimization evaluated and bounded without speculative claims.
 - [x] T15: deliberate unsigned releases, explicit inputs and strict actual payload comparisons.
 - [x] T16: bounded/cancelled location requests and safe offline/manual recovery.
 - [x] T17: semantic controls, actual keyboard/touch/Back and widget checks, valid manifest assets and consistent docs.

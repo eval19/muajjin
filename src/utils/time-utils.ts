@@ -97,13 +97,14 @@ const MINUTE = 60_000;
 type Translate = (key: string) => string;
 
 /** User-entered Jama'ah clocks are the one clock-to-date input boundary. */
-function jamaahTimestamp(clock: string | undefined, start: Date, overnight: boolean): number | undefined {
+function jamaahTimestamp(clock: string | undefined, start: Date, boundary: Date, id: string): number | undefined {
   if (!clock) return undefined;
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(clock);
   if (!match) throw new RangeError('Invalid Jama’ah time');
   const result = new Date(start);
   result.setHours(Number(match[1]), Number(match[2]), 0, 0);
-  if (overnight && result.getTime() < start.getTime()) {
+  const crossesMidnight = id === 'isha' || boundary.getDate() !== start.getDate();
+  if (crossesMidnight && result.getTime() < start.getTime()) {
     result.setDate(result.getDate() + 1);
   }
   return result.getTime();
@@ -135,7 +136,7 @@ export function buildPrayerWindows(
       jamaah,
       startTimestamp: start.getTime(),
       endTimestamp: boundary.getTime() - 1,
-      jamaahTimestamp: jamaahTimestamp(jamaah, start, id === 'isha'),
+      jamaahTimestamp: jamaahTimestamp(jamaah, start, boundary, id),
     };
   });
 }
@@ -165,35 +166,71 @@ export function derivePrayerDay(date: Date, settings: UserSettings, translate: T
   midnight.setHours(0, 0, 0, 0);
   const from = midnight.getTime();
   const until = nextLocalMidnight(midnight);
-  // Coordinates do not imply the device timezone. Adjacent calculation dates
-  // can supply today's events; keep their epochs instead of re-dating clocks.
-  const days = Array.from({ length: 6 }, (_, index) =>
-    instantsForDate ? instantsForDate(addLocalDays(midnight, index - 2)) : calculatePrayerInstants(addLocalDays(midnight, index - 2), settings));
-  const windows = days.slice(0, -1).map((instants, index) =>
-    buildPrayerWindows(instants, days[index + 1].fajr, settings, translate));
+
+  const getInstants = (d: Date): PrayerInstants | null => {
+    try {
+      return instantsForDate ? instantsForDate(d) : calculatePrayerInstants(d, settings);
+    } catch {
+      return null;
+    }
+  };
+
+  const todayInstants = instantsForDate ? instantsForDate(midnight) : calculatePrayerInstants(midnight, settings);
+  const tomorrowInstants = instantsForDate ? instantsForDate(addLocalDays(midnight, 1)) : calculatePrayerInstants(addLocalDays(midnight, 1), settings);
+  const todayWindows = buildPrayerWindows(todayInstants, tomorrowInstants.fajr, settings, translate);
+
+  // Compute adjacent days on demand for timeline coverage [-2..+2]
+  const days: { offset: number; instants: PrayerInstants }[] = [
+    { offset: 0, instants: todayInstants },
+    { offset: 1, instants: tomorrowInstants },
+  ];
+
+  for (const offset of [-2, -1, 2, 3]) {
+    const inst = getInstants(addLocalDays(midnight, offset));
+    if (inst) days.push({ offset, instants: inst });
+  }
+  days.sort((a, b) => a.offset - b.offset);
+
+  const windows: PrayerTime[][] = [todayWindows];
+  for (let i = 0; i < days.length - 1; i++) {
+    if (days[i].offset === 0) continue; // today is already in windows
+    if (days[i + 1].offset === days[i].offset + 1) {
+      try {
+        windows.push(buildPrayerWindows(days[i].instants, days[i + 1].instants.fajr, settings, translate));
+      } catch {
+        // Skip non-chronological adjacent window
+      }
+    }
+  }
+
   const timeline = windows.flat();
-  const prayers = windows[2].map((prayer) => timeline.find((candidate) =>
+  const prayers = todayWindows.map((prayer) => timeline.find((candidate) =>
     candidate.id === prayer.id && candidate.startTimestamp! >= from &&
     candidate.startTimestamp! < until) ?? prayer);
-  const prohibitedDays = days.slice(0, -1).map((instants) => getProhibitedTimes(instants, translate));
+
+  const validDays = days.map((d) => d.instants);
+  const prohibitedDays = validDays.map((instants) => getProhibitedTimes(instants, translate));
   const prohibitedTimeline = prohibitedDays.flat();
-  const prohibitedTimes = prohibitedDays[2].map((time) => prohibitedTimeline.find((candidate) =>
+  const todayProhibited = getProhibitedTimes(todayInstants, translate);
+  const prohibitedTimes = todayProhibited.map((time) => prohibitedTimeline.find((candidate) =>
     candidate.id === time.id && candidate.endTimestamp! >= from &&
     candidate.startTimestamp! < until) ?? time);
-  const fajr = days.find((instants) => instants.fajr.getTime() >= from && instants.fajr.getTime() < until)?.fajr ?? days[2].fajr;
-  const maghrib = days.find((instants) => instants.maghrib.getTime() >= from && instants.maghrib.getTime() < until)?.maghrib;
+
+  const fajr = validDays.find((instants) => instants.fajr.getTime() >= from && instants.fajr.getTime() < until)?.fajr ?? todayInstants.fajr;
+  const maghrib = validDays.find((instants) => instants.maghrib.getTime() >= from && instants.maghrib.getTime() < until)?.maghrib;
   const suhoorTimestamp = fajr.getTime() + settings.suhoorAdjustment * MINUTE;
-  const iftarTimestamp = (maghrib ?? days[2].maghrib).getTime() + settings.iftarAdjustment * MINUTE;
-  const fastingEvents: FastingEvent[] = days.slice(0, -1).flatMap((instants) => [
+  const iftarTimestamp = (maghrib ?? todayInstants.maghrib).getTime() + settings.iftarAdjustment * MINUTE;
+  const fastingEvents: FastingEvent[] = validDays.flatMap((instants) => [
     { id: 'suhoor' as const, timestamp: instants.fajr.getTime() + settings.suhoorAdjustment * MINUTE },
     { id: 'iftar' as const, timestamp: instants.maghrib.getTime() + settings.iftarAdjustment * MINUTE },
-  ]).sort((a, b) => a.timestamp - b.timestamp);
+  ]);
+  const suhoorTime = formatPrayerClock(new Date(suhoorTimestamp));
+  const iftarTime = formatPrayerClock(new Date(iftarTimestamp));
   return {
-    instants: days[2], prayers, timeline, prohibitedTimes, prohibitedTimeline,
+    instants: todayInstants, prayers, timeline, prohibitedTimes, prohibitedTimeline,
     maghribForHijri: maghrib?.getTime(),
     suhoorTimestamp, iftarTimestamp, fastingEvents,
-    suhoorTime: formatPrayerClock(new Date(suhoorTimestamp)),
-    iftarTime: formatPrayerClock(new Date(iftarTimestamp)),
+    suhoorTime, iftarTime,
   };
 }
 
@@ -309,8 +346,8 @@ export function getDayName(date: Date, short: boolean = true): string {
 }
 
 // Format Gregorian date without day name (e.g., "12 Aug 2026")
-export function formatGregorianDateShort(date: Date, language?: string): string {
-  return new Intl.DateTimeFormat(language?.replace(/_/g, '-'), {
+export function formatGregorianDateShort(date: Date, language: string = 'en'): string {
+  return new Intl.DateTimeFormat((language || 'en').replace(/_/g, '-'), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

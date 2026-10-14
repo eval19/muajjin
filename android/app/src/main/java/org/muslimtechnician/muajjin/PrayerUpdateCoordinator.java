@@ -28,13 +28,17 @@ public final class PrayerUpdateCoordinator {
             SharedPreferences prefs=context.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
             long now=System.currentTimeMillis();TimeZone zone=TimeZone.getDefault();
             PrayerSchedule schedule=NativeScheduleStore.loadSchedule(prefs);
-            if(schedule==null||schedule.needsRenewal(now,zone)) {
+            long lastFailure=prefs.getLong("last_renewal_failure",0L);
+            boolean inBackoff=(now-lastFailure)<1800000L;
+            if((schedule==null||schedule.needsRenewal(now,zone)) && (!inBackoff || force)) {
                 PrayerSchedule.Calculation config=NativeScheduleStore.loadCalculation(prefs);
                 if(config!=null) try {
                     PrayerSchedule renewed=PrayerSchedule.renew(now,zone,config);
                     NativeScheduleStore.saveSchedule(prefs,renewed,config,"native:"+zone.getID()+":"+renewed.validFrom);
                     schedule=renewed;
+                    if(lastFailure!=0L) prefs.edit().remove("last_renewal_failure").apply();
                 } catch(Exception error) {
+                    prefs.edit().putLong("last_renewal_failure",now).apply();
                     // A current, validated horizon remains usable after a failed proactive renewal.
                     // Expired/wrong-zone schedules are rejected by timeline selection below.
                     Log.e("MuajjinCoordinator","Offline schedule renewal failed; preserving known-good data",error);

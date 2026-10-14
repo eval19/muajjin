@@ -21,8 +21,8 @@ const colocatedExports = [
 export default [
   {
     ignores: [
-      'dist/**', 'android/**', 'node_modules/**', 'build/**', '*.lock',
-      '.tools/**', 'reproducible-output/**',
+      'dist/**', 'android/**', 'node_modules/**', 'build/**', '**/build/**', '*.lock',
+      '.tools/**', 'reproducible-output/**', 'native-geolocation-plugin/**',
     ],
   },
   {

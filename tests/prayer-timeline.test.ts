@@ -3,7 +3,7 @@ import { CalculationMethod, Coordinates, Madhab, PrayerTimes } from 'adhan';
 import { DEFAULT_SETTINGS } from '../src/constants/default-settings';
 import { calculatePrayerInstants } from '../src/services/prayer-times-local';
 import {
-  addLocalDays, derivePrayerDay, getCurrentSalat, getNextSalat,
+  addLocalDays, buildPrayerWindows, derivePrayerDay, getCurrentSalat, getNextSalat,
   getPrayerCountdown, getNextFastingEvent, localDateKey,
 } from '../src/utils/time-utils';
 import { calculateHijriDate } from '../src/utils/hijri-utils';
@@ -100,6 +100,32 @@ describe('dated religious windows', () => {
     const next = addLocalDays(end, 1);
     expect(localDateKey(next)).toBe('2027-01-01');
     expect(next.getHours()).toBe(12);
+  });
+  test('high-latitude valid day succeeds despite subsequent polar window collapse', () => {
+    const polar = { ...settings, latitude: 60, longitude: 18.96, method: 1, madhab: 0 };
+    const day = derivePrayerDay(new Date(2026, 5, 13, 12), polar);
+    expect(day.prayers).toHaveLength(5);
+    expect(day.prayers[0].id).toBe('fajr');
+  });
+  test('cross-midnight Jama’ah advances by one day for any midnight-crossing prayer', () => {
+    const start = new Date(2026, 5, 13, 23, 30);
+    const end = new Date(2026, 5, 14, 2, 30);
+    const mockInstants = {
+      fajr: new Date(2026, 5, 13, 5),
+      sunrise: new Date(2026, 5, 13, 6),
+      dhuhr: start,
+      asr: end,
+      maghrib: new Date(2026, 5, 14, 18),
+      isha: new Date(2026, 5, 14, 20),
+    };
+    const localSettings = { ...settings, jamaahTimes: { Dhuhr: '00:30' } };
+    const windows = buildPrayerWindows(mockInstants, new Date(2026, 5, 15, 5), localSettings);
+    const dhuhr = windows.find((p) => p.id === 'dhuhr')!;
+    const jamaah = new Date(dhuhr.jamaahTimestamp!);
+    expect(jamaah.getDate()).toBe(14);
+    expect(jamaah.getHours()).toBe(0);
+    expect(jamaah.getMinutes()).toBe(30);
+    expect(getPrayerCountdown(dhuhr, new Date(2026, 5, 13, 23, 45)).target).toBe('jamaah');
   });
 });
 

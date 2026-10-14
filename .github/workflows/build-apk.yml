@@ -131,7 +131,7 @@ jobs:
       - name: Native unit regressions and debug assembly
         env:
           BUILD_MODE: ${{ matrix.mode }}
-        run: bash android/gradlew -p android testDebugUnitTest assembleDebug -PbuildMode="$BUILD_MODE" -PsourceDateEpoch="$SOURCE_DATE_EPOCH" --stacktrace
+        run: bash android/gradlew -p android testDebugUnitTest assembleDebug :app:assembleDebugAndroidTest -PbuildMode="$BUILD_MODE" -PsourceDateEpoch="$SOURCE_DATE_EPOCH" --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.identity.outputs.name }}

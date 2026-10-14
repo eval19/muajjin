@@ -33,7 +33,7 @@ const parseInputDate = (value: string): Date => {
 const UpcomingPrayerTimesPage: FC = () => {
   const { settings } = useApp();
   const { t, activeTranslation } = useTranslation();
-  const language = activeTranslation?.meta.languageCode.replace(/_/g, '-');
+  const language = (activeTranslation?.meta.languageCode ?? 'en').replace(/_/g, '-');
 
   const [startDateValue, setStartDateValue] = useState(() =>
     localDateKey(new Date()),
