@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { normalizeAppSettings, normalizeQazaCounts, normalizeContainerOrder, normalizeVisibility } from '../src/utils/settings-storage';
 import { createPersistentStore, commitStorageChanges } from '../src/utils/persistent-storage';
 import { validateTranslation, normalizeStoredTranslations } from '../src/utils/translation-validation';
-import { validateWoff2, decodeLegacyFont, LatestFontRequest } from '../src/utils/font-storage';
+import { validateWoff2, decodeLegacyFont, LatestFontRequest, saveFontRecord, type FontRecord } from '../src/utils/font-storage';
 import enTemplate from '../src/i18n/template-en.json';
 import { calculatePrayerInstants } from '../src/services/prayer-times-local';
 
@@ -56,6 +56,34 @@ describe('settings loading boundary', () => {
     expect(new Set(order).size).toBe(6);
     expect(normalizeVisibility({ saumTimes: false, currentSalat: 'false' }).saumTimes).toBe(false);
     expect(normalizeVisibility({ currentSalat: 'false' }).currentSalat).toBe(true);
+  });
+  test('unusable persisted adjustments are normalized to default without corrupting valid siblings', () => {
+    for (const badValue of [Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER, 'bad', NaN, Infinity, null, 1e16, -1e16]) {
+      const settings = normalizeAppSettings({
+        suhoorAdjustment: badValue,
+        iftarAdjustment: badValue,
+        hijriAdjustment: badValue,
+        city: 'Cairo',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        method: 5,
+        madhab: 0,
+      });
+      expect(settings.suhoorAdjustment).toBe(0);
+      expect(settings.iftarAdjustment).toBe(0);
+      expect(settings.hijriAdjustment).toBe(0);
+      expect(settings.city).toBe('Cairo');
+      expect(settings.latitude).toBe(30.0444);
+      expect(settings.method).toBe(5);
+    }
+    const valid = normalizeAppSettings({
+      suhoorAdjustment: -121,
+      iftarAdjustment: 121,
+      hijriAdjustment: 121,
+    });
+    expect(valid.suhoorAdjustment).toBe(-121);
+    expect(valid.iftarAdjustment).toBe(121);
+    expect(valid.hijriAdjustment).toBe(121);
   });
 });
 
@@ -165,5 +193,142 @@ describe('font binary and latest-selection contracts', () => {
     const denied = requests.begin();
     expect(() => requests.commit(denied, () => { throw new Error('Storage denied'); })).toThrow();
     expect(working).toBe('newer');
+  });
+
+  test('failed binary verification cleans up candidate record from store', async () => {
+    const globalWithIdb = globalThis as unknown as { indexedDB: IDBFactory };
+    const originalIndexedDB = globalWithIdb.indexedDB;
+    try {
+      const buffer = new ArrayBuffer(64);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x774f4632); // 'wOF2'
+      view.setUint32(4, 0x00010000); // TrueType flavor
+      view.setUint32(8, 64);         // byteLength
+      view.setUint16(12, 1);         // numTables
+      view.setUint16(14, 0);         // reserved
+      view.setUint32(16, 16);        // totalSfntSize >= 12
+      view.setUint32(20, 10);        // totalCompressedSize <= 64 - 48
+
+      const store = new Map<string, FontRecord>();
+      let mismatchReadback = true;
+      const mockDb = {
+        objectStoreNames: { contains: () => true, createObjectStore: () => {} },
+        close: () => {},
+        transaction: () => {
+          let oncomplete: (() => void) | undefined;
+          const tx = {
+            set oncomplete(fn: () => void) { oncomplete = fn; },
+            objectStore: () => ({
+              put: (val: FontRecord) => { store.set(val.id, val); return { result: val.id }; },
+              get: (id: string) => {
+                let rec = store.get(id);
+                if (rec && mismatchReadback) {
+                  const corrupted = new Uint8Array(rec.bytes).slice();
+                  corrupted[30] = (corrupted[30] ?? 0) ^ 0xff;
+                  rec = { ...rec, bytes: corrupted.buffer };
+                }
+                return { result: rec };
+              },
+              delete: (id: string) => { store.delete(id); return { result: undefined }; },
+            }),
+          };
+          queueMicrotask(() => { if (oncomplete) oncomplete(); });
+          return tx;
+        },
+      };
+      globalWithIdb.indexedDB = {
+        open: () => {
+          const req = {
+            result: mockDb,
+            onsuccess: null as (() => void) | null,
+          };
+          queueMicrotask(() => {
+            if (req.onsuccess) req.onsuccess();
+          });
+          return req as unknown as IDBOpenDBRequest;
+        },
+      } as unknown as IDBFactory;
+
+      const candidateRecord: FontRecord = {
+        schema: 2 as const,
+        id: 'test-corrupt-readback-' + Date.now(),
+        name: 'customfont.woff2' as const,
+        timestamp: Date.now(),
+        bytes: buffer,
+      };
+
+      await expect(saveFontRecord(candidateRecord)).rejects.toThrow('Font storage verification failed');
+      // Ensure that because verification failed, deleteFontRecord was called and cleaned up the store
+      expect(store.has(candidateRecord.id)).toBe(false);
+    } finally {
+      globalWithIdb.indexedDB = originalIndexedDB;
+    }
+  });
+
+  test('failed binary verification with deletion failure raises compound error', async () => {
+    const globalWithIdb = globalThis as unknown as { indexedDB: IDBFactory };
+    const originalIndexedDB = globalWithIdb.indexedDB;
+    try {
+      const buffer = new ArrayBuffer(64);
+      const view = new DataView(buffer);
+      view.setUint32(0, 0x774f4632); // 'wOF2'
+      view.setUint32(4, 0x00010000);
+      view.setUint32(8, 64);
+      view.setUint16(12, 1);
+      view.setUint16(14, 0);
+      view.setUint32(16, 16);
+      view.setUint32(20, 10);
+
+      const store = new Map<string, FontRecord>();
+      const mockDb = {
+        objectStoreNames: { contains: () => true, createObjectStore: () => {} },
+        close: () => {},
+        transaction: () => {
+          let oncomplete: (() => void) | undefined;
+          const tx = {
+            set oncomplete(fn: () => void) { oncomplete = fn; },
+            objectStore: () => ({
+              put: (val: FontRecord) => { store.set(val.id, val); return { result: val.id }; },
+              get: (id: string) => {
+                let rec = store.get(id);
+                if (rec) {
+                  const corrupted = new Uint8Array(rec.bytes).slice();
+                  corrupted[30] = (corrupted[30] ?? 0) ^ 0xff;
+                  rec = { ...rec, bytes: corrupted.buffer };
+                }
+                return { result: rec };
+              },
+              delete: () => { throw new Error('Database locked'); },
+            }),
+          };
+          queueMicrotask(() => { if (oncomplete) oncomplete(); });
+          return tx;
+        },
+      };
+      globalWithIdb.indexedDB = {
+        open: () => {
+          const req = {
+            result: mockDb,
+            onsuccess: null as (() => void) | null,
+          };
+          queueMicrotask(() => {
+            if (req.onsuccess) req.onsuccess();
+          });
+          return req as unknown as IDBOpenDBRequest;
+        },
+      } as unknown as IDBFactory;
+
+      const candidateRecord: FontRecord = {
+        schema: 2 as const,
+        id: 'test-compound-error-' + Date.now(),
+        name: 'customfont.woff2' as const,
+        timestamp: Date.now(),
+        bytes: buffer,
+      };
+
+      await expect(saveFontRecord(candidateRecord)).rejects.toThrow('Font verification failed and cleanup failed');
+    } finally {
+      globalWithIdb.indexedDB = originalIndexedDB;
+    }
   });
 });

@@ -92,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [nongithub, github]
+        mode: [github]
     steps:
       - uses: actions/checkout@v4
         with:

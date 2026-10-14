@@ -21,6 +21,27 @@ Checked items mean the scoped implementation and documented local checks are del
 - [x] T16: bounded/cancelled location requests and safe offline/manual recovery.
 - [x] T17: semantic controls, actual keyboard/touch/Back and widget checks, valid manifest assets and consistent docs.
 
+
+## Review corrections (C01–C08)
+
+- [x] C01: Remove native fabricated-time fallback in PrayerSchedule.java; fail uncomputable astronomical renewals explicitly and present honest recovery state.
+- [x] C02: Produce strictly chronological web prayer timeline in time-utils.ts; fix cross-timezone earliest-future prayer selection.
+- [x] C03: Remove automatic unsigned publication job, write permissions, and release action in release-apk.yml.
+- [x] C04: Validate native horizon outer edges in PrayerSchedule.java and tests; reject ancient previousIsha or far-future nextFajr.
+- [x] C05: Repair malformed adjustment handling in settings-storage.ts and time-utils.ts; bound fasting and Hijri adjustments without crashing dashboard.
+- [x] C06: Clean up uncommitted font-migration candidates in font-storage.ts and translation-context.tsx on verification/pointer failure.
+- [x] C07: Reconcile persisted native acknowledgment on JS restart via getScheduleStatus() in PrayerWidgetPlugin and widget-sync-service.
+- [x] C08: Correct status, claims, and file references (PrayerWidgetHelper, no unmeasured performance claims) in tasks documents.
+
+## Second review corrections (S01–S07)
+
+- [x] S01: Real outer native boundaries validated against astronomical calculations in PrayerSchedule.validateOuterBoundaries and PrayerWidgetPlugin.updateSchedule.
+- [x] S02: Removed arbitrary ±120 cap; enforced representable timestamp safety while preserving valid offsets like 121 minutes and 121 days.
+- [x] S03: Observable font cleanup handling; cleanupRecord preserves font on localStorage read errors.
+- [x] S04: Replaced ineffective 50-byte zero buffer test with real post-write verification failure and candidate deletion test in storage-imports.test.ts.
+- [x] S05: Fixed NativeScheduleStore.saveSchedule revision persistence check and made JS status query retryable on failure.
+- [x] S06: Multi-day polar renewal collapse regression (intermediateAstronomicalCollapseFailsRenewalWithoutFabrication).
+- [x] S07: Task evidence and documentation reconciled with explicit separated status fields.
 ## Release validation not yet established
 
 - [ ] Controlled physical-device battery attribution, CPU profiles and visible startup benchmarks.

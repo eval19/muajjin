@@ -22,6 +22,16 @@ export const defaultAppSettings: AppSettings = {
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const finiteInteger = z.number().finite().int().safe();
+const MAX_DATE_TIMESTAMP = 8.64e15;
+const MAX_DATE_HEADROOM = 1e14;
+const fastingAdjustmentSchema = finiteInteger.refine(
+  (val) => Math.abs(val * 60 * 1000) <= MAX_DATE_TIMESTAMP - MAX_DATE_HEADROOM,
+  { message: 'Fasting adjustment exceeds representable timestamp range' },
+);
+const hijriAdjustmentSchema = finiteInteger.refine(
+  (val) => Math.abs(val * 86400 * 1000) <= MAX_DATE_TIMESTAMP - MAX_DATE_HEADROOM,
+  { message: 'Hijri adjustment exceeds representable timestamp range' },
+);
 const methodSchema = z.union([1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 15].map((id) => z.literal(id)) as [z.ZodLiteral<number>, z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]);
 const clockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const textSchema = z.string().max(256);
@@ -54,9 +64,9 @@ export function normalizeAppSettings(value: unknown, legacyOnboardingComplete = 
     madhab: source.madhab === null && !onboardingComplete ? null
       : validOr(z.union([z.literal(0), z.literal(1)]), source.madhab === 2 ? 0 : source.madhab, DEFAULT_SETTINGS.madhab),
     jamaahTimes: jamaah,
-    suhoorAdjustment: validOr(finiteInteger, source.suhoorAdjustment ?? source.sehriAdjustment, DEFAULT_SETTINGS.suhoorAdjustment),
-    iftarAdjustment: validOr(finiteInteger, source.iftarAdjustment, DEFAULT_SETTINGS.iftarAdjustment),
-    hijriAdjustment: validOr(finiteInteger, source.hijriAdjustment, DEFAULT_SETTINGS.hijriAdjustment),
+    suhoorAdjustment: validOr(fastingAdjustmentSchema, source.suhoorAdjustment ?? source.sehriAdjustment, DEFAULT_SETTINGS.suhoorAdjustment),
+    iftarAdjustment: validOr(fastingAdjustmentSchema, source.iftarAdjustment, DEFAULT_SETTINGS.iftarAdjustment),
+    hijriAdjustment: validOr(hijriAdjustmentSchema, source.hijriAdjustment, DEFAULT_SETTINGS.hijriAdjustment),
     hijriDateChangeAtMaghrib: validOr(z.boolean(), source.hijriDateChangeAtMaghrib, DEFAULT_SETTINGS.hijriDateChangeAtMaghrib),
     // Only a genuinely absent value gets initial coordinates. In a saved
     // object, missing/damaged coordinates require repair, not another city.

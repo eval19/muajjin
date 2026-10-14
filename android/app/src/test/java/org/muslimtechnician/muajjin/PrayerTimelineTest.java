@@ -139,4 +139,71 @@ public class PrayerTimelineTest {
         Calendar end = date(13); end.add(Calendar.DATE, 30);
         new PrayerSchedule("UTC", date(13).getTimeInMillis(), end.getTimeInMillis(), days);
     }
+    @Test(expected = Exception.class)
+    public void unresolvableAstronomicalRenewalFailsExplicitlyWithoutFabricatingTimes() {
+        Calendar now = Calendar.getInstance(UTC);
+        now.clear();
+        now.set(2026, Calendar.MAY, 22, 12, 0, 0);
+        PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(69, 18.96, 1, 0);
+        PrayerSchedule.renew(now.getTimeInMillis(), UTC, config);
+    }
+    @Test(expected = Exception.class)
+    public void intermediateAstronomicalCollapseFailsRenewalWithoutFabrication() {
+        // May 20, 2026 produces initial valid days but collapses on May 21 at lat 69
+        Calendar now = Calendar.getInstance(UTC);
+        now.clear();
+        now.set(2026, Calendar.MAY, 20, 12, 0, 0);
+        PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(69, 18.96, 1, 0);
+        PrayerSchedule.renew(now.getTimeInMillis(), UTC, config);
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void corruptFirstPreviousIshaIsRejectedByConstructor() {
+        PrayerSchedule.Day[] days = schedule().days();
+        Calendar shifted = date(13);
+        shifted.add(Calendar.YEAR, -1);
+        long shiftedMidnight = shifted.getTimeInMillis();
+        PrayerSchedule.Day d = days[0];
+        days[0] = new PrayerSchedule.Day(d.date, shiftedMidnight, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr);
+        Calendar end = date(13); end.add(Calendar.DATE, 30);
+        new PrayerSchedule("UTC", date(13).getTimeInMillis(), end.getTimeInMillis(), days);
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void corruptLastNextFajrIsRejectedByConstructor() {
+        PrayerSchedule.Day[] days = schedule().days();
+        Calendar shifted = date(13);
+        shifted.add(Calendar.YEAR, 1);
+        long shiftedMidnight = shifted.getTimeInMillis();
+        PrayerSchedule.Day d = days[29];
+        days[29] = new PrayerSchedule.Day(d.date, d.previousIsha, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, shiftedMidnight);
+        Calendar end = date(13); end.add(Calendar.DATE, 30);
+        new PrayerSchedule("UTC", date(13).getTimeInMillis(), end.getTimeInMillis(), days);
+    }
+    @Test
+    public void validEngineDerivedSchedulePassesOuterBoundaryValidation() {
+        PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
+        PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
+        valid.validateOuterBoundaries(config);
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void slightlyShiftedFirstPreviousIshaFailsOuterBoundaryValidation() {
+        PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
+        PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
+        PrayerSchedule.Day[] days = valid.days();
+        PrayerSchedule.Day d = days[0];
+        // Shift previousIsha by 1 hour (still within dayStart and < fajr, passes constructor)
+        days[0] = new PrayerSchedule.Day(d.date, d.previousIsha - 3600000L, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr);
+        PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
+        candidate.validateOuterBoundaries(config);
+    }
+    @Test(expected = IllegalArgumentException.class)
+    public void slightlyShiftedLastNextFajrFailsOuterBoundaryValidation() {
+        PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
+        PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
+        PrayerSchedule.Day[] days = valid.days();
+        PrayerSchedule.Day d = days[29];
+        // Shift nextFajr by 1 hour (still within dayEnd and > isha, passes constructor; days[0] remains untouched)
+        days[29] = new PrayerSchedule.Day(d.date, d.previousIsha, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr + 3600000L);
+        PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
+        candidate.validateOuterBoundaries(config);
+    }
 }

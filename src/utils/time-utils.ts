@@ -203,14 +203,14 @@ export function derivePrayerDay(date: Date, settings: UserSettings, translate: T
     }
   }
 
-  const timeline = windows.flat();
+  const timeline = windows.flat().sort((a, b) => a.startTimestamp! - b.startTimestamp!);
   const prayers = todayWindows.map((prayer) => timeline.find((candidate) =>
     candidate.id === prayer.id && candidate.startTimestamp! >= from &&
     candidate.startTimestamp! < until) ?? prayer);
 
   const validDays = days.map((d) => d.instants);
   const prohibitedDays = validDays.map((instants) => getProhibitedTimes(instants, translate));
-  const prohibitedTimeline = prohibitedDays.flat();
+  const prohibitedTimeline = prohibitedDays.flat().sort((a, b) => a.startTimestamp! - b.startTimestamp!);
   const todayProhibited = getProhibitedTimes(todayInstants, translate);
   const prohibitedTimes = todayProhibited.map((time) => prohibitedTimeline.find((candidate) =>
     candidate.id === time.id && candidate.endTimestamp! >= from &&
@@ -223,9 +223,10 @@ export function derivePrayerDay(date: Date, settings: UserSettings, translate: T
   const fastingEvents: FastingEvent[] = validDays.flatMap((instants) => [
     { id: 'suhoor' as const, timestamp: instants.fajr.getTime() + settings.suhoorAdjustment * MINUTE },
     { id: 'iftar' as const, timestamp: instants.maghrib.getTime() + settings.iftarAdjustment * MINUTE },
-  ]);
-  const suhoorTime = formatPrayerClock(new Date(suhoorTimestamp));
-  const iftarTime = formatPrayerClock(new Date(iftarTimestamp));
+  ]).sort((a, b) => a.timestamp - b.timestamp);
+  const isSafeTimestamp = (ts: number): boolean => Number.isFinite(ts) && Math.abs(ts) <= 8.64e15;
+  const suhoorTime = isSafeTimestamp(suhoorTimestamp) ? formatPrayerClock(new Date(suhoorTimestamp)) : '--:--';
+  const iftarTime = isSafeTimestamp(iftarTimestamp) ? formatPrayerClock(new Date(iftarTimestamp)) : '--:--';
   return {
     instants: todayInstants, prayers, timeline, prohibitedTimes, prohibitedTimeline,
     maghribForHijri: maghrib?.getTime(),

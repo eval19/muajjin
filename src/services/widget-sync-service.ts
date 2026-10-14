@@ -44,7 +44,22 @@ export interface PrayerSchedulePayload {
     days: WidgetScheduleDay[];
   };
 }
+export interface ScheduleStatus {
+  exists: boolean;
+  schema?: number;
+  engine?: string;
+  timezonePolicy?: string;
+  timezone?: string;
+  validFrom?: number;
+  validUntil?: number;
+  latitude?: number;
+  longitude?: number;
+  method?: number;
+  madhab?: number;
+  revision?: string;
+}
 export interface PrayerWidgetPluginInterface {
+  getScheduleStatus?(): Promise<ScheduleStatus>;
   updateSchedule(payload: PrayerSchedulePayload): Promise<{ success: boolean }>;
   updatePresentation(payload: { revision: string; presentation: WidgetPresentation }): Promise<{ success: boolean }>;
 }
@@ -128,24 +143,69 @@ export function createWidgetSync(
   let desired: SyncRequest | undefined;
   let running: Promise<void> | undefined;
   let successfulSchedule: { key: string; validFrom: number; validUntil: number } | undefined;
+  let checkedNativeStatus = false;
   let successfulPresentation: string | undefined;
   let presentationRevision = 0;
-
   const drain = async () => {
     while (desired) {
       const request = desired;
       desired = undefined;
       try {
-        const now = clock();
         const settings = request.settings;
-        const key = JSON.stringify({
+        const targetLat = settings.latitude === undefined ? 21.3891 : settings.latitude;
+        const targetLon = settings.longitude === undefined ? 39.8579 : settings.longitude;
+        let targetTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let key = JSON.stringify({
           engine: 'adhan-4.4.3', timezonePolicy: 'device',
-          latitude: settings.latitude === undefined ? 21.3891 : settings.latitude,
-          longitude: settings.longitude === undefined ? 39.8579 : settings.longitude,
+          latitude: targetLat,
+          longitude: targetLon,
           method: settings.method, madhab: settings.madhab,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: targetTimezone,
         });
-        const nearExpiry = addLocalDays(now, 2).getTime();
+        let now = clock();
+        let nearExpiry = addLocalDays(now, 2).getTime();
+
+        if (!successfulSchedule && !checkedNativeStatus && adapter.getScheduleStatus) {
+          try {
+            const status = await adapter.getScheduleStatus();
+            checkedNativeStatus = true;
+            // Refresh time and timezone post-await to eliminate sleep/suspension skew
+            now = clock();
+            targetTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            key = JSON.stringify({
+              engine: 'adhan-4.4.3', timezonePolicy: 'device',
+              latitude: targetLat,
+              longitude: targetLon,
+              method: settings.method, madhab: settings.madhab,
+              timezone: targetTimezone,
+            });
+            nearExpiry = addLocalDays(now, 2).getTime();
+
+            if (
+              status.exists &&
+              status.schema === 2 &&
+              status.engine === 'adhan-4.4.3' &&
+              status.timezonePolicy === 'device' &&
+              status.timezone === targetTimezone &&
+              status.latitude === targetLat &&
+              status.longitude === targetLon &&
+              status.method === settings.method &&
+              status.madhab === settings.madhab &&
+              Number.isSafeInteger(status.validFrom) &&
+              Number.isSafeInteger(status.validUntil) &&
+              typeof status.revision === 'string' &&
+              status.revision.length > 0 &&
+              now.getTime() >= status.validFrom! &&
+              nearExpiry < status.validUntil!
+            ) {
+              successfulSchedule = { key, validFrom: status.validFrom!, validUntil: status.validUntil! };
+            }
+          } catch {
+            // Leave checkedNativeStatus false so subsequent calls can retry
+          }
+        }
+        if (desired) continue;
+
         if (!successfulSchedule || successfulSchedule.key !== key || now.getTime() < successfulSchedule.validFrom || nearExpiry >= successfulSchedule.validUntil) {
           const payload = buildWidgetSchedule(settings, now);
           const response = await adapter.updateSchedule(payload);
@@ -161,6 +221,7 @@ export function createWidgetSync(
           successfulPresentation = presentationKey;
         }
       } catch {
+        if (!successfulSchedule) checkedNativeStatus = false;
         if (desired) continue;
         throw new Error('errors.widgetSyncFailed');
       }

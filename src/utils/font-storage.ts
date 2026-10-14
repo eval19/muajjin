@@ -86,10 +86,22 @@ export async function deleteFontRecord(id: string): Promise<void> {
 export async function saveFontRecord(record: FontRecord): Promise<void> {
   validateWoff2(record.name, record.bytes);
   await fontTransaction('readwrite', (store) => store.put(record));
-  // Read in a separate completed transaction before replacing the selected pointer or deleting legacy base64.
-  const saved = await readFontRecord(record);
-  const expected = new Uint8Array(record.bytes);
-  const actual = new Uint8Array(saved.bytes);
-  if (actual.length !== expected.length) throw new Error('Font storage verification failed');
-  for (let index = 0; index < actual.length; index++) if (actual[index] !== expected[index]) throw new Error('Font storage verification failed');
+  try {
+    // Read in a separate completed transaction before replacing the selected pointer or deleting legacy base64.
+    const saved = await readFontRecord(record);
+    const expected = new Uint8Array(record.bytes);
+    const actual = new Uint8Array(saved.bytes);
+    if (actual.length !== expected.length) throw new Error('Font storage verification failed');
+    for (let index = 0; index < actual.length; index++) {
+      if (actual[index] !== expected[index]) throw new Error('Font storage verification failed');
+    }
+  } catch (error) {
+    try {
+      await deleteFontRecord(record.id);
+    } catch (cleanupError) {
+      console.error('Failed to cleanup uncommitted font record:', cleanupError);
+      throw new Error(`Font verification failed and cleanup failed: ${error instanceof Error ? error.message : String(error)}; cleanup error: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
+    }
+    throw error;
+  }
 }

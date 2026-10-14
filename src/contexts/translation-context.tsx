@@ -87,8 +87,14 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   }, []);
   const cleanupRecord = useCallback(async (id: string) => {
     try {
-      const raw = localStorage.getItem(CUSTOM_FONT_KEY);
-      if (raw && parseFontSelection(JSON.parse(raw))?.id === id) return;
+      try {
+        const raw = localStorage.getItem(CUSTOM_FONT_KEY);
+        if (raw && parseFontSelection(JSON.parse(raw))?.id === id) return;
+      } catch (storageError) {
+        // If localStorage is unavailable, do not infer orphanhood; preserve the record
+        if (live.current) report(storageError);
+        return;
+      }
       await deleteFontRecord(id);
     } catch (error) { if (live.current) report(error); }
   }, [report]);
@@ -121,18 +127,34 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         cachedFont.current = record; selectionRef.current = record; setCustomFont(record);
         activateFont({ face, selection: record.id });
       });
+      let committed = false;
       try {
         await saveFontRecord(record);
-        if (!requests.current.isCurrent(token) || localStorage.getItem(CUSTOM_FONT_KEY) !== raw) { await cleanupRecord(record.id); return; }
+        if (!requests.current.isCurrent(token) || localStorage.getItem(CUSTOM_FONT_KEY) !== raw) {
+          try {
+            await deleteFontRecord(record.id);
+          } catch (cleanupError) {
+            if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+          }
+          return;
+        }
         const metadata: StoredFont = { schema: 2, id: record.id, name: record.name, timestamp: record.timestamp };
         localStorage.setItem(CUSTOM_FONT_KEY, JSON.stringify(metadata));
-        if (live.current) setStorageError(null);
+        committed = true;
+        if (live.current && requests.current.isCurrent(token)) setStorageError(null);
       } catch (error) {
+        if (!committed) {
+          try {
+            await deleteFontRecord(record.id);
+          } catch (cleanupError) {
+            if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+          }
+        }
         // IDB/permission/quota failure leaves the loaded working legacy font and its original base64 untouched.
-        report(error);
+        if (requests.current.isCurrent(token)) report(error);
       }
     } catch (error) { if (requests.current.isCurrent(token)) report(error); }
-  }, [activateFont, cleanupRecord, prepareFont, report]);
+  }, [activateFont, prepareFont, report]);
 
   useEffect(() => {
     live.current = true;
@@ -239,7 +261,14 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       await face.load();
       if (!requests.current.isCurrent(token)) return false;
       await saveFontRecord(candidate);
-      if (!requests.current.isCurrent(token)) { await cleanupRecord(candidate.id); return false; }
+      if (!requests.current.isCurrent(token)) {
+        try {
+          await deleteFontRecord(candidate.id);
+        } catch (cleanupError) {
+          if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+        }
+        return false;
+      }
       const metadata: StoredFont = { schema: 2, id: candidate.id, name: candidate.name, timestamp: candidate.timestamp };
       const previous = selectionRef.current;
       requests.current.commit(token, () => {
@@ -252,9 +281,14 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       toast({ title: t('settings.fontUploaded'), description: t('settings.fontUploadedDesc') });
       return true;
     } catch (error) {
-      if (candidate) void cleanupRecord(candidate.id);
+      if (candidate) {
+        try {
+          await deleteFontRecord(candidate.id);
+        } catch (cleanupError) {
+          if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+        }
+      }
       if (requests.current.isCurrent(token)) report(error);
-      return false;
     }
   }, [activateFont, cleanupRecord, report, t]);
   const removeFont = useCallback(async (): Promise<boolean> => {

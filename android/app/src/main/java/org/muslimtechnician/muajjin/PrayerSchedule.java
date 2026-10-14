@@ -45,7 +45,7 @@ public final class PrayerSchedule {
             long dayStart=c.getTimeInMillis()-2*86400000L;
             Calendar tomorrow=(Calendar)c.clone();tomorrow.add(Calendar.DATE,1);
             long dayEnd=c.getTimeInMillis()+3*86400000L;
-            if(d.fajr<dayStart || d.isha>dayEnd)
+            if(d.previousIsha<dayStart || d.fajr<dayStart || d.isha>dayEnd || d.nextFajr>dayEnd)
                 throw new IllegalArgumentException("Prayer event timestamps do not belong to local date "+d.date);
             if(i>0 && (d.previousIsha!=days[i-1].isha || days[i-1].nextFajr!=d.fajr))
                 throw new IllegalArgumentException("Schedule day edges are discontinuous");
@@ -53,6 +53,17 @@ public final class PrayerSchedule {
         }
         if(c.getTimeInMillis()!=validUntil) throw new IllegalArgumentException("validUntil must be midnight after 30 local dates");
         this.timezone=timezone;this.validFrom=validFrom;this.validUntil=validUntil;this.entries=days.clone();
+    }
+    public void validateOuterBoundaries(Calculation config) {
+        if(config==null) throw new IllegalArgumentException("Calculation configuration required to validate outer boundaries");
+        TimeZone zone=TimeZone.getTimeZone(timezone);
+        Calendar prev=midnight(validFrom,zone);prev.add(Calendar.DATE,-1);
+        long expectedPreviousIsha=NativePrayerCalculator.calculate(prev,config.latitude,config.longitude,config.method,config.madhab)[5];
+        Calendar next=midnight(validUntil,zone);
+        long expectedNextFajr=NativePrayerCalculator.calculate(next,config.latitude,config.longitude,config.method,config.madhab)[0];
+        if(entries[0].previousIsha!=expectedPreviousIsha || entries[entries.length-1].nextFajr!=expectedNextFajr) {
+            throw new IllegalArgumentException("Schedule outer boundary events do not match astronomical calculations");
+        }
     }
     public Day[] days() { return entries.clone(); }
     public Day dayAt(long now,TimeZone zone) {
@@ -103,29 +114,11 @@ public final class PrayerSchedule {
         date.add(Calendar.DATE,1);
         long[] current=NativePrayerCalculator.calculate(date,config.latitude,config.longitude,config.method,config.madhab);
         Day[] days=new Day[HORIZON_DAYS];
-        Day lastValid=null;
         for(int i=0;i<HORIZON_DAYS;i++) {
             Calendar next=(Calendar)date.clone();next.add(Calendar.DATE,1);
-            try {
-                long[] following=NativePrayerCalculator.calculate(next,config.latitude,config.longitude,config.method,config.madhab);
-                Day d=new Day(dateKey(date),previousIsha,current[0],current[1],current[2],current[3],current[4],current[5],following[0]);
-                days[i]=d;
-                previousIsha=current[5];current=following;
-                lastValid=d;
-            } catch(Exception e) {
-                if(lastValid==null) throw e;
-                long dayOffset=86400000L;
-                long fajr=current[0];
-                long sunrise=current[1];
-                long dhuhr=current[2];
-                long asr=current[3];
-                long maghrib=current[4];
-                long isha=current[5];
-                long nextFajr=fajr+dayOffset;
-                days[i]=new Day(dateKey(date),previousIsha,fajr,sunrise,dhuhr,asr,maghrib,isha,nextFajr);
-                previousIsha=isha;
-                current=new long[]{nextFajr,sunrise+dayOffset,dhuhr+dayOffset,asr+dayOffset,maghrib+dayOffset,isha+dayOffset};
-            }
+            long[] following=NativePrayerCalculator.calculate(next,config.latitude,config.longitude,config.method,config.madhab);
+            days[i]=new Day(dateKey(date),previousIsha,current[0],current[1],current[2],current[3],current[4],current[5],following[0]);
+            previousIsha=current[5];current=following;
             date=next;
         }
         return new PrayerSchedule(zone.getID(),first.getTimeInMillis(),date.getTimeInMillis(),days);

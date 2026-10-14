@@ -1,5 +1,5 @@
 const GITHUB_RELEASES_URL =
-  'https://api.github.com/repos/MuslimTechnician/muajjin/releases/latest';
+  'https://api.github.com/repos/eval19/muajjin/releases/latest';
 
 export type ReleaseInfo = {
   latestVersion: string;

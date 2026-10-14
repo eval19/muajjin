@@ -98,4 +98,142 @@ describe('native schedule delivery', () => {
     const expected = derivePrayerDay(now(), newest).prayers.find((prayer) => prayer.id === 'asr')!;
     expect(day.asr).toBe(expected.startTimestamp!);
   });
+  test('fresh JS synchronizer reuses matching valid native schedule without full-month rebuild', async () => {
+    let scheduleGenerated = false;
+    let presentationDelivered = false;
+    const currentTime = now();
+    const sync = createWidgetSync({
+      getScheduleStatus: async () => ({
+        exists: true,
+        schema: 2,
+        engine: 'adhan-4.4.3',
+        timezonePolicy: 'device',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        latitude: 21.3891,
+        longitude: 39.8579,
+        method: DEFAULT_SETTINGS.method,
+        madhab: 0,
+        validFrom: new Date(2026, 9, 10).getTime(),
+        validUntil: new Date(2026, 10, 10).getTime(),
+        revision: 'existing-rev',
+      }),
+      updateSchedule: async () => {
+        scheduleGenerated = true;
+        return { success: true };
+      },
+      updatePresentation: async () => {
+        presentationDelivered = true;
+        return { success: true };
+      },
+    }, () => true, () => currentTime);
+
+    await sync({ settings, presentation });
+    expect(scheduleGenerated).toBe(false);
+    expect(presentationDelivered).toBe(true);
+  });
+
+  test('near-expiry native schedule triggers renewal', async () => {
+    let scheduleGenerated = false;
+    const currentTime = now();
+    const sync = createWidgetSync({
+      getScheduleStatus: async () => ({
+        exists: true,
+        schema: 2,
+        engine: 'adhan-4.4.3',
+        timezonePolicy: 'device',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        latitude: 21.3891,
+        longitude: 39.8579,
+        method: DEFAULT_SETTINGS.method,
+        madhab: 0,
+        validFrom: new Date(2026, 8, 10).getTime(),
+        validUntil: new Date(2026, 9, 14).getTime(), // near expiry (< 2 days from Oct 13)
+        revision: 'old-rev',
+      }),
+      updateSchedule: async () => {
+        scheduleGenerated = true;
+        return { success: true };
+      },
+      updatePresentation: async () => ({ success: true }),
+    }, () => true, () => currentTime);
+
+    await sync({ settings, presentation });
+    expect(scheduleGenerated).toBe(true);
+  });
+
+  test('failed status query does not permanently lock out subsequent retry', async () => {
+    let queryAttempts = 0;
+    let scheduleUpdates = 0;
+    let presentationUpdates = 0;
+    const currentTime = now();
+    const sync = createWidgetSync({
+      getScheduleStatus: async () => {
+        queryAttempts++;
+        if (queryAttempts === 1) throw new Error('Transient bridge error');
+        return {
+          exists: true,
+          schema: 2,
+          engine: 'adhan-4.4.3',
+          timezonePolicy: 'device',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          latitude: 21.3891,
+          longitude: 39.8579,
+          method: DEFAULT_SETTINGS.method,
+          madhab: 0,
+          validFrom: new Date(2026, 9, 10).getTime(),
+          validUntil: new Date(2026, 10, 10).getTime(),
+          revision: 'valid-rev',
+        };
+      },
+      updateSchedule: async () => {
+        scheduleUpdates++;
+        if (scheduleUpdates === 1) throw new Error('Schedule transfer failed');
+        return { success: true };
+      },
+      updatePresentation: async () => {
+        presentationUpdates++;
+        return { success: true };
+      },
+    }, () => true, () => currentTime);
+
+    // First attempt: status query throws, fallback updateSchedule throws -> sync throws
+    await expect(sync({ settings, presentation })).rejects.toThrow();
+    expect(queryAttempts).toBe(1);
+    expect(scheduleUpdates).toBe(1);
+
+    // Second attempt on the same synchronizer: query is retried, native status recovered!
+    // Reuses native schedule without invoking updateSchedule a second time!
+    await sync({ settings, presentation });
+    expect(queryAttempts).toBe(2);
+    expect(scheduleUpdates).toBe(1);
+    expect(presentationUpdates).toBe(1);
+  });
+
+  test('missing revision in native status rejects reuse and requires schedule transfer', async () => {
+    let scheduleGenerated = false;
+    const currentTime = now();
+    const sync = createWidgetSync({
+      getScheduleStatus: async () => ({
+        exists: true,
+        engine: 'adhan-4.4.3',
+        timezonePolicy: 'device',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        latitude: 21.3891,
+        longitude: 39.8579,
+        method: DEFAULT_SETTINGS.method,
+        madhab: 0,
+        validFrom: new Date(2026, 9, 10).getTime(),
+        validUntil: new Date(2026, 10, 10).getTime(),
+        revision: '', // empty revision
+      }),
+      updateSchedule: async () => {
+        scheduleGenerated = true;
+        return { success: true };
+      },
+      updatePresentation: async () => ({ success: true }),
+    }, () => true, () => currentTime);
+
+    await sync({ settings, presentation });
+    expect(scheduleGenerated).toBe(true);
+  });
 });

@@ -48,7 +48,16 @@ public final class NativeScheduleStore {
     }
     public static PrayerSchedule loadSchedule(SharedPreferences prefs) {
         String stored=prefs.getString(SCHEDULE,null);if(stored==null) return null;
-        try {return schedule(new JSONObject(stored));} catch(JSONException|IllegalArgumentException error) {
+        try {
+            PrayerSchedule sched=schedule(new JSONObject(stored));
+            PrayerSchedule.Calculation config=loadCalculation(prefs);
+            if(config==null) {
+                Log.w("MuajjinSchedule","Stored schedule missing calculation configuration; recovery required");
+                return null;
+            }
+            sched.validateOuterBoundaries(config);
+            return sched;
+        } catch(JSONException|IllegalArgumentException error) {
             // Old arrays have neither trustworthy first previous-Isha nor final next-Fajr. Do not
             // resurrect their single-day timestamp fallback. A saved calculation renews them below.
             Log.w("MuajjinSchedule","Stored schedule requires migration or recovery",error);return null;
@@ -65,7 +74,9 @@ public final class NativeScheduleStore {
     }
     public static void saveSchedule(SharedPreferences prefs,PrayerSchedule schedule,PrayerSchedule.Calculation config,String revision) throws JSONException {
         Map<String,String> values=new LinkedHashMap<>();values.put(SCHEDULE,scheduleJson(schedule).toString());values.put(CALCULATION,calculationJson(config).toString());
-        if(values.get(SCHEDULE).equals(prefs.getString(SCHEDULE,null))&&values.get(CALCULATION).equals(prefs.getString(CALCULATION,null))) return;
+        if(values.get(SCHEDULE).equals(prefs.getString(SCHEDULE,null))&&
+           values.get(CALCULATION).equals(prefs.getString(CALCULATION,null))&&
+           revision!=null&&revision.equals(prefs.getString("prayer_schedule_revision",null))) return;
         values.put("prayer_schedule_revision",revision);commit(prefs,values);
     }
     public static void savePresentation(SharedPreferences prefs,NativePresentation presentation,String revision) throws JSONException {

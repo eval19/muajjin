@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [nongithub, github]
+        mode: [github]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,36 +96,28 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: release
+    needs: [resolve, release]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
         with:
-          path: release-artifacts
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: muajjin-*-github-release*
+          path: downloaded-artifacts
+          merge-multiple: true
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: "Muajjin ${{ github.ref_name }}"
-          tag_name: ${{ github.ref_name }}
-          files: |
-            release-artifacts/**/*.apk
-            release-artifacts/**/build-metadata.txt
+          name: Muajjin ${{ github.ref_name }}
           draft: false
           prerelease: false
-          body: |
-            ### Muajjin ${{ github.ref_name }}
-
-            This release adds Android home screen widgets and improves offline reliability and battery usage.
-
-            - Android home screen widgets in multiple sizes (strip, square, banner, wide, and full table)
-            - Offline prayer calculation renewal so widgets keep updating without reopening the app
-            - Reduced battery consumption by stopping background updates when no widgets are on screen
-            - Fixed prayer time transitions, next Fajr calculation, and coordinate edge cases
+          generate_release_notes: true
+          files: |
+            downloaded-artifacts/*.apk
+            downloaded-artifacts/build-metadata.txt
 

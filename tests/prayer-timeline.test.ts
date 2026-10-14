@@ -127,6 +127,24 @@ describe('dated religious windows', () => {
     expect(jamaah.getMinutes()).toBe(30);
     expect(getPrayerCountdown(dhuhr, new Date(2026, 5, 13, 23, 45)).target).toBe('jamaah');
   });
+  test('chronological timeline selects prior-day Isha when earlier than today Fajr across timezones', () => {
+    const nySettings = {
+      ...settings,
+      latitude: 40.7,
+      longitude: -74,
+      method: 1,
+      madhab: 0,
+    };
+    const now = new Date('2026-03-20T00:00:00.000Z');
+    const day = derivePrayerDay(now, nySettings);
+    for (let i = 1; i < day.timeline.length; i++) {
+      expect(day.timeline[i].startTimestamp!).toBeGreaterThanOrEqual(day.timeline[i - 1].startTimestamp!);
+    }
+    const next = getNextSalat(day.timeline, now);
+    expect(next).not.toBeNull();
+    expect(next!.id).toBe('isha');
+    expect(new Date(next!.startTimestamp!).toISOString()).toBe('2026-03-20T00:39:00.000Z');
+  });
 });
 
 describe('DST-safe Hijri civil dates', () => {
