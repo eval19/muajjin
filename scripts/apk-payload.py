@@ -121,6 +121,18 @@ def main():
         if result.returncode != 0:
             raise ValueError('APK signature verification failed:\n' + result.stdout + result.stderr)
         verified_v1 = signature_details(result.stdout, args.certificate)
+        if not verified_v1:
+            with zipfile.ZipFile(args.apk) as archive:
+                has_v1_metadata = any(jar_signature_entry(entry.filename) for entry in archive.infolist())
+            if has_v1_metadata:
+                # minSDK24+ verification may use only v2/v3. API 23 forces a
+                # separate v1 check without replacing normal platform validation.
+                v1_result = subprocess.run([args.apksigner, 'verify', '--verbose', '--print-certs', '--min-sdk-version', '23', '--max-sdk-version', '23', str(args.apk.resolve())], capture_output=True, text=True, check=False)
+                if v1_result.returncode != 0:
+                    raise ValueError('APK v1 signature verification failed:\n' + v1_result.stdout + v1_result.stderr)
+                verified_v1 = signature_details(v1_result.stdout, args.certificate)
+                if not verified_v1:
+                    raise ValueError('JAR signing metadata requires a verified v1 signature')
         print(result.stdout.rstrip())
         print('Signature validity and expected signer fingerprint: VERIFIED (not a certificate-chain/PKI claim).')
     reference = payload_manifest(args.apk, verified_v1=verified_v1)
