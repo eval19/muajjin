@@ -2,6 +2,17 @@
 
 Checked items mean the scoped implementation and documented local checks are delivered. They do not certify unmeasured physical-device battery/CPU/startup performance, every OEM/launcher/accessibility configuration, or a trusted signed release. Exact outcomes and limits are in `tasks/evidence.md`.
 
+## Current app-health completion — 2.8.4
+
+- [x] H00: Read-only audit of shipped versus local runtime fixes and app/native/tooling paths; distinguish confirmed defects from unverified scenarios.
+- [x] H01: Record failing-before reproductions for the scoped UI, async, native persistence/presentation and APK verification defects.
+- [x] H02: Integrate pending runtime fixes and complete the approved minimal repairs without unrelated edits or new dependencies.
+- [x] H03: Pass full web gates, Python APK regressions and native unit/runtime checks with consumer-visible assertions.
+- [ ] H04: Exercise actual browser routes/imports/settings/lifecycle and isolated API36 native/widget/persistence/restart scenarios; retain platform limits accurately.
+- [ ] H05: Publish the verified original-signed 2.8.4 APK from a clean GitHub-compiled source and verify its public download/updater path.
+
+The older completed and unchecked rows below retain their historical scope. They are not a whole-app health certificate or proof that 2.8.3 included the pending local fixes.
+
 - [x] T00: executable baseline, runtime/device facts and repeated comparable work observations.
 - [x] T01: meaningful tests/type-check/lint/CI gates; no automatic publishing.
 - [x] T02: valid zero coordinates, input bounds, isolated selected-method parameters.
@@ -26,7 +37,7 @@ Checked items mean the scoped implementation and documented local checks are del
 
 - [x] C01: Remove native fabricated-time fallback in PrayerSchedule.java; fail uncomputable astronomical renewals explicitly and present honest recovery state.
 - [x] C02: Produce strictly chronological web prayer timeline in time-utils.ts; fix cross-timezone earliest-future prayer selection.
-- [x] C03: Remove automatic unsigned publication job, write permissions, and release action in release-apk.yml.
+- [x] C03/F03: Removed unsigned publication job, repository-write permission and release action; local three-workflow verification passed. No hosted Actions or public release was executed.
 - [x] C04: Validate native horizon outer edges in PrayerSchedule.java and tests; reject ancient previousIsha or far-future nextFajr.
 - [x] C05: Repair malformed adjustment handling in settings-storage.ts and time-utils.ts; bound fasting and Hijri adjustments without crashing dashboard.
 - [x] C06: Clean up uncommitted font-migration candidates in font-storage.ts and translation-context.tsx on verification/pointer failure.
@@ -42,6 +53,30 @@ Checked items mean the scoped implementation and documented local checks are del
 - [x] S05: Fixed NativeScheduleStore.saveSchedule revision persistence check and made JS status query retryable on failure.
 - [x] S06: Multi-day polar renewal collapse regression (intermediateAstronomicalCollapseFailsRenewalWithoutFabrication).
 - [x] S07: Task evidence and documentation reconciled with explicit separated status fields.
+## Behavioral QA handoff — current correction status
+
+This section records the new correction sequence. Older checked implementation rows are historical delivery claims, not proof that the current behavioral handoff is complete.
+
+- [x] F03: Remove automatic unsigned public-release publication; parse all three workflows locally and verify dependencies, permissions, artifact uploads and retained Pages policy.
+- [ ] F01: Code and isolated-process regressions corrected; 47 affected tests passed, including 32,226 independent Hijri fixtures across 13 timezones; lint/types/both web builds passed. Actual browser/device timezone-change resume remains UNVERIFIED.
+- [x] F02: Preserve committed font records after activation/reporting failure and return false honestly; actual provider/IndexedDB failure and reload checks passed.
+- [x] F04: Preserve original plus cleanup errors, make stale cleanup warnings observable without changing newer status, and retain potentially selected records when pointer reads fail; actual browser checks passed.
+- [x] F05: Carry initiating request ownership through both upload/remove retirement paths; delayed failures preserve newer selection/status and remain observable in actual browser checks.
+- [ ] F06: JS validation/retry/reconciliation corrected; 175 affected tests, direct production smoke, lint/types/both web modes passed. Actual Android persisted-pair validation, durable revision repair/failed commit and retained WebView/process restart remain UNVERIFIED.
+- [ ] F07: JS canonical-alias reuse and genuine-zone invalidation corrected; independent factory counts and post-wait timezone checks passed. Actual Android/WebView alias identity and retained native preferences across process recreation remain UNVERIFIED.
+- [x] F08: Exact adjustment conversion replaces guessed headroom; actual resulting Dates govern availability and valid siblings survive. Full suite: 299 parent tests plus 44 isolated arithmetic cases; lint/types/both builds, production smoke and 14 real browser reload cases passed. User-assisted actual typing/Save and page reload preserved the repaired value, all other settings and sentinel. Task-owned cleanup verified; native/WebView gates remain separate.
+- [ ] R09: Calendar/font, JS status/work-count and native core regression portions are corrected. Step 6 passed 27 fresh native tests and real-engine JVM smoke; fault controls proved three old false passes are now rejected, and removing outer validation is detected. Actual incoming/persisted-pair validation, coordinator/store retention/recovery, durable/failed revision commits and retained WebView/process restart remain UNVERIFIED.
+- [ ] R10: Reconcile all affected historical implementation/regression/runtime claims with the final corrected source.
+- [ ] Run separately approved remaining native/runtime integration gates; the full Bun suite passed in Step 5. Distinguish unverified scenarios and platform/release limits.
+
+Approved scopes so far cover F03, F01 and coordinated F02/F04/F05 source/regressions/task records, local gates/build cleanup, and the isolated font browser/IndexedDB campaign. The browser campaign removed only its initially empty origin's synthetic font fixtures, closed its owned tab, restored the previous attachment and stopped its local server. Temporary helpers/font/screenshot and generated dist were removed. No dependencies were installed, devices or system clocks/timezones changed, or signing/publication/commits/pushes performed. Unchecked runtime gates are not implied complete by these results.
+
+Step 4 additionally approved only the JS synchronizer, existing widget-sync tests, these task records and local verification/build cleanup. Its production smoke and test clocks/timezones were process-local; no native preferences, personal data, devices or system clocks/timezones changed. Full F06/F07 checkboxes remain open for their named Android runtime gates despite the completed local code correction.
+
+Step 5 additionally approved adjustment utilities, three existing test files, these task records, local gates/builds/smoke and the isolated synthetic-data Edge campaign. Actual manual typing/Save/reload completed the repair check without focus emulation. The initially empty task origin returned to empty localStorage/IndexedDB with its ownership marker removed; the owned tab was closed and prior attachment restored. Port 18082 has zero listeners; `.tools/qa-adjustments/`, screenshots and generated dist were removed. No personal data, native preferences, devices, system clocks/timezones, dependencies or release/signing state were changed.
+
+Step 6 additionally approved only `PrayerTimelineTest.java`, these records and isolated offline native/JVM verification helpers. No production Java or Android data/device state changed. Fresh XML reports were inspected, then task-owned helpers, control classes, build/project-cache outputs and two stopped-daemon logs were removed. Existing native build directories and working JDK/SDK/Gradle caches were preserved. Unit results do not close the Android persistence/lifecycle gates.
+
 ## Release validation not yet established
 
 - [ ] Controlled physical-device battery attribution, CPU profiles and visible startup benchmarks.
