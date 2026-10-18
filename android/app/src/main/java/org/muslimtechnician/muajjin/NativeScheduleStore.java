@@ -46,8 +46,14 @@ public final class NativeScheduleStore {
             JSONObject d=new JSONObject();d.put("date",day.date);d.put("previousIsha",day.previousIsha);d.put("fajr",day.fajr);d.put("sunrise",day.sunrise);d.put("dhuhr",day.dhuhr);d.put("asr",day.asr);d.put("maghrib",day.maghrib);d.put("isha",day.isha);d.put("nextFajr",day.nextFajr);array.put(d);
         }json.put("days",array);return json;
     }
+    private static String storedString(SharedPreferences prefs,String key) {
+        try { return prefs.getString(key,null); }
+        catch(ClassCastException error) {
+            Log.w("MuajjinSchedule","Invalid saved preference type; recovery required");return null;
+        }
+    }
     public static PrayerSchedule loadSchedule(SharedPreferences prefs) {
-        String stored=prefs.getString(SCHEDULE,null);if(stored==null) return null;
+        String stored=storedString(prefs,SCHEDULE);if(stored==null) return null;
         try {
             PrayerSchedule sched=schedule(new JSONObject(stored));
             PrayerSchedule.Calculation config=loadCalculation(prefs);
@@ -57,39 +63,54 @@ public final class NativeScheduleStore {
             }
             sched.validateOuterBoundaries(config);
             return sched;
-        } catch(JSONException|IllegalArgumentException error) {
+        } catch(JSONException|IllegalArgumentException|IllegalStateException error) {
             // Old arrays have neither trustworthy first previous-Isha nor final next-Fajr. Do not
             // resurrect their single-day timestamp fallback. A saved calculation renews them below.
-            Log.w("MuajjinSchedule","Stored schedule requires migration or recovery",error);return null;
+            Log.w("MuajjinSchedule","Stored schedule requires migration or recovery");return null;
         }
     }
     public static PrayerSchedule.Calculation loadCalculation(SharedPreferences prefs) {
-        String stored=prefs.getString(CALCULATION,null);if(stored==null) return null;
-        try{return calculation(new JSONObject(stored));}catch(JSONException|IllegalArgumentException error){Log.w("MuajjinSchedule","Invalid saved calculation; open app to restore",error);return null;}
+        String stored=storedString(prefs,CALCULATION);if(stored==null) return null;
+        try{return calculation(new JSONObject(stored));}catch(JSONException|IllegalArgumentException error){Log.w("MuajjinSchedule","Invalid saved calculation; open app to restore");return null;}
     }
     public static NativePresentation loadPresentation(SharedPreferences prefs) {
-        String stored=prefs.getString(PRESENTATION,null);if(stored!=null) try{return NativePresentation.parse(new JSONObject(stored));}catch(JSONException|IllegalArgumentException error){Log.w("MuajjinSchedule","Invalid presentation; using bounded baseline labels",error);}
+        String stored=storedString(prefs,PRESENTATION);if(stored!=null) try{return NativePresentation.parse(new JSONObject(stored));}catch(JSONException|IllegalArgumentException error){Log.w("MuajjinSchedule","Invalid presentation; using bounded baseline labels");}
         // Preserve the legacy user-provided location, but never reuse a transferred Hijri date.
-        return NativePresentation.defaults(prefs.getString("location_name",""));
+        String location=storedString(prefs,"location_name");
+        return NativePresentation.defaults(location==null?"":location);
     }
     public static void saveSchedule(SharedPreferences prefs,PrayerSchedule schedule,PrayerSchedule.Calculation config,String revision) throws JSONException {
         Map<String,String> values=new LinkedHashMap<>();values.put(SCHEDULE,scheduleJson(schedule).toString());values.put(CALCULATION,calculationJson(config).toString());
-        if(values.get(SCHEDULE).equals(prefs.getString(SCHEDULE,null))&&
-           values.get(CALCULATION).equals(prefs.getString(CALCULATION,null))&&
-           revision!=null&&revision.equals(prefs.getString("prayer_schedule_revision",null))) return;
+        if(values.get(SCHEDULE).equals(storedString(prefs,SCHEDULE))&&
+           values.get(CALCULATION).equals(storedString(prefs,CALCULATION))&&
+           revision!=null&&revision.equals(storedString(prefs,"prayer_schedule_revision"))) return;
         values.put("prayer_schedule_revision",revision);commit(prefs,values);
     }
     public static void savePresentation(SharedPreferences prefs,NativePresentation presentation,String revision) throws JSONException {
-        String json=presentation.json().toString();if(json.equals(prefs.getString(PRESENTATION,null))) return;
+        String json=presentation.json().toString();if(json.equals(storedString(prefs,PRESENTATION))) return;
         Map<String,String> values=new LinkedHashMap<>();values.put(PRESENTATION,json);values.put("prayer_presentation_revision",revision);commit(prefs,values);
     }
     private static void commit(SharedPreferences prefs,Map<String,String> values) {
-        Map<String,String> previous=new LinkedHashMap<>();SharedPreferences.Editor editor=prefs.edit();
-        for(Map.Entry<String,String> entry:values.entrySet()){previous.put(entry.getKey(),prefs.getString(entry.getKey(),null));editor.putString(entry.getKey(),entry.getValue());}
+        Map<String,?> previous=prefs.getAll();SharedPreferences.Editor editor=prefs.edit();
+        for(Map.Entry<String,String> entry:values.entrySet()) editor.putString(entry.getKey(),entry.getValue());
         if(editor.commit()) return;
         // SharedPreferences publishes in-memory values even if disk writing fails. Restore only
         // touched keys so a failed ACK cannot replace the process's known-good snapshot.
-        SharedPreferences.Editor rollback=prefs.edit();for(Map.Entry<String,String> entry:previous.entrySet())if(entry.getValue()==null)rollback.remove(entry.getKey());else rollback.putString(entry.getKey(),entry.getValue());
+        SharedPreferences.Editor rollback=prefs.edit();
+        for(String key:values.keySet()) {
+            Object value=previous.get(key);
+            if(value==null) rollback.remove(key);
+            else if(value instanceof String) rollback.putString(key,(String)value);
+            else if(value instanceof Boolean) rollback.putBoolean(key,(Boolean)value);
+            else if(value instanceof Integer) rollback.putInt(key,(Integer)value);
+            else if(value instanceof Long) rollback.putLong(key,(Long)value);
+            else if(value instanceof Float) rollback.putFloat(key,(Float)value);
+            else if(value instanceof java.util.Set<?>) {
+                java.util.Set<String> strings=new java.util.HashSet<>();
+                for(Object item:(java.util.Set<?>)value) if(item instanceof String) strings.add((String)item);
+                rollback.putStringSet(key,strings);
+            }
+        }
         if(!rollback.commit()) Log.e("MuajjinSchedule","Could not durably restore preferences after failed transaction");
         throw new IllegalStateException("Could not durably save prayer data");
     }

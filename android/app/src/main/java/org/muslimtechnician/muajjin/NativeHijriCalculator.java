@@ -15,9 +15,9 @@ public final class NativeHijriCalculator {
     private NativeHijriCalculator() {}
 
     /** Return [day, month1Based, year], retaining adjustment and Maghrib rollover. */
-    public static int[] calculate(Calendar localDate, int adjustment, boolean changeAtMaghrib, long now, long maghrib) {
+    public static int[] calculate(Calendar localDate, long adjustment, boolean changeAtMaghrib, long now, long maghrib) {
         NativeCalendarMath.requireDate(localDate);
-        long shift = (long) adjustment + (changeAtMaghrib && now >= maghrib ? 1 : 0);
+        long shift = adjustment + (changeAtMaghrib && now >= maghrib ? 1 : 0);
         if (shift < Integer.MIN_VALUE || shift > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Hijri date adjustment is outside the supported range");
         }
