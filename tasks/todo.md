@@ -8,7 +8,7 @@ Checked items mean the scoped implementation and documented local checks are del
 - [x] H01: Record failing-before reproductions for the scoped UI, async, native persistence/presentation and APK verification defects.
 - [x] H02: Integrate pending runtime fixes and complete the approved minimal repairs without unrelated edits or new dependencies.
 - [x] H03: Pass full web gates, Python APK regressions and native unit/runtime checks with consumer-visible assertions.
-- [ ] H04: Exercise actual browser routes/imports/settings/lifecycle and isolated API36 native/widget/persistence/restart scenarios; retain platform limits accurately.
+- [x] H04: Exercise actual browser routes/imports/settings/lifecycle and isolated API36 native/widget/persistence/restart scenarios; retain platform limits accurately.
 - [ ] H05: Publish the verified original-signed 2.8.4 APK from a clean GitHub-compiled source and verify its public download/updater path.
 
 The older completed and unchecked rows below retain their historical scope. They are not a whole-app health certificate or proof that 2.8.3 included the pending local fixes.
