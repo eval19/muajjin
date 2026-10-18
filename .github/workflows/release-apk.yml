@@ -1,7 +1,8 @@
-name: Build unsigned release artifacts
+name: Build release APK
+run-name: ${{ inputs.sign_release && 'Signed installable release APK' || 'Unsigned verification artifact (not installable)' }}
 
-# Tag builds and explicit manual requests produce CI artifacts only. There is
-# no keystore access, signing, GitHub Release mutation, or automatic publishing.
+# Signing is an explicit manual request. Artifacts are never published as a
+# GitHub Release, and signing material is never included in an artifact.
 on:
   push:
     tags: ['v[0-9]*']
@@ -16,6 +17,10 @@ on:
         description: 'Actual build epoch in seconds; empty means selected source commit timestamp'
         type: string
         default: ''
+      sign_release:
+        description: 'Sign an installable APK with the existing release key (requires signing secrets)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,37 +92,70 @@ jobs:
           BUILD_MODE: ${{ matrix.mode }}
           BUILD_EPOCH: ${{ steps.identity.outputs.epoch }}
         run: bun run reproducible:build --install --mode "$BUILD_MODE" --time "$BUILD_EPOCH" --output "reproducible-output/$BUILD_MODE"
+      - name: Select unsigned verification artifact
+        if: ${{ !inputs.sign_release }}
+        id: unsigned
+        env:
+          APK_NAME: ${{ steps.identity.outputs.name }}
+        run: |
+          echo "name=$APK_NAME" >> "$GITHUB_OUTPUT"
+      - name: Sign and verify installable APK
+        if: ${{ inputs.sign_release }}
+        id: signed
+        env:
+          APK_NAME: ${{ steps.identity.outputs.name }}
+          BUILD_MODE: ${{ matrix.mode }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ secrets.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_SIGNING_CERT_SHA256; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required signing secret: $name" >&2
+              exit 1
+            fi
+          done
+          umask 077
+          signing_dir=$(mktemp -d "$RUNNER_TEMP/muajjin-signing.XXXXXX")
+          trap 'rm -rf -- "$signing_dir"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$signing_dir/release.keystore"
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          output="reproducible-output/$BUILD_MODE"
+          signed_name="${APK_NAME%-unsigned.apk}.apk"
+          "$sdk/zipalign" -c -P 16 4 "$output/$APK_NAME"
+          "$sdk/apksigner" sign \
+            --ks "$signing_dir/release.keystore" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$output/$signed_name" "$output/$APK_NAME"
+          "$sdk/apksigner" verify --verbose --print-certs \
+            --min-sdk-version 24 --max-sdk-version 36 \
+            "$output/$signed_name" > "$signing_dir/certificate.txt"
+          python3 - "$signing_dir/certificate.txt" <<'PY'
+          import os, pathlib, re, sys
+          report = pathlib.Path(sys.argv[1]).read_text()
+          expected = os.environ['ANDROID_SIGNING_CERT_SHA256'].replace(':', '').strip().lower()
+          actual = re.findall(r'^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$', report, re.MULTILINE)
+          if not re.fullmatch(r'[0-9a-f]{64}', expected) or [value.lower() for value in actual] != [expected]:
+              sys.exit('Release signer does not match the expected original certificate')
+          print(report, end='')
+          PY
+          "$sdk/zipalign" -c -P 16 4 "$output/$signed_name"
+          {
+            printf '\nSIGNED_APK_SHA256\n'
+            sha256sum "$output/$signed_name"
+            cat "$signing_dir/certificate.txt"
+          } >> "$output/build-metadata.txt"
+          echo "name=$signed_name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.identity.outputs.name }}
+          name: ${{ steps.signed.outputs.name || steps.unsigned.outputs.name }}
           path: |
-            reproducible-output/${{ matrix.mode }}/${{ steps.identity.outputs.name }}
+            reproducible-output/${{ matrix.mode }}/${{ steps.signed.outputs.name || steps.unsigned.outputs.name }}
             reproducible-output/${{ matrix.mode }}/build-metadata.txt
           if-no-files-found: error
-
-  publish:
-    needs: [resolve, release]
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve.outputs.sha }}
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: muajjin-*-github-release*
-          path: downloaded-artifacts
-          merge-multiple: true
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Muajjin ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            downloaded-artifacts/*.apk
-            downloaded-artifacts/build-metadata.txt
 
