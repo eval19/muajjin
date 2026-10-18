@@ -11,6 +11,9 @@
       "save": "সংরক্ষণ",
       "cancel": "বাতিল",
       "close": "বন্ধ করুন",
+      "back": "ফিরে যান",
+      "decreaseValue": "{{label}} কমান",
+      "increaseValue": "{{label}} বাড়ান",
       "am": "AM",
       "pm": "PM",
       "appName": "মুআযযিন",
@@ -92,6 +95,7 @@
       "iftarAdjustment": "ইফতার সমন্বয় (মিনিট)",
       "iftarAdjustmentDesc": "ইফতার শুরুর সময় সমন্বয় করুন (মিনিটে)",
       "theme": "থিম",
+      "toggleTheme": "থিম পরিবর্তন করুন",
       "themeDesc": "অ্যাপের চেহারা কাস্টমাইজ করুন",
       "light": "হালকা",
       "dark": "গাঢ়",
@@ -153,6 +157,7 @@
       "noFontUploaded": "কোনো কাস্টম ফন্ট আপলোড করা হয়নি",
       "fontFileName": "customfont.woff2",
       "translationDeleted": "অনুবাদ মুছে ফেলা হয়েছে",
+      "deleteTranslation": "{{languageName}} অনুবাদ মুছে ফেলুন",
       "importDescriptionWithLearnMore": "কমিউনিটি অনুবাদ বা টেমপ্লেট সংগ্রহ করুন এবং আপনার অনুবাদ শেয়ার করুন। আরও জানুন"
     },
     "onboarding": {

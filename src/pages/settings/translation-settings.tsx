@@ -104,6 +104,7 @@ const TranslationSettings: FC = () => {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={t('settings.deleteTranslation', { languageName: translation.meta.languageName })}
                       onClick={() =>
                         handleDelete(
                           translation.id,

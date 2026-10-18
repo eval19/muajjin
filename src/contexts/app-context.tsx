@@ -68,6 +68,11 @@ export const AppProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (next.onboardingComplete && next.madhab !== 0 && next.madhab !== 1) {
         throw new RangeError('Choose a madhab before completing setup');
       }
+      if (newSettings.onboardingComplete === true &&
+          (typeof next.latitude !== 'number' || !Number.isFinite(next.latitude) || Math.abs(next.latitude) > 90 ||
+           typeof next.longitude !== 'number' || !Number.isFinite(next.longitude) || Math.abs(next.longitude) > 180)) {
+        throw new RangeError('Choose a valid location before completing setup');
+      }
       return next;
     }), [setSettings]);
   const resetSettings = useCallback(() => reset(['muajjin-onboarding-completed']), [reset]);

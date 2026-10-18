@@ -15,13 +15,14 @@ const HijriSettings: FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { settings, updateSettings } = useApp();
-  const [localSettings, setLocalSettings] = useState<UserSettings>({
-    ...settings,
+  const { hijriAdjustment, hijriDateChangeAtMaghrib } = settings;
+  const [localSettings, setLocalSettings] = useState<Pick<UserSettings, 'hijriAdjustment' | 'hijriDateChangeAtMaghrib'>>({
+    hijriAdjustment, hijriDateChangeAtMaghrib,
   });
 
   useEffect(() => {
-    setLocalSettings({ ...settings });
-  }, [settings]);
+    setLocalSettings({ hijriAdjustment, hijriDateChangeAtMaghrib });
+  }, [hijriAdjustment, hijriDateChangeAtMaghrib]);
 
   const handleSave = () => {
     if (updateSettings(localSettings)) navigate(-1);

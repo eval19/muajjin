@@ -13,21 +13,22 @@ const FastingSettings: FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { settings, updateSettings } = useApp();
-  const [localSettings, setLocalSettings] = useState<UserSettings>({
-    ...settings,
+  const { suhoorAdjustment, iftarAdjustment } = settings;
+  const [localSettings, setLocalSettings] = useState<Pick<UserSettings, 'suhoorAdjustment' | 'iftarAdjustment'>>({
+    suhoorAdjustment, iftarAdjustment,
   });
 
   useEffect(() => {
-    setLocalSettings({ ...settings });
-  }, [settings]);
+    setLocalSettings({ suhoorAdjustment, iftarAdjustment });
+  }, [suhoorAdjustment, iftarAdjustment]);
 
   const handleSave = () => {
     if (updateSettings(localSettings)) navigate(-1);
   };
 
-  const updateSetting = <K extends keyof UserSettings>(
+  const updateSetting = <K extends keyof typeof localSettings>(
     key: K,
-    value: UserSettings[K],
+    value: (typeof localSettings)[K],
   ) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -42,6 +43,7 @@ const FastingSettings: FC = () => {
         description={t('settings.suhoorAdjustmentDesc')}>
         <NumberAdjustmentControl
           id="suhoor-adjustment"
+          label={t('settings.suhoorAdjustment')}
           value={localSettings.suhoorAdjustment || 0}
           min={-10}
           max={10}
@@ -55,6 +57,7 @@ const FastingSettings: FC = () => {
         description={t('settings.iftarAdjustmentDesc')}>
         <NumberAdjustmentControl
           id="iftar-adjustment"
+          label={t('settings.iftarAdjustment')}
           value={localSettings.iftarAdjustment || 0}
           min={-10}
           max={10}

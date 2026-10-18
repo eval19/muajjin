@@ -1,5 +1,6 @@
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/contexts/translation-context';
 import { ArrowLeft } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ export const SettingsPageLayout: FC<SettingsPageLayoutProps> = ({
   showBackButton = true,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -28,6 +30,7 @@ export const SettingsPageLayout: FC<SettingsPageLayoutProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={t('common.back')}
                 onClick={() => navigate(-1)}
                 className="size-10 rounded-full">
                 <ArrowLeft className="h-5 w-5" />
