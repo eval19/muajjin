@@ -22,16 +22,19 @@ export const defaultAppSettings: AppSettings = {
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const finiteInteger = z.number().finite().int().safe();
-const MAX_DATE_TIMESTAMP = 8.64e15;
-const MAX_DATE_HEADROOM = 1e14;
-const fastingAdjustmentSchema = finiteInteger.refine(
-  (val) => Math.abs(val * 60 * 1000) <= MAX_DATE_TIMESTAMP - MAX_DATE_HEADROOM,
-  { message: 'Fasting adjustment exceeds representable timestamp range' },
-);
-const hijriAdjustmentSchema = finiteInteger.refine(
-  (val) => Math.abs(val * 86400 * 1000) <= MAX_DATE_TIMESTAMP - MAX_DATE_HEADROOM,
-  { message: 'Hijri adjustment exceeds representable timestamp range' },
-);
+function adjustmentSchema(millisecondsPerUnit: number) {
+  const exactUnit = BigInt(millisecondsPerUnit);
+  return finiteInteger.refine((value) => {
+    if (!Number.isSafeInteger(value)) return false;
+    const delta = value * millisecondsPerUnit;
+    // A large exact duration can cancel a distant reference date. Do not cap
+    // it by a guessed Date headroom or by safe millisecond magnitude alone.
+    return Number.isSafeInteger(delta) ||
+      BigInt(delta) === BigInt(value) * exactUnit;
+  }, { message: 'Adjustment loses precision when converted to milliseconds' });
+}
+const fastingAdjustmentSchema = adjustmentSchema(60_000);
+const hijriAdjustmentSchema = adjustmentSchema(86_400_000);
 const methodSchema = z.union([1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 15].map((id) => z.literal(id)) as [z.ZodLiteral<number>, z.ZodLiteral<number>, ...z.ZodLiteral<number>[]]);
 const clockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const textSchema = z.string().max(256);

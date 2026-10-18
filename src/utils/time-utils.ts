@@ -218,15 +218,24 @@ export function derivePrayerDay(date: Date, settings: UserSettings, translate: T
 
   const fajr = validDays.find((instants) => instants.fajr.getTime() >= from && instants.fajr.getTime() < until)?.fajr ?? todayInstants.fajr;
   const maghrib = validDays.find((instants) => instants.maghrib.getTime() >= from && instants.maghrib.getTime() < until)?.maghrib;
-  const suhoorTimestamp = fajr.getTime() + settings.suhoorAdjustment * MINUTE;
-  const iftarTimestamp = (maghrib ?? todayInstants.maghrib).getTime() + settings.iftarAdjustment * MINUTE;
+  const suhoorOffset = Number.isSafeInteger(settings.suhoorAdjustment)
+    ? settings.suhoorAdjustment * MINUTE : NaN;
+  const iftarOffset = Number.isSafeInteger(settings.iftarAdjustment)
+    ? settings.iftarAdjustment * MINUTE : NaN;
+  const iftarBase = maghrib ?? todayInstants.maghrib;
+  const suhoorDate = new Date(fajr.getTime() + suhoorOffset);
+  const iftarDate = new Date(iftarBase.getTime() + iftarOffset);
+  const suhoorTimestamp = suhoorDate.getTime();
+  const iftarTimestamp = iftarDate.getTime();
   const fastingEvents: FastingEvent[] = validDays.flatMap((instants) => [
-    { id: 'suhoor' as const, timestamp: instants.fajr.getTime() + settings.suhoorAdjustment * MINUTE },
-    { id: 'iftar' as const, timestamp: instants.maghrib.getTime() + settings.iftarAdjustment * MINUTE },
-  ]).sort((a, b) => a.timestamp - b.timestamp);
-  const isSafeTimestamp = (ts: number): boolean => Number.isFinite(ts) && Math.abs(ts) <= 8.64e15;
-  const suhoorTime = isSafeTimestamp(suhoorTimestamp) ? formatPrayerClock(new Date(suhoorTimestamp)) : '--:--';
-  const iftarTime = isSafeTimestamp(iftarTimestamp) ? formatPrayerClock(new Date(iftarTimestamp)) : '--:--';
+    { id: 'suhoor' as const, timestamp: instants.fajr === fajr
+      ? suhoorTimestamp : new Date(instants.fajr.getTime() + suhoorOffset).getTime() },
+    { id: 'iftar' as const, timestamp: instants.maghrib === iftarBase
+      ? iftarTimestamp : new Date(instants.maghrib.getTime() + iftarOffset).getTime() },
+  ]).filter((event) => Number.isFinite(event.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const suhoorTime = Number.isFinite(suhoorTimestamp) ? formatPrayerClock(suhoorDate) : '--:--';
+  const iftarTime = Number.isFinite(iftarTimestamp) ? formatPrayerClock(iftarDate) : '--:--';
   return {
     instants: todayInstants, prayers, timeline, prohibitedTimes, prohibitedTimeline,
     maghribForHijri: maghrib?.getTime(),

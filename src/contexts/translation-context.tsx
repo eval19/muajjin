@@ -58,9 +58,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const working = useRef<{ face: FontFace | null; selection: string } | null>(null);
   const live = useRef(false);
 
-  const report = useCallback((error: unknown) => {
-    const message = error instanceof Error ? error.message : storageFailure(error);
-    if (live.current) setStorageError(message);
+  const report = useCallback((error: unknown, token?: number, cleanupMessage?: string) => {
+    const originalMessage = error instanceof Error ? error.message : storageFailure(error);
+    const message = cleanupMessage === undefined ? originalMessage : `${originalMessage}; ${cleanupMessage}`;
+    if (live.current && (token === undefined || requests.current.isCurrent(token))) setStorageError(message);
     toast({ title: 'Device data or font operation failed', description: message, variant: 'destructive' });
   }, []);
   const publish = useCallback((next: TranslationState) => { stateRef.current = next; setState(next); setStorageError(null); }, []);
@@ -85,18 +86,18 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     working.current = prepared;
     if (previous?.face && previous.face !== prepared.face) document.fonts.delete(previous.face);
   }, []);
-  const cleanupRecord = useCallback(async (id: string) => {
+  const cleanupRecord = useCallback(async (id: string, token: number) => {
     try {
       try {
         const raw = localStorage.getItem(CUSTOM_FONT_KEY);
         if (raw && parseFontSelection(JSON.parse(raw))?.id === id) return;
       } catch (storageError) {
         // If localStorage is unavailable, do not infer orphanhood; preserve the record
-        if (live.current) report(storageError);
+        report(storageError, token);
         return;
       }
       await deleteFontRecord(id);
-    } catch (error) { if (live.current) report(error); }
+    } catch (error) { report(error, token); }
   }, [report]);
 
   const loadSavedFont = useCallback(async (raw: string | null) => {
@@ -134,7 +135,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
           try {
             await deleteFontRecord(record.id);
           } catch (cleanupError) {
-            if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+            report(cleanupError, token);
           }
           return;
         }
@@ -147,11 +148,12 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
           try {
             await deleteFontRecord(record.id);
           } catch (cleanupError) {
-            if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+            report(error, token, cleanupError instanceof Error ? cleanupError.message : storageFailure(cleanupError));
+            return;
           }
         }
         // IDB/permission/quota failure leaves the loaded working legacy font and its original base64 untouched.
-        if (requests.current.isCurrent(token)) report(error);
+        if (requests.current.isCurrent(token)) report(error, token);
       }
     } catch (error) { if (requests.current.isCurrent(token)) report(error); }
   }, [activateFont, prepareFont, report]);
@@ -251,6 +253,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const uploadFont = useCallback(async (file: File): Promise<boolean> => {
     const token = requests.current.begin();
     let candidate: FontRecord | null = null;
+    let committed = false;
     try {
       if (file.name !== 'customfont.woff2') throw new Error('Font file must be named exactly "customfont.woff2"');
       if (file.size > MAX_FONT_BYTES) throw new Error('Font file too large. Maximum size is 5MB.');
@@ -265,7 +268,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         try {
           await deleteFontRecord(candidate.id);
         } catch (cleanupError) {
-          if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+          report(cleanupError, token);
         }
         return false;
       }
@@ -274,21 +277,24 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       requests.current.commit(token, () => {
         // Replacing this one small pointer is atomic; until it succeeds the old bytes, face and selection remain intact.
         localStorage.setItem(CUSTOM_FONT_KEY, JSON.stringify(metadata));
+        committed = true;
         activateFont({ face, selection: metadata.id });
         cachedFont.current = candidate; selectionRef.current = metadata; setCustomFont(metadata); setStorageError(null);
       });
-      if (previous && previous.id !== metadata.id) void cleanupRecord(previous.id);
       toast({ title: t('settings.fontUploaded'), description: t('settings.fontUploadedDesc') });
+      if (previous && previous.id !== metadata.id) void cleanupRecord(previous.id, token);
       return true;
     } catch (error) {
-      if (candidate) {
+      if (candidate && !committed) {
         try {
           await deleteFontRecord(candidate.id);
         } catch (cleanupError) {
-          if (live.current && requests.current.isCurrent(token)) report(cleanupError);
+          report(error, token, cleanupError instanceof Error ? cleanupError.message : storageFailure(cleanupError));
+          return false;
         }
       }
-      if (requests.current.isCurrent(token)) report(error);
+      if (requests.current.isCurrent(token)) report(error, token);
+      return false;
     }
   }, [activateFont, cleanupRecord, report, t]);
   const removeFont = useCallback(async (): Promise<boolean> => {
@@ -301,8 +307,8 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(CUSTOM_FONT_KEY);
         activateFont(prepared); selectionRef.current = null; cachedFont.current = null; setCustomFont(null); setStorageError(null);
       });
-      if (previous) void cleanupRecord(previous.id);
       toast({ title: t('settings.fontRemoved'), description: t('settings.fontRemovedDesc') });
+      if (previous) void cleanupRecord(previous.id, token);
       return true;
     } catch (error) { if (requests.current.isCurrent(token)) report(error); return false; }
   }, [activateFont, cleanupRecord, prepareFont, report, t]);

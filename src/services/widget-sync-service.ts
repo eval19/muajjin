@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { z } from 'zod';
 import type { UserSettings } from '@/types';
 import { calculatePrayerInstants } from '@/services/prayer-times-local';
 import { addLocalDays, localDateKey } from '@/utils/time-utils';
@@ -44,22 +45,30 @@ export interface PrayerSchedulePayload {
     days: WidgetScheduleDay[];
   };
 }
-export interface ScheduleStatus {
-  exists: boolean;
-  schema?: number;
-  engine?: string;
-  timezonePolicy?: string;
-  timezone?: string;
-  validFrom?: number;
-  validUntil?: number;
-  latitude?: number;
-  longitude?: number;
-  method?: number;
-  madhab?: number;
-  revision?: string;
-}
+// Match NativeScheduleStore.epoch: positive integral milliseconds within Date range.
+const nativeEpoch = z.number().finite().int().positive().max(8.64e15);
+const scheduleStatusSchema = z.object({
+  exists: z.literal(true),
+  schema: z.literal(2),
+  engine: z.literal('adhan-4.4.3'),
+  timezonePolicy: z.literal('device'),
+  // Intl resolves IANA links using rules/identity, never the current UTC offset.
+  timezone: z.string().min(1).max(128).transform((timeZone) =>
+    new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone),
+  validFrom: nativeEpoch,
+  validUntil: nativeEpoch,
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+  method: z.union([
+    z.literal(1), z.literal(2), z.literal(3), z.literal(4),
+    z.literal(5), z.literal(7), z.literal(8), z.literal(9),
+    z.literal(10), z.literal(11), z.literal(12), z.literal(15),
+  ]),
+  madhab: z.union([z.literal(0), z.literal(1)]),
+  revision: z.string().min(1).max(1024),
+}).refine((status) => status.validFrom < status.validUntil);
 export interface PrayerWidgetPluginInterface {
-  getScheduleStatus?(): Promise<ScheduleStatus>;
+  getScheduleStatus?(): Promise<unknown>;
   updateSchedule(payload: PrayerSchedulePayload): Promise<{ success: boolean }>;
   updatePresentation(payload: { revision: string; presentation: WidgetPresentation }): Promise<{ success: boolean }>;
 }
@@ -166,14 +175,22 @@ export function createWidgetSync(
         let nearExpiry = addLocalDays(now, 2).getTime();
 
         if (!successfulSchedule && !checkedNativeStatus && adapter.getScheduleStatus) {
+          let cancelStatusTimeout: (() => void) | undefined;
+          let validatedStatus: z.infer<typeof scheduleStatusSchema> | undefined;
           try {
             const statusPromise = adapter.getScheduleStatus();
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('Status query timeout')), 5000),
-            );
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Status query timeout')), 5000);
+              cancelStatusTimeout = () => clearTimeout(timeout);
+            });
             const status = await Promise.race([statusPromise, timeoutPromise]);
             checkedNativeStatus = true;
-            // Refresh time and timezone post-await to eliminate sleep/suspension skew
+            validatedStatus = scheduleStatusSchema.parse(status);
+          } catch {
+            // Invalid/unavailable status falls through to repair; failed repair remains retryable.
+          } finally {
+            cancelStatusTimeout?.();
+            // Failed and malformed responses can also arrive after suspension.
             now = clock();
             targetTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             key = JSON.stringify({
@@ -184,28 +201,18 @@ export function createWidgetSync(
               timezone: targetTimezone,
             });
             nearExpiry = addLocalDays(now, 2).getTime();
-
-            if (
-              status.exists &&
-              status.schema === 2 &&
-              status.engine === 'adhan-4.4.3' &&
-              status.timezonePolicy === 'device' &&
-              status.timezone === targetTimezone &&
-              status.latitude === targetLat &&
-              status.longitude === targetLon &&
-              status.method === settings.method &&
-              status.madhab === settings.madhab &&
-              Number.isSafeInteger(status.validFrom) &&
-              Number.isSafeInteger(status.validUntil) &&
-              typeof status.revision === 'string' &&
-              status.revision.length > 0 &&
-              now.getTime() >= status.validFrom! &&
-              nearExpiry < status.validUntil!
-            ) {
-              successfulSchedule = { key, validFrom: status.validFrom!, validUntil: status.validUntil! };
-            }
-          } catch {
-            // Leave checkedNativeStatus false so subsequent calls can retry
+          }
+          if (
+            validatedStatus &&
+            validatedStatus.timezone === targetTimezone &&
+            validatedStatus.latitude === targetLat &&
+            validatedStatus.longitude === targetLon &&
+            validatedStatus.method === settings.method &&
+            validatedStatus.madhab === settings.madhab &&
+            now.getTime() >= validatedStatus.validFrom &&
+            nearExpiry < validatedStatus.validUntil
+          ) {
+            successfulSchedule = { key, validFrom: validatedStatus.validFrom, validUntil: validatedStatus.validUntil };
           }
         }
         if (desired) continue;
@@ -215,14 +222,17 @@ export function createWidgetSync(
           const response = await adapter.updateSchedule(payload);
           if (!response.success) throw new Error('Schedule was not durably acknowledged');
           successfulSchedule = { key, validFrom: payload.schedule.validFrom, validUntil: payload.schedule.validUntil };
+          // Re-enter after acknowledgments to reconsider time, zone and newest intent.
+          desired ??= request;
+          continue;
         }
-        // A newer locale/settings intent can arrive while native storage is in flight.
-        if (desired) continue;
         const presentationKey = JSON.stringify(request.presentation);
         if (successfulPresentation !== presentationKey) {
           const response = await adapter.updatePresentation({ revision: `presentation:${++presentationRevision}`, presentation: request.presentation });
           if (!response.success) throw new Error('Presentation was not durably acknowledged');
           successfulPresentation = presentationKey;
+          desired ??= request;
+          continue;
         }
       } catch {
         if (!successfulSchedule) checkedNativeStatus = false;
