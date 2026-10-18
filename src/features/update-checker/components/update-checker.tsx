@@ -36,17 +36,39 @@ export const UpdateChecker: FC = () => {
     IGNORED_RELEASE_KEY,
     null,
   );
-  const isCheckingRef = useRef(false);
+  const requestRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
 
   const currentVersion = packageInfo.version || '0.0.0';
 
+  const cancelUpdateCheck = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      cancelUpdateCheck();
+    };
+  }, [cancelUpdateCheck]);
+
   const checkForUpdates = useCallback(
     async (options?: { force?: boolean; notifyUpToDate?: boolean }) => {
-      if (isCheckingRef.current) return;
-      isCheckingRef.current = true;
+      if (!mountedRef.current || requestRef.current) return;
+      const controller = new AbortController();
+      requestRef.current = controller;
 
       try {
-        const latestRelease = await fetchLatestRelease();
+        const latestRelease = await fetchLatestRelease(controller.signal);
+        if (
+          !mountedRef.current ||
+          controller.signal.aborted ||
+          requestRef.current !== controller
+        ) {
+          return;
+        }
         if (!latestRelease) {
           if (options?.notifyUpToDate) {
             toast({
@@ -84,7 +106,7 @@ export const UpdateChecker: FC = () => {
         setReleaseInfo(latestRelease);
         setIsOpen(true);
       } finally {
-        isCheckingRef.current = false;
+        if (requestRef.current === controller) requestRef.current = null;
       }
     },
     [currentVersion, ignoredVersion, t],
@@ -124,11 +146,16 @@ export const UpdateChecker: FC = () => {
     };
   }, [checkForUpdates, t]);
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) cancelUpdateCheck();
+    setIsOpen(open);
+  };
+
   const handleIgnore = () => {
     if (releaseInfo?.latestVersion) {
       setIgnoredVersion(releaseInfo.latestVersion);
     }
-    setIsOpen(false);
+    handleOpenChange(false);
   };
 
   const handleDownload = () => {
@@ -136,13 +163,13 @@ export const UpdateChecker: FC = () => {
     if (target) {
       window.open(target, '_blank', 'noopener,noreferrer');
     }
-    setIsOpen(false);
+    handleOpenChange(false);
   };
 
   if (!releaseInfo) return null;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogContent
         className="w-[90%] rounded-2xl"
         onOpenAutoFocus={(event) => event.preventDefault()}>

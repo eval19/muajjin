@@ -8,7 +8,7 @@ import { useForegroundActive } from '@/hooks/use-visible-clock';
 import { Capacitor } from '@capacitor/core';
 import { Coordinates, Qibla } from 'adhan';
 import { Compass, LocateFixed, MapPin, Navigation } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -121,6 +121,17 @@ const QiblaCompassPage: FC = () => {
   const [displayDialRotation, setDisplayDialRotation] = useState(0);
   const [permissionState, setPermissionState] =
     useState<OrientationPermissionState>('idle');
+  const [orientationPermissionGranted, setOrientationPermissionGranted] =
+    useState(false);
+  const [browserFallbackRequested, setBrowserFallbackRequested] = useState(false);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const coordinates = useMemo(() => {
     if (!hasValidCoordinates(settings.latitude, settings.longitude)) {
@@ -248,24 +259,11 @@ const QiblaCompassPage: FC = () => {
   }, []);
 
   const startBrowserOrientationFallback = useCallback(() => {
-    if (
-      typeof window === 'undefined' ||
-      !('DeviceOrientationEvent' in window)
-    ) {
-      setPermissionState('unsupported');
-      return () => undefined;
-    }
-
-    const orientationConstructor =
-      DeviceOrientationEvent as unknown as DeviceOrientationEventConstructorWithPermission;
-
-    if (typeof orientationConstructor.requestPermission === 'function') {
-      setPermissionState('request-required');
-      return () => undefined;
-    }
-
-    return subscribeToOrientation();
-  }, [subscribeToOrientation]);
+    setBrowserFallbackRequested(true);
+    return () => {
+      if (mountedRef.current) setBrowserFallbackRequested(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !active) {
@@ -320,7 +318,7 @@ const QiblaCompassPage: FC = () => {
   }, [startBrowserOrientationFallback, active]);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform() || !active) {
+    if ((Capacitor.isNativePlatform() && !browserFallbackRequested) || !active) {
       return;
     }
 
@@ -335,30 +333,41 @@ const QiblaCompassPage: FC = () => {
     const orientationConstructor =
       DeviceOrientationEvent as unknown as DeviceOrientationEventConstructorWithPermission;
 
-    if (typeof orientationConstructor.requestPermission === 'function') {
+    if (
+      typeof orientationConstructor.requestPermission === 'function' &&
+      !orientationPermissionGranted
+    ) {
       setPermissionState('request-required');
       return;
     }
 
     return subscribeToOrientation();
-  }, [subscribeToOrientation, active]);
+  }, [
+    subscribeToOrientation,
+    active,
+    browserFallbackRequested,
+    orientationPermissionGranted,
+  ]);
 
   const requestOrientationPermission = useCallback(async () => {
+    if (!active || !mountedRef.current) return;
+
     try {
       const orientationConstructor =
         DeviceOrientationEvent as unknown as DeviceOrientationEventConstructorWithPermission;
       const result = await orientationConstructor.requestPermission?.();
+      if (!mountedRef.current) return;
 
       if (result !== 'granted') {
         setPermissionState('denied');
         return;
       }
 
-      subscribeToOrientation();
+      setOrientationPermissionGranted(true);
     } catch (error) {
-      setPermissionState('denied');
+      if (mountedRef.current) setPermissionState('denied');
     }
-  }, [subscribeToOrientation]);
+  }, [active]);
 
   const locationLabel = [settings.city, settings.country]
     .filter(Boolean)
