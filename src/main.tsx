@@ -4,20 +4,11 @@ import './index.css';
 import { ThemeProvider } from './components/theme-provider';
 import { TranslationProvider } from './contexts/translation-context';
 import { Capacitor } from '@capacitor/core';
-import { useState, useEffect } from 'react';
 
 export const Root = () => {
   const isNative = Capacitor.isNativePlatform();
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
-  useEffect(() => {
-    const check = () => setIsSmallScreen(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  if (isNative || isSmallScreen) {
+  if (isNative) {
     return (
       <ThemeProvider
         defaultTheme="system"
@@ -36,11 +27,9 @@ export const Root = () => {
       storageKey="muajjin-theme"
       attribute="class">
       <TranslationProvider>
-        <div className="flex min-h-dvh items-center justify-center bg-muted p-4">
-          <div
-            className="relative h-[852px] max-h-[95dvh] w-[393px] overflow-hidden rounded-[2.5rem] border-[8px] border-foreground/15 bg-background shadow-2xl"
-            style={{ transform: 'translateZ(0)' }}>
-            <div className="h-full overflow-y-auto">
+        <div className="md:flex md:min-h-dvh md:items-center md:justify-center md:bg-muted md:p-4">
+          <div className="md:relative md:h-[852px] md:max-h-[95dvh] md:w-[393px] md:overflow-hidden md:rounded-[2.5rem] md:border-[8px] md:border-foreground/15 md:bg-background md:shadow-2xl md:[transform:translateZ(0)]">
+            <div className="md:h-full md:overflow-y-auto">
               <App />
             </div>
           </div>

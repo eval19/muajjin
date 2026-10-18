@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { normalizeAppSettings, normalizeQazaCounts, normalizeContainerOrder, normalizeVisibility } from '../src/utils/settings-storage';
+import { defaultAppSettings, normalizeAppSettings, normalizeQazaCounts, normalizeContainerOrder, normalizeVisibility } from '../src/utils/settings-storage';
 import { createPersistentStore, commitStorageChanges } from '../src/utils/persistent-storage';
 import { validateTranslation, normalizeStoredTranslations } from '../src/utils/translation-validation';
-import { validateWoff2, decodeLegacyFont, LatestFontRequest, saveFontRecord, type FontRecord } from '../src/utils/font-storage';
+import { validateWoff2, decodeLegacyFont, LatestFontRequest, saveFontRecord } from '../src/utils/font-storage';
+import type { FontRecord } from '../src/utils/font-storage';
 import enTemplate from '../src/i18n/template-en.json';
 import { calculatePrayerInstants } from '../src/services/prayer-times-local';
 
@@ -13,6 +14,15 @@ class MemoryStorage {
   setItem(key: string, value: string) { if (this.denied) throw new Error('QuotaExceededError'); this.values.set(key, value); }
   removeItem(key: string) { if (this.denied) throw new Error('SecurityError'); this.values.delete(key); }
 }
+const adjustmentSettings = {
+  ...defaultAppSettings,
+  latitude: 21.3891, longitude: 39.8579,
+  city: 'QA Makkah', country: 'QA', method: 1, madhab: 0,
+  onboardingComplete: true, timeFormat: '24h' as const,
+  jamaahTimes: { Isha: '23:45' },
+  suhoorAdjustment: -10, iftarAdjustment: 10, hijriAdjustment: 121,
+};
+const adjustmentFields = ['suhoorAdjustment', 'iftarAdjustment', 'hijriAdjustment'] as const;
 
 describe('settings loading boundary', () => {
   test('migrates legacy names without overwriting valid current values or zero coordinates', () => {
@@ -57,33 +67,61 @@ describe('settings loading boundary', () => {
     expect(normalizeVisibility({ saumTimes: false, currentSalat: 'false' }).saumTimes).toBe(false);
     expect(normalizeVisibility({ currentSalat: 'false' }).currentSalat).toBe(true);
   });
-  test('unusable persisted adjustments are normalized to default without corrupting valid siblings', () => {
-    for (const badValue of [Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER, 'bad', NaN, Infinity, null, 1e16, -1e16]) {
-      const settings = normalizeAppSettings({
-        suhoorAdjustment: badValue,
-        iftarAdjustment: badValue,
-        hijriAdjustment: badValue,
-        city: 'Cairo',
-        latitude: 30.0444,
-        longitude: 31.2357,
-        method: 5,
-        madhab: 0,
-      });
-      expect(settings.suhoorAdjustment).toBe(0);
-      expect(settings.iftarAdjustment).toBe(0);
-      expect(settings.hijriAdjustment).toBe(0);
-      expect(settings.city).toBe('Cairo');
-      expect(settings.latitude).toBe(30.0444);
-      expect(settings.method).toBe(5);
-    }
-    const valid = normalizeAppSettings({
-      suhoorAdjustment: -121,
-      iftarAdjustment: 121,
-      hijriAdjustment: 121,
-    });
-    expect(valid.suhoorAdjustment).toBe(-121);
-    expect(valid.iftarAdjustment).toBe(121);
-    expect(valid.hijriAdjustment).toBe(121);
+  test('adjustment recovery starts from an accepted baseline', () => {
+    expect(normalizeAppSettings(adjustmentSettings)).toEqual(adjustmentSettings);
+  });
+  test.each(adjustmentFields.flatMap((field) => [
+    Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER,
+    NaN, Infinity, -Infinity, null, undefined, '121', false, {}, [],
+    0.5, -0.5, Number.MAX_SAFE_INTEGER + 1,
+  ].map((value) => [field, value] as const)))(
+    'repairs unusable %s=%p without changing any valid sibling',
+    (field, value) => {
+      const repaired = normalizeAppSettings({ ...adjustmentSettings, [field]: value });
+      expect(repaired).toEqual({ ...adjustmentSettings, [field]: 0 });
+    },
+  );
+  test.each(adjustmentFields.flatMap((field) =>
+    [-121, -10, 0, 10, 121].map((value) => [field, value] as const)))(
+    'preserves supported %s=%i',
+    (field, value) => {
+      const input = { ...adjustmentSettings, [field]: value };
+      expect(normalizeAppSettings(input)).toEqual(input);
+    },
+  );
+  test.each(['suhoorAdjustment', 'iftarAdjustment'].flatMap((field) =>
+    [-143_000_000_000, 143_000_000_000].map((value) => [field, value] as const)))(
+    'preserves representable headroom-boundary %s=%i',
+    (field, value) => {
+      // Arithmetic precondition only; no astronomical result is fabricated.
+      const reference = Date.parse('2026-03-20T12:00:00.000Z');
+      expect(Number.isFinite(new Date(reference + value * 60_000).getTime())).toBe(true);
+      const input = { ...adjustmentSettings, [field]: value };
+      expect(normalizeAppSettings(input)).toEqual(input);
+    },
+  );
+  test.each([-160_000_000_000, 160_000_000_000])(
+    'preserves exact minute conversions beyond safe millisecond magnitude: %i',
+    (value) => {
+      const reference = value > 0 ? -8e15 : 8e15;
+      expect(new Date(reference + value * 60_000).getTime())
+        .toBe(value > 0 ? 1.6e15 : -1.6e15);
+      const input = { ...adjustmentSettings, suhoorAdjustment: value };
+      expect(normalizeAppSettings(input)).toEqual(input);
+    },
+  );
+  test.each([
+    ['suhoorAdjustment', 4_803_839_602_529, 0],
+    ['suhoorAdjustment', 4_803_839_602_530, 4_803_839_602_530],
+    ['iftarAdjustment', -4_803_839_602_529, 0],
+    ['iftarAdjustment', -4_803_839_602_530, -4_803_839_602_530],
+    ['hijriAdjustment', 106_751_991_169, 0],
+    ['hijriAdjustment', 106_751_991_170, 106_751_991_170],
+    ['hijriAdjustment', -106_751_991_169, 0],
+    ['hijriAdjustment', -106_751_991_170, -106_751_991_170],
+  ] as const)('precision boundary %s=%i recovers to %i', (field, value, expected) => {
+    expect(normalizeAppSettings({ ...adjustmentSettings, [field]: value }))
+      .toEqual({ ...adjustmentSettings, [field]: expected });
   });
 });
 
@@ -197,7 +235,7 @@ describe('font binary and latest-selection contracts', () => {
 
   test('failed binary verification cleans up candidate record from store', async () => {
     const globalWithIdb = globalThis as unknown as { indexedDB: IDBFactory };
-    const originalIndexedDB = globalWithIdb.indexedDB;
+    const originalIndexedDB = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
     try {
       const buffer = new ArrayBuffer(64);
       const view = new DataView(buffer);
@@ -210,7 +248,7 @@ describe('font binary and latest-selection contracts', () => {
       view.setUint32(20, 10);        // totalCompressedSize <= 64 - 48
 
       const store = new Map<string, FontRecord>();
-      let mismatchReadback = true;
+      let mismatchReadback = false;
       const mockDb = {
         objectStoreNames: { contains: () => true, createObjectStore: () => {} },
         close: () => {},
@@ -251,23 +289,31 @@ describe('font binary and latest-selection contracts', () => {
 
       const candidateRecord: FontRecord = {
         schema: 2 as const,
-        id: 'test-corrupt-readback-' + Date.now(),
+        id: 'test-corrupt-readback',
         name: 'customfont.woff2' as const,
-        timestamp: Date.now(),
+        timestamp: 42,
         bytes: buffer,
       };
 
-      await expect(saveFontRecord(candidateRecord)).rejects.toThrow('Font storage verification failed');
-      // Ensure that because verification failed, deleteFontRecord was called and cleaned up the store
-      expect(store.has(candidateRecord.id)).toBe(false);
+      const previousRecord: FontRecord = { ...candidateRecord, id: 'previous-font' };
+      await saveFontRecord(previousRecord);
+      expect(store.get(previousRecord.id)).toEqual(previousRecord);
+      mismatchReadback = true;
+      await expect(saveFontRecord(candidateRecord)).rejects.toBeInstanceOf(Error);
+      expect([...store.keys()]).toEqual([previousRecord.id]);
+      expect(store.get(previousRecord.id)).toEqual(previousRecord);
+      mismatchReadback = false;
+      await saveFontRecord(candidateRecord);
+      expect(store.get(candidateRecord.id)).toEqual(candidateRecord);
     } finally {
-      globalWithIdb.indexedDB = originalIndexedDB;
+      if (originalIndexedDB) Object.defineProperty(globalThis, 'indexedDB', originalIndexedDB);
+      else Reflect.deleteProperty(globalThis, 'indexedDB');
     }
   });
 
   test('failed binary verification with deletion failure raises compound error', async () => {
     const globalWithIdb = globalThis as unknown as { indexedDB: IDBFactory };
-    const originalIndexedDB = globalWithIdb.indexedDB;
+    const originalIndexedDB = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
     try {
       const buffer = new ArrayBuffer(64);
       const view = new DataView(buffer);
@@ -280,6 +326,8 @@ describe('font binary and latest-selection contracts', () => {
       view.setUint32(20, 10);
 
       const store = new Map<string, FontRecord>();
+      let mismatchReadback = false;
+      let denyCleanup = false;
       const mockDb = {
         objectStoreNames: { contains: () => true, createObjectStore: () => {} },
         close: () => {},
@@ -291,14 +339,18 @@ describe('font binary and latest-selection contracts', () => {
               put: (val: FontRecord) => { store.set(val.id, val); return { result: val.id }; },
               get: (id: string) => {
                 let rec = store.get(id);
-                if (rec) {
+                if (rec && mismatchReadback) {
                   const corrupted = new Uint8Array(rec.bytes).slice();
                   corrupted[30] = (corrupted[30] ?? 0) ^ 0xff;
                   rec = { ...rec, bytes: corrupted.buffer };
                 }
                 return { result: rec };
               },
-              delete: () => { throw new Error('Database locked'); },
+              delete: (id: string) => {
+                if (denyCleanup) throw new Error('QA cleanup denied');
+                store.delete(id);
+                return { result: undefined };
+              },
             }),
           };
           queueMicrotask(() => { if (oncomplete) oncomplete(); });
@@ -320,15 +372,27 @@ describe('font binary and latest-selection contracts', () => {
 
       const candidateRecord: FontRecord = {
         schema: 2 as const,
-        id: 'test-compound-error-' + Date.now(),
-        name: 'customfont.woff2' as const,
-        timestamp: Date.now(),
+        id: 'test-compound-error',
+        name: 'customfont.woff2',
+        timestamp: 43,
         bytes: buffer,
       };
 
-      await expect(saveFontRecord(candidateRecord)).rejects.toThrow('Font verification failed and cleanup failed');
+      const previousRecord: FontRecord = { ...candidateRecord, id: 'previous-font' };
+      await saveFontRecord(previousRecord);
+      expect(store.get(previousRecord.id)).toEqual(previousRecord);
+      mismatchReadback = true;
+      denyCleanup = true;
+      await expect(saveFontRecord(candidateRecord)).rejects.toThrow('QA cleanup denied');
+      expect(store.get(candidateRecord.id)).toEqual(candidateRecord);
+      expect(store.get(previousRecord.id)).toEqual(previousRecord);
+      mismatchReadback = false;
+      denyCleanup = false;
+      await saveFontRecord(candidateRecord);
+      expect([...store.keys()].sort()).toEqual([previousRecord.id, candidateRecord.id].sort());
     } finally {
-      globalWithIdb.indexedDB = originalIndexedDB;
+      if (originalIndexedDB) Object.defineProperty(globalThis, 'indexedDB', originalIndexedDB);
+      else Reflect.deleteProperty(globalThis, 'indexedDB');
     }
   });
 });

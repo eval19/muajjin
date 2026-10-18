@@ -11,6 +11,9 @@
       "save": "Save",
       "cancel": "Cancel",
       "close": "Close",
+      "back": "Back",
+      "decreaseValue": "Decrease {{label}}",
+      "increaseValue": "Increase {{label}}",
       "am": "AM",
       "pm": "PM",
       "appName": "Muajjin",
@@ -92,6 +95,7 @@
       "iftarAdjustment": "Iftar Adjustment (minutes)",
       "iftarAdjustmentDesc": "Adjust Iftar start time (in minutes)",
       "theme": "Theme",
+      "toggleTheme": "Change theme",
       "themeDesc": "Customize the app appearance",
       "light": "Light",
       "dark": "Dark",
@@ -153,6 +157,7 @@
       "noFontUploaded": "No custom font uploaded",
       "fontFileName": "customfont.woff2",
       "translationDeleted": "Translation deleted",
+      "deleteTranslation": "Delete {{languageName}} translation",
       "importDescriptionWithLearnMore": "Get community translations or translation templates and share your translations with the community. Learn more"
     },
     "onboarding": {

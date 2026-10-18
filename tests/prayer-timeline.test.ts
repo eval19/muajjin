@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { CalculationMethod, Coordinates, Madhab, PrayerTimes } from 'adhan';
 import { DEFAULT_SETTINGS } from '../src/constants/default-settings';
 import { calculatePrayerInstants } from '../src/services/prayer-times-local';
@@ -168,5 +170,92 @@ describe('DST-safe Hijri civil dates', () => {
     expect(calculateHijriDate(new Date(1900, 3, 30)).date).toBe('01-01-1318');
     expect(() => calculateHijriDate(new Date(1900, 3, 29))).toThrow();
     expect(() => calculateHijriDate(new Date(2077, 10, 17))).toThrow();
+  });
+});
+
+const fastingArithmeticGroup = 'fasting adjustment arithmetic';
+describe(fastingArithmeticGroup, () => {
+  // Deleting TZ freezes later changes in pinned Windows Bun. Keep timezone
+  // ownership in a child instead of mutating/restoring the shared test process.
+  if (process.env.MUAJJIN_FASTING_UTC !== '1') {
+    test('all arithmetic cases in an isolated UTC process', () => {
+      const result = spawnSync(process.execPath, [
+        'test', fileURLToPath(import.meta.url),
+        '--test-name-pattern', fastingArithmeticGroup,
+      ], {
+        env: { ...process.env, TZ: 'UTC', MUAJJIN_FASTING_UTC: '1' },
+        encoding: 'utf8', timeout: 4_000,
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(result.stderr || result.stdout);
+    });
+    return;
+  }
+  if (Intl.DateTimeFormat().resolvedOptions().timeZone !== 'UTC')
+    throw new Error('Fasting arithmetic worker did not adopt UTC');
+  const reference = new Date('2026-03-20T12:00:00.000Z');
+  const calculationSettings = { ...settings, method: 1, madhab: 0 };
+  // Existing independent engine-parity.jsonl: makkah/2026-03-20/1/0.
+  const fajr = 1773972660000;
+  const maghrib = 1774020720000;
+  test('fixed reference agrees with the committed independent engine fixture', () => {
+    const day = derivePrayerDay(reference, calculationSettings);
+    expect(Object.values(day.instants).map((instant) => instant.getTime())).toEqual([
+      fajr, 1773977100000, 1773998940000, 1774011180000, maghrib, 1774025160000,
+    ]);
+  });
+  test.each([-143_000_000_000, -144_000_000_000, -121, -10, 0, 10, 121, 143_000_000_000])(
+    'preserves exact supported minute semantics: %i',
+    (value) => {
+      const day = derivePrayerDay(reference, {
+        ...calculationSettings, suhoorAdjustment: value, iftarAdjustment: value,
+      });
+      expect(day.suhoorTimestamp).toBe(fajr + value * 60_000);
+      expect(day.iftarTimestamp).toBe(maghrib + value * 60_000);
+      expect(day.fastingEvents.every((event) =>
+        Number.isFinite(new Date(event.timestamp).getTime()))).toBe(true);
+    },
+  );
+  test.each(['suhoorAdjustment', 'iftarAdjustment'].flatMap((field) =>
+    [144_000_000_000, 160_000_000_000, Number.MAX_SAFE_INTEGER,
+      -Number.MAX_SAFE_INTEGER, NaN, Infinity, -Infinity, 0.5, '10', null,
+    ].map((value) => [field, value] as const)))(
+    'isolates unusable %s=%p from valid prayer and fasting siblings',
+    (field, value) => {
+      const day = derivePrayerDay(reference, { ...calculationSettings, [field]: value });
+      const invalidId = field === 'suhoorAdjustment' ? 'suhoor' : 'iftar';
+      const siblingId = invalidId === 'suhoor' ? 'iftar' : 'suhoor';
+      const failed = invalidId === 'suhoor' ? day.suhoorTimestamp : day.iftarTimestamp;
+      expect(Number.isFinite(failed)).toBe(false);
+      expect(day.fastingEvents.filter((event) => event.id === invalidId)).toEqual([]);
+      expect(getNextFastingEvent(day.fastingEvents, reference)?.id).toBe(siblingId);
+      expect(day.suhoorTimestamp === fajr || day.iftarTimestamp === maghrib).toBe(true);
+      expect(day.instants.fajr.getTime()).toBe(fajr);
+      expect(day.instants.maghrib.getTime()).toBe(maghrib);
+      expect(getNextSalat(day.timeline, reference)?.startTimestamp).toBe(1774011180000);
+    },
+  );
+  test('two invalid fasting fields leave the actual prayer timeline available', () => {
+    const day = derivePrayerDay(reference, {
+      ...calculationSettings, suhoorAdjustment: Infinity, iftarAdjustment: NaN,
+    });
+    expect(day.fastingEvents).toEqual([]);
+    expect(getNextFastingEvent(day.fastingEvents, reference)).toBeNull();
+    expect(getNextSalat(day.timeline, reference)?.startTimestamp).toBe(1774011180000);
+    expect(day.instants.fajr.getTime()).toBe(fajr);
+  });
+  test.each([
+    [143_970_433_789, 8.64e15],
+    [143_970_433_790, NaN],
+    [-144_029_566_211, -8.64e15],
+    [-144_029_566_212, NaN],
+  ])('actual Date endpoint for minute offset %i', (value, expected) => {
+    const day = derivePrayerDay(reference, { ...calculationSettings, suhoorAdjustment: value });
+    if (Number.isFinite(expected)) expect(day.suhoorTimestamp).toBe(expected);
+    else expect(Number.isFinite(day.suhoorTimestamp)).toBe(false);
+    expect(day.fastingEvents.every((event) =>
+      Number.isFinite(new Date(event.timestamp).getTime()))).toBe(true);
+    expect(day.iftarTimestamp).toBe(maghrib);
+    expect(getNextFastingEvent(day.fastingEvents, reference)?.id).toBe('iftar');
   });
 });

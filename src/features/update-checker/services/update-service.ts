@@ -35,9 +35,19 @@ export const isNewerVersion = (
   return false;
 };
 
-export const fetchLatestRelease = async (): Promise<ReleaseInfo | null> => {
+export const fetchLatestRelease = async (
+  signal?: AbortSignal,
+): Promise<ReleaseInfo | null> => {
+  if (signal?.aborted) return null;
+
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort, { once: true });
+  const deadline = setTimeout(abort, 10_000);
+
   try {
     const response = await fetch(GITHUB_RELEASES_URL, {
+      signal: controller.signal,
       headers: {
         Accept: 'application/vnd.github+json',
       },
@@ -48,6 +58,8 @@ export const fetchLatestRelease = async (): Promise<ReleaseInfo | null> => {
     }
 
     const data = await response.json();
+    if (controller.signal.aborted) return null;
+
     const tag = typeof data?.tag_name === 'string' ? data.tag_name : '';
     const name = typeof data?.name === 'string' ? data.name : '';
     const latestVersion = normalizeVersion(tag || name);
@@ -71,5 +83,8 @@ export const fetchLatestRelease = async (): Promise<ReleaseInfo | null> => {
     };
   } catch {
     return null;
+  } finally {
+    clearTimeout(deadline);
+    signal?.removeEventListener('abort', abort);
   }
 };

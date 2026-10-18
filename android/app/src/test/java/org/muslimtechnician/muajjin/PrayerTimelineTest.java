@@ -139,22 +139,42 @@ public class PrayerTimelineTest {
         Calendar end = date(13); end.add(Calendar.DATE, 30);
         new PrayerSchedule("UTC", date(13).getTimeInMillis(), end.getTimeInMillis(), days);
     }
-    @Test(expected = Exception.class)
+    @Test
     public void unresolvableAstronomicalRenewalFailsExplicitlyWithoutFabricatingTimes() {
         Calendar now = Calendar.getInstance(UTC);
         now.clear();
         now.set(2026, Calendar.MAY, 22, 12, 0, 0);
         PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(69, 18.96, 1, 0);
-        PrayerSchedule.renew(now.getTimeInMillis(), UTC, config);
+        assertThrows(IllegalStateException.class,
+            () -> PrayerSchedule.renew(now.getTimeInMillis(), UTC, config));
     }
-    @Test(expected = Exception.class)
+    @Test
     public void intermediateAstronomicalCollapseFailsRenewalWithoutFabrication() {
-        // May 20, 2026 produces initial valid days but collapses on May 21 at lat 69
         Calendar now = Calendar.getInstance(UTC);
         now.clear();
         now.set(2026, Calendar.MAY, 20, 12, 0, 0);
         PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(69, 18.96, 1, 0);
-        PrayerSchedule.renew(now.getTimeInMillis(), UTC, config);
+        // Real May 17-20 engine results supply complete May 18/19 renewal rows.
+        long[][] prefix = new long[4][];
+        for (int i = 0; i < prefix.length; i++) {
+            Calendar day = (Calendar) now.clone();
+            day.add(Calendar.DATE, i - 3);
+            prefix[i] = NativePrayerCalculator.calculate(day, config.latitude, config.longitude, config.method, config.madhab);
+            for (int prayer = 0; prayer < 6; prayer++) {
+                assertTrue("Positive engine event on " + PrayerSchedule.dateKey(day), prefix[i][prayer] > 0);
+                if (prayer > 0) assertTrue(prefix[i][prayer - 1] < prefix[i][prayer]);
+            }
+        }
+        for (int row = 1; row <= 2; row++) {
+            assertTrue(prefix[row - 1][5] < prefix[row][0]);
+            assertTrue(prefix[row][5] < prefix[row + 1][0]);
+        }
+        Calendar firstUnresolved = (Calendar) now.clone();
+        firstUnresolved.add(Calendar.DATE, 1);
+        assertThrows(IllegalStateException.class,
+            () -> NativePrayerCalculator.calculate(firstUnresolved, config.latitude, config.longitude, config.method, config.madhab));
+        assertThrows(IllegalStateException.class,
+            () -> PrayerSchedule.renew(now.getTimeInMillis(), UTC, config));
     }
     @Test(expected = IllegalArgumentException.class)
     public void corruptFirstPreviousIshaIsRejectedByConstructor() {
@@ -183,27 +203,37 @@ public class PrayerTimelineTest {
         PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
         PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
         valid.validateOuterBoundaries(config);
+        PrayerSchedule.Day today = valid.dayAt(date(15).getTimeInMillis(), UTC);
+        PrayerTimeline timeline = PrayerTimeline.at(valid, today.fajr, UTC);
+        assertEquals("fajr", timeline.currentId);
+        assertEquals("sunrise", timeline.nextId);
+        assertEquals(today.sunrise, timeline.target);
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void slightlyShiftedFirstPreviousIshaFailsOuterBoundaryValidation() {
         PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
         PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
-        PrayerSchedule.Day[] days = valid.days();
-        PrayerSchedule.Day d = days[0];
-        // Shift previousIsha by 1 hour (still within dayStart and < fajr, passes constructor)
-        days[0] = new PrayerSchedule.Day(d.date, d.previousIsha - 3600000L, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr);
-        PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
-        candidate.validateOuterBoundaries(config);
+        valid.validateOuterBoundaries(config);
+        for (long shift : new long[] {-60000L, 60000L, -3600000L, 3600000L}) {
+            PrayerSchedule.Day[] days = valid.days();
+            PrayerSchedule.Day d = days[0];
+            days[0] = new PrayerSchedule.Day(d.date, d.previousIsha + shift, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr);
+            // Construction must succeed; only astronomical validation may reject.
+            PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
+            assertThrows(IllegalArgumentException.class, () -> candidate.validateOuterBoundaries(config));
+        }
     }
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void slightlyShiftedLastNextFajrFailsOuterBoundaryValidation() {
         PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 0);
         PrayerSchedule valid = PrayerSchedule.renew(date(15).getTimeInMillis(), UTC, config);
-        PrayerSchedule.Day[] days = valid.days();
-        PrayerSchedule.Day d = days[29];
-        // Shift nextFajr by 1 hour (still within dayEnd and > isha, passes constructor; days[0] remains untouched)
-        days[29] = new PrayerSchedule.Day(d.date, d.previousIsha, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr + 3600000L);
-        PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
-        candidate.validateOuterBoundaries(config);
+        valid.validateOuterBoundaries(config);
+        for (long shift : new long[] {-60000L, 60000L, -3600000L, 3600000L}) {
+            PrayerSchedule.Day[] days = valid.days();
+            PrayerSchedule.Day d = days[29];
+            days[29] = new PrayerSchedule.Day(d.date, d.previousIsha, d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha, d.nextFajr + shift);
+            PrayerSchedule candidate = new PrayerSchedule(valid.timezone, valid.validFrom, valid.validUntil, days);
+            assertThrows(IllegalArgumentException.class, () -> candidate.validateOuterBoundaries(config));
+        }
     }
 }

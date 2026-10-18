@@ -66,6 +66,7 @@ export function AppHeader({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t('common.back')}
               onClick={handleBack}
               className="size-9 rounded-full">
               <ArrowLeft className="h-5 w-5" />
@@ -85,6 +86,7 @@ export function AppHeader({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t('settings.toggleTheme')}
               onClick={toggleTheme}
               className="size-9 rounded-full">
               {getThemeIcon()}

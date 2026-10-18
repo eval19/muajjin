@@ -9,7 +9,7 @@ Privacy-focused, offline prayer and fasting times companion with Android home sc
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v2.8.3-emerald" alt="Version 2.8.3">
+  <img src="https://img.shields.io/badge/Release-v2.8.4-emerald" alt="Version 2.8.4">
   <img src="https://img.shields.io/badge/React-18-blue" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/Vite-7-purple" alt="Vite">
@@ -129,10 +129,22 @@ bun run android:release:github
 android/app/build/outputs/apk/
 ```
 
-### Installable APK from GitHub Actions — v2.8.3
+### Installable APK from GitHub Actions — v2.8.4
 
-The release workflow supports **explicit manual signing**. Version 2.8.3
-(Android versionCode 283) keeps `org.muslimtechnician.muajjin`; it does not
+For installation, download the signed `.apk` from the
+[2.8.4 release](https://github.com/eval19/muajjin/releases/tag/v2.8.4),
+not a source archive, Actions ZIP, or `*-unsigned.apk`. Keep the installed
+app and its local data; updates must use the original signing identity.
+
+Version 2.8.4 completes the pending font/import, timezone, adjustment and
+widget-sync corrections. Settings save only their own fields; responsive
+resizing preserves drafts; Qibla subscriptions and update requests have
+owned cleanup. Invalid native schedules recover without fabricated times,
+and an unsupported Hijri adjustment does not discard other widget settings.
+Exact exercised checks and device limitations are in `tasks/evidence.md`.
+
+The release workflow supports **explicit manual signing**. Version 2.8.4
+(Android versionCode 284) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -157,7 +169,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.8.3-283-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.8.4-284-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

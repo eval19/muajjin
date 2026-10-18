@@ -17,11 +17,11 @@ public final class NativePresentation {
     private static final String[] KEYS={"fajr","sunrise","dhuhr","asr","maghrib","isha","current","next","now","in","at","startsIn","am","pm","remainingHours","remainingMinutes","recovery"};
     private static final String[] ENGLISH={"Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha","Current Salat","Next Salat","Now","in","at","Starts in","AM","PM","{{hours}}h {{minutes}}m","{{minutes}}m","Open Muajjin to restore prayer settings"};
     public final String language,direction,timeFormat,locationName;
-    public final int hijriAdjustment;
+    public final long hijriAdjustment;
     public final boolean hijriDateChangeAtMaghrib;
     private final Map<String,String> labels;
     private final String[] months;
-    private NativePresentation(String language,String direction,String timeFormat,String location,int adjustment,boolean rollover,Map<String,String> labels,String[] months) {
+    private NativePresentation(String language,String direction,String timeFormat,String location,long adjustment,boolean rollover,Map<String,String> labels,String[] months) {
         this.language=language;this.direction=direction;this.timeFormat=timeFormat;this.locationName=location;
         this.hijriAdjustment=adjustment;this.hijriDateChangeAtMaghrib=rollover;
         this.labels=Collections.unmodifiableMap(new LinkedHashMap<>(labels));this.months=months.clone();
@@ -35,7 +35,13 @@ public final class NativePresentation {
         String language=text(json,"language",64),direction=text(json,"direction",3),format=text(json,"timeFormat",6);
         if(!direction.equals("ltr")&&!direction.equals("rtl")) throw new IllegalArgumentException("Invalid presentation direction");
         if(!format.equals("system")&&!format.equals("12h")&&!format.equals("24h")) throw new IllegalArgumentException("Invalid time format");
-        String location=text(json,"locationName",256,true);int adjustment=NativeScheduleStore.integer(json,"hijriAdjustment");
+        String location=text(json,"locationName",256,true);
+        Object rawAdjustment=json.get("hijriAdjustment");
+        if(!(rawAdjustment instanceof Number)) throw new IllegalArgumentException("Hijri adjustment must be numeric");
+        double numericAdjustment=((Number)rawAdjustment).doubleValue();
+        if(!Double.isFinite(numericAdjustment)||numericAdjustment!=Math.rint(numericAdjustment)||Math.abs(numericAdjustment)>9007199254740991d)
+            throw new IllegalArgumentException("Hijri adjustment must be an exact JavaScript integer");
+        long adjustment=((Number)rawAdjustment).longValue();
         Object rollover=json.get("hijriDateChangeAtMaghrib");if(!(rollover instanceof Boolean)) throw new IllegalArgumentException("Hijri rollover must be boolean");
         JSONObject incoming=json.getJSONObject("labels");Map<String,String> labels=new LinkedHashMap<>();
         for(String key:KEYS) labels.put(key,text(incoming,key,8192));

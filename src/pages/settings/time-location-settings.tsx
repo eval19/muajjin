@@ -19,8 +19,9 @@ const TimeLocationSettings: FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { settings, updateSettings } = useApp();
-  const [localSettings, setLocalSettings] = useState<UserSettings>({
-    ...settings,
+  const { timeFormat, city, country, latitude: committedLatitude, longitude: committedLongitude, manualLocation } = settings;
+  const [localSettings, setLocalSettings] = useState<Pick<UserSettings, 'timeFormat' | 'city' | 'country' | 'latitude' | 'longitude' | 'manualLocation'>>({
+    timeFormat, city, country, latitude: committedLatitude, longitude: committedLongitude, manualLocation,
   });
   const [latitudeText, setLatitudeText] = useState(Number.isFinite(settings.latitude) ? String(settings.latitude) : '');
   const [longitudeText, setLongitudeText] = useState(Number.isFinite(settings.longitude) ? String(settings.longitude) : '');
@@ -31,10 +32,10 @@ const TimeLocationSettings: FC = () => {
   });
   useEffect(() => {
     cancel();
-    setLocalSettings({ ...settings });
-    setLatitudeText(Number.isFinite(settings.latitude) ? String(settings.latitude) : '');
-    setLongitudeText(Number.isFinite(settings.longitude) ? String(settings.longitude) : '');
-  }, [settings, cancel]);
+    setLocalSettings({ timeFormat, city, country, latitude: committedLatitude, longitude: committedLongitude, manualLocation });
+    setLatitudeText(Number.isFinite(committedLatitude) ? String(committedLatitude) : '');
+    setLongitudeText(Number.isFinite(committedLongitude) ? String(committedLongitude) : '');
+  }, [timeFormat, city, country, committedLatitude, committedLongitude, manualLocation, cancel]);
   const latitude = latitudeText.trim() === '' ? NaN : Number(latitudeText);
   const longitude = longitudeText.trim() === '' ? NaN : Number(longitudeText);
   const valid = Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 &&
@@ -45,7 +46,7 @@ const TimeLocationSettings: FC = () => {
     const country = latitude === localSettings.latitude && longitude === localSettings.longitude ? localSettings.country : '';
     if (updateSettings({ ...localSettings, latitude, longitude, country })) navigate(-1);
   };
-  const updateSetting = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+  const updateSetting = <K extends keyof typeof localSettings>(key: K, value: (typeof localSettings)[K]) => {
     cancel();
     setLocalSettings((previous) => ({ ...previous, [key]: value }));
   };

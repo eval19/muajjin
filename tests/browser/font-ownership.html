@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Muajjin font ownership regression checks</title>
+  </head>
+  <body>
+    <h1>Muajjin font ownership regression checks</h1>
+    <p>
+      Run only on a new, dedicated localhost origin with explicit storage-testing
+      approval. This page mounts the production TranslationProvider and uses real
+      IndexedDB transactions. Nothing is submitted to a remote server.
+    </p>
+    <p>
+      Choose a valid, licensed file named customfont.woff2. Run a baseline before
+      fault cases. After reload, choose the same file again if more checks are
+      needed. Cleanup removes only this initially empty test origin's font
+      fixtures; do not use this page on an origin containing personal data.
+    </p>
+    <label for="qa-font">Valid WOFF2 fixture</label>
+    <input id="qa-font" type="file" accept=".woff2" />
+    <div id="qa-actions"></div>
+    <pre id="qa-result" aria-live="polite">Initializing isolated test origin…</pre>
+    <div id="qa-provider"></div>
+    <script type="module" src="/tests/browser/font-ownership-checks.jsx"></script>
+  </body>
+</html>

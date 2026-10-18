@@ -7,12 +7,11 @@ import { OnboardingStepHeader } from '@/components/onboarding/onboarding-step-he
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ONBOARDING_DEFAULTS } from '@/constants/default-settings';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
 import { UserSettings } from '@/types';
 import { CalendarDays, Scale } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function FinalSettingsPage() {
@@ -20,27 +19,28 @@ export default function FinalSettingsPage() {
   const { t } = useTranslation();
   const { settings: appSettings, updateSettings } = useApp();
 
-  // Start from existing app settings (location set in previous step or defaults)
-  const [settings, setSettings] = useState<UserSettings>(() => ({
-    method: appSettings.method ?? ONBOARDING_DEFAULTS.method,
-    madhab: appSettings.madhab ?? ONBOARDING_DEFAULTS.madhab ?? null,
-    timeFormat: appSettings.timeFormat ?? 'system',
-    jamaahTimes: appSettings.jamaahTimes ?? {},
-    suhoorAdjustment: appSettings.suhoorAdjustment ?? 0,
-    iftarAdjustment: appSettings.iftarAdjustment ?? 0,
-    hijriAdjustment: appSettings.hijriAdjustment ?? 0,
-    hijriDateChangeAtMaghrib: appSettings.hijriDateChangeAtMaghrib ?? true,
-    manualLocation: appSettings.manualLocation ?? true,
-    city: appSettings.city ?? ONBOARDING_DEFAULTS.city,
-    country: appSettings.country ?? ONBOARDING_DEFAULTS.country,
-    latitude: appSettings.latitude ?? ONBOARDING_DEFAULTS.latitude,
-    longitude: appSettings.longitude ?? ONBOARDING_DEFAULTS.longitude,
-  }));
+  const { method, madhab, hijriAdjustment, latitude, longitude } = appSettings;
+  const [settings, setSettings] = useState<Pick<UserSettings, 'method' | 'madhab' | 'hijriAdjustment'>>({
+    method, madhab, hijriAdjustment,
+  });
 
-  // Check if user has completed all required selections
-  const isReadyToFinish = settings.madhab !== null;
+  useEffect(() => {
+    setSettings({ method, madhab, hijriAdjustment });
+  }, [method, madhab, hijriAdjustment]);
+
+  const hasValidLocation = typeof latitude === 'number' && Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
+    typeof longitude === 'number' && Number.isFinite(longitude) && Math.abs(longitude) <= 180;
+  useEffect(() => {
+    if (!hasValidLocation) navigate('/onboarding/location', { replace: true });
+  }, [hasValidLocation, navigate]);
+
+  const isReadyToFinish = settings.madhab !== null && hasValidLocation;
   const handleFinish = () => {
-    // Save all settings and mark onboarding as completed
+    if (!hasValidLocation) {
+      navigate('/onboarding/location', { replace: true });
+      return;
+    }
+    if (settings.madhab === null) return;
     if (updateSettings({ ...settings, onboardingComplete: true })) navigate('/', { replace: true });
   };
 

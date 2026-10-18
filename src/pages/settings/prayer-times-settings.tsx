@@ -15,21 +15,22 @@ const PrayerTimesSettings: FC = () => {
   const navigate = useNavigate();
   const { t, getSalatName } = useTranslation();
   const { settings, updateSettings } = useApp();
-  const [localSettings, setLocalSettings] = useState<UserSettings>({
-    ...settings,
+  const { method, madhab, jamaahTimes: { Fajr, Dhuhr, Asr, Maghrib, Isha } } = settings;
+  const [localSettings, setLocalSettings] = useState<Pick<UserSettings, 'method' | 'madhab' | 'jamaahTimes'>>({
+    method, madhab, jamaahTimes: { Fajr, Dhuhr, Asr, Maghrib, Isha },
   });
 
   useEffect(() => {
-    setLocalSettings({ ...settings });
-  }, [settings]);
+    setLocalSettings({ method, madhab, jamaahTimes: { Fajr, Dhuhr, Asr, Maghrib, Isha } });
+  }, [method, madhab, Fajr, Dhuhr, Asr, Maghrib, Isha]);
 
   const handleSave = () => {
     if (updateSettings(localSettings)) navigate(-1);
   };
 
-  const updateSetting = <K extends keyof UserSettings>(
+  const updateSetting = <K extends keyof typeof localSettings>(
     key: K,
-    value: UserSettings[K],
+    value: (typeof localSettings)[K],
   ) => {
     setLocalSettings((prev) => ({ ...prev, [key]: value }));
   };
