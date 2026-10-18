@@ -4,9 +4,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import java.lang.reflect.Proxy;
 import java.util.Calendar;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +29,49 @@ public class NativeStorageInstrumentedTest {
         date.clear();
         date.set(2024, Calendar.FEBRUARY, 29, 12, 0, 0);
         return date;
+    }
+
+    private SharedPreferences failNextCommit(SharedPreferences delegate) {
+        AtomicBoolean fail = new AtomicBoolean(true);
+        ClassLoader loader = getClass().getClassLoader();
+        return (SharedPreferences) Proxy.newProxyInstance(loader, new Class<?>[] {SharedPreferences.class},
+            (proxy, method, arguments) -> {
+                if (!method.getName().equals("edit")) return method.invoke(delegate, arguments);
+                SharedPreferences.Editor editor = delegate.edit();
+                return Proxy.newProxyInstance(loader, new Class<?>[] {SharedPreferences.Editor.class},
+                    (editorProxy, operation, values) -> {
+                        // Android publishes memory before reporting a failed disk commit.
+                        // Real preferences perform the writes; only that first result fails.
+                        Object result = operation.invoke(editor, values);
+                        if (operation.getName().equals("commit") && fail.getAndSet(false)) return false;
+                        return result == editor ? editorProxy : result;
+                    });
+            });
+    }
+
+    @Test public void failedCommitRestoresThePreviouslyAcknowledgedScheduleAndRevision() throws Exception {
+        Context context = debugContext();
+        String name = "native-storage-test-" + UUID.randomUUID();
+        SharedPreferences prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE);
+        try {
+            Calendar date = referenceDate();
+            PrayerSchedule.Calculation accepted = new PrayerSchedule.Calculation(21.3891, 39.8579, 1, 0);
+            PrayerSchedule previous = PrayerSchedule.renew(date.getTimeInMillis(), date.getTimeZone(), accepted);
+            NativeScheduleStore.saveSchedule(prefs, previous, accepted, "accepted");
+            assertTrue(prefs.edit().putString("unrelated", "keep").commit());
+            Map<String, ?> before = prefs.getAll();
+            PrayerSchedule.Calculation changed = new PrayerSchedule.Calculation(21.3891, 39.8579, 4, 1);
+            PrayerSchedule replacement = PrayerSchedule.renew(date.getTimeInMillis(), date.getTimeZone(), changed);
+            assertThrows(IllegalStateException.class, () ->
+                NativeScheduleStore.saveSchedule(failNextCommit(prefs), replacement, changed, "rejected"));
+            assertEquals(before, prefs.getAll());
+            assertEquals("accepted", prefs.getString("prayer_schedule_revision", null));
+            assertEquals(1, NativeScheduleStore.loadCalculation(prefs).method);
+            assertEquals(previous.dayAt(date.getTimeInMillis(), date.getTimeZone()).fajr,
+                NativeScheduleStore.loadSchedule(prefs).dayAt(date.getTimeInMillis(), date.getTimeZone()).fajr);
+        } finally {
+            context.deleteSharedPreferences(name);
+        }
     }
 
     @Test public void astronomicalFailureRejectsStoredScheduleWithoutInventingAnotherLocation() throws Exception {
