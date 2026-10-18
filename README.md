@@ -9,7 +9,7 @@ Privacy-focused, offline prayer and fasting times companion with Android home sc
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v2.8.0-emerald" alt="Version 2.8.0">
+  <img src="https://img.shields.io/badge/Release-v2.8.3-emerald" alt="Version 2.8.3">
   <img src="https://img.shields.io/badge/React-18-blue" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/Vite-7-purple" alt="Vite">
@@ -93,7 +93,7 @@ Measured work reductions, bundle-size increases, device checks, rollback caveats
 
 ### Keystore Setup
 
-Only required for deliberate signed release builds. The release package scripts and CI produce **unsigned** artifacts by default; signing requires `-PsignRelease=true`. Never commit a keystore, password or `android/local.properties`.
+Only required for deliberate signed release builds. The local release package scripts and default CI runs produce **unsigned** verification artifacts, which Android cannot install. Local signing requires `-PsignRelease=true`; GitHub signing uses the explicit manual option below. Never commit a keystore, password or `android/local.properties`.
 
 1. Place your keystore file in:
 
@@ -128,6 +128,48 @@ bun run android:release:github
 ```
 android/app/build/outputs/apk/
 ```
+
+### Installable APK from GitHub Actions — v2.8.3
+
+The release workflow supports **explicit manual signing**. Version 2.8.3
+(Android versionCode 283) keeps `org.muslimtechnician.muajjin`; it does not
+change the minimum Android version (7.0/API 24) or lower the target SDK.
+Android 15/16 can reject an unsigned APK before the app ever launches.
+
+Configure these repository Actions secrets yourself using the **existing
+original release key**, only after authorizing its use in GitHub:
+
+- `ANDROID_KEYSTORE_BASE64`: base64 encoding of the original release keystore.
+- `ANDROID_KEYSTORE_PASSWORD`: its store password.
+- `ANDROID_KEY_ALIAS`: the original signing-key alias.
+- `ANDROID_KEY_PASSWORD`: that key's password.
+- `ANDROID_SIGNING_CERT_SHA256`: the independently confirmed original signing
+  certificate's SHA-256 fingerprint, with or without colons.
+
+Do not substitute a newly generated key or the Android debug key. An update
+must match the installed app's signing identity; changing keys can prevent
+updates. Do not uninstall the existing app as a workaround: its local data
+may be lost. Key provisioning, commits/pushes and publication are separate
+authorized actions, not performed by preparing this workflow.
+
+After the source changes are committed and pushed:
+
+1. Open **Actions → Build release APK → Run workflow**.
+2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
+3. Download the successful run's artifact
+   `muajjin-2.8.3-283-github-release.apk`, extract the Actions ZIP, and install
+   the **`.apk` inside it**, not the ZIP.
+
+The signed path checks alignment, verifies the APK for API 24–36, requires
+the pinned original certificate and records its checksum. Missing secrets,
+invalid signatures or a different certificate fail the run without uploading
+an unsigned substitute. Temporary decoded keys are removed on step exit.
+No GitHub Release is created or modified automatically.
+
+Tag builds and manual runs with **sign_release disabled** still produce
+`*-release-unsigned.apk` for reproducibility checks only. These are **not
+installable**. Debug builds use a separate `.debug` package and are not
+updates to the original app.
 
 ### Controlled builds and signed-reference verification
 
