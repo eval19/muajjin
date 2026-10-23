@@ -21,6 +21,35 @@
   &middot; <a href="https://github.com/MuslimTechnician/muajjin">Original project</a>
 </p>
 
+## Widgets in action
+
+<p align="center">
+  <img src="docs/images/widgets-home-screen.png" width="640" alt="Muajjin strip and square widgets on an Android home screen, showing a live countdown to Dhuhr">
+  <br>
+  <em>Compact strip and square layouts.</em>
+</p>
+
+<details>
+<summary><strong>See the wide card and full daily table</strong></summary>
+
+**Wide card** — the next-prayer countdown and daily schedule in one widget.
+
+<p align="center">
+  <img src="docs/images/widget-wide.png" width="640" alt="Muajjin wide-card widget with a Dhuhr countdown and all six daily prayer and sunrise times">
+</p>
+
+**Full daily table** — location, Hijri date, countdown, and the day's times.
+
+<p align="center">
+  <img src="docs/images/widget-full-table.png" width="640" alt="Muajjin full-table widget for Makkah, showing the Hijri date and a three-column, two-row daily schedule">
+</p>
+
+</details>
+
+Actual captures from the [2.8.4 APK](https://github.com/eval19/muajjin/releases/tag/v2.8.4)
+on an Android 16 (API 36) emulator, using Makkah as a sample location. Screenshots
+are cropped for readability; appearance and sizing vary by launcher.
+
 ## What this fork adds
 
 ### Prayer times at a glance
