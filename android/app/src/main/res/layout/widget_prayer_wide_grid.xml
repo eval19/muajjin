@@ -9,22 +9,7 @@
 
     <include layout="@layout/widget_wide_header" />
 
-    <FrameLayout
-        android:id="@+id/widget_progress_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="@dimen/w_gap_progress">
-
-        <ProgressBar
-            android:id="@+id/pb_wide_progress"
-            style="@style/WidgetProgress" />
-
-        <ProgressBar
-            android:id="@+id/pb_wide_progress_warm"
-            style="@style/WidgetProgress"
-            android:progressDrawable="@drawable/widget_progress_bar_warm"
-            android:visibility="gone" />
-    </FrameLayout>
+    <include layout="@layout/widget_progress" />
 
     <include layout="@layout/widget_wide_schedule_grid" />
 </LinearLayout>

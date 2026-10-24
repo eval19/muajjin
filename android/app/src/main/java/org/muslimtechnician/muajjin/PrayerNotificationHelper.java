@@ -53,7 +53,7 @@ public class PrayerNotificationHelper {
         BidiFormatter bidi = BidiFormatter.getInstance("rtl".equals(presentation.direction));
         String title = bidi.unicodeWrap(timed
             ? presentation.label("next") + ": " + state.nextName + " "
-                + presentation.label("at") + " " + state.nextTime
+                + presentation.label("at") + " " + presentation.clock(presentation.clockFormatter(context), state.targetTimestamp)
             : presentation.label("recovery"));
         String content = bidi.unicodeWrap(timed
             ? state.footerText + " · " + state.label

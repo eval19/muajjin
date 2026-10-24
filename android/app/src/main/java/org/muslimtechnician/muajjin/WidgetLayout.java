@@ -7,7 +7,7 @@ import android.os.Build;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
-import android.text.format.DateUtils;
+import java.text.NumberFormat;
 
 /** Presentation fit only. Dates, formatted values and prayer state belong to the snapshot. */
 final class WidgetLayout {
@@ -24,6 +24,9 @@ final class WidgetLayout {
     float nameLineHeight, clockLineHeight, labelLineHeight, contextLineHeight;
     float contextBlockHeight, compactCellInset;
     int scheduleTextPixels;
+    private final String countdownSample, countdownHourSample, countdownMinuteSample;
+    private float regularCountdownWidth, compactCountdownWidth;
+    private float regularCountdownHeight, compactCountdownHeight;
 
     WidgetLayout(Context context, PrayerWidgetHelper.WidgetTimelineState state,
                  int requestedVariant, float width, float height) {
@@ -34,7 +37,16 @@ final class WidgetLayout {
         variant = height > 0 && height < 100 && requestedVariant == 1 ? 0
             : height > 0 && height < 100 && requestedVariant == 3 ? 2 : requestedVariant;
         paint.setFontFeatureSettings("tnum");
-        paint.setTextLocale(context.getResources().getConfiguration().getLocales().get(0));
+        paint.setTextLocale(state.numericLocale);
+        if(state.valid) {
+            long seconds=Math.max(0,state.targetTimestamp-state.now)/1000;
+            NumberFormat numbers=NumberFormat.getIntegerInstance(state.numericLocale);
+            countdownSample=WidgetLocale.elapsedTime(seconds,numbers);
+            countdownHourSample=WidgetLocale.elapsedTime(seconds/3600*3600+3599,numbers);
+            countdownMinuteSample=WidgetLocale.elapsedTime(3599,numbers);
+        } else {
+            countdownSample=countdownHourSample=countdownMinuteSample="—";
+        }
         chooseScale();
         if (variant == 3 && columns == 3 && height > 0 && minimumHeight > height
                 && canWrapSixClocks()) {
@@ -125,9 +137,23 @@ final class WidgetLayout {
     }
 
     float countdownWidth() {
-        String digits = state.valid
-            ? DateUtils.formatElapsedTime(Math.max(0, state.targetTimestamp - state.now) / 1000) : "—";
-        return textWidth(digits, countdownSize(), true) + 2;
+        float cached=compact?compactCountdownWidth:regularCountdownWidth;
+        if(cached>0) return cached;
+        float size=countdownSize();
+        float width=Math.max(textWidth(countdownSample,size,true),
+            Math.max(textWidth(countdownHourSample,size,true),textWidth(countdownMinuteSample,size,true)))+2;
+        if(compact) compactCountdownWidth=width;else regularCountdownWidth=width;
+        return width;
+    }
+
+    float countdownHeight() {
+        float cached=compact?compactCountdownHeight:regularCountdownHeight;
+        if(cached>0) return cached;
+        float size=countdownSize();
+        float height=Math.max(textHeight(countdownSample,size,true),
+            Math.max(textHeight(countdownHourSample,size,true),textHeight(countdownMinuteSample,size,true)));
+        if(compact) compactCountdownHeight=height;else regularCountdownHeight=height;
+        return height;
     }
 
     private float heroWidth() {
@@ -272,7 +298,7 @@ final class WidgetLayout {
                 recovery += scheduleGap() + 2 * cellHeight() + rowGap();
             return recovery + 2 * verticalInset();
         }
-        float digits = lineHeight(countdownSize(), true);
+        float digits = countdownHeight();
         float contextLine = contextLineHeight;
         float primary = label + 4 + digits;
         float contextBlock = contextBlockHeight;

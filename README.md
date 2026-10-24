@@ -99,6 +99,55 @@ measurements at two densities: the full clock needs a 286dp three-column budget
 with 4dp cell side padding. This is a tested reference floor, not a guarantee about
 every OEM font or launcher. Minimum hints do not migrate already-placed widgets.
 
+### Progress colors and device numerals — 2.9.0 rebuild
+
+The 2.9.0 replacement APK uses internal build **291**; the original build 290 does
+not include these changes. Existing 2.9.0 users must download and install the
+replacement manually: the in-app checker compares version names, not build codes.
+The five home widgets retain an **elapsed-interval** progress bar: a fuller bar
+does not mean more time remains. Its solid fill changes from green to muted gold,
+amber, then soft rose-red as the displayed next event approaches. Countdown digits
+remain neutral; the two transparent keyguard variants do not gain bars.
+
+| Stage | Begins when remaining time is at most |
+| --- | --- |
+| Green | Before the thresholds below |
+| Gold | Half the dated interval, capped at 30 minutes |
+| Amber | One quarter of the interval, capped at 15 minutes |
+| Soft red | One tenth of the interval, capped at 5 minutes |
+
+The nearest stage wins at an exact threshold. These colors indicate proximity,
+not a missed prayer or religious ruling; sunrise and Dhuhr follow the same policy.
+Updates reuse the existing non-wakeup 60–300-second cosmetic cadence. Android
+batching, Doze, force-stop, and OEM restrictions can delay a change or skip a short
+stage; the native countdown can keep ticking while the bar retains its last color.
+No per-second redraw or additional stage alarm is introduced.
+
+Widget clocks, Hijri day/year, and ordinary host-native countdown numerals follow
+the **device numbering locale**, including regional and explicit numbering
+preferences, independently of the selected app/import language. Prayer names,
+month names, AM/PM words, and layout direction retain their app/import owner;
+the selected 12/24-hour policy is unchanged. For example, English labels with
+`٣:٠٢ PM` are intentional on an Arabic-Indic-numbering device. Digits inside
+user-provided location names or imported words are not rewritten.
+
+Device-language changes reconcile through the offline native update path without
+opening the WebView. Notifications keep their existing app-numbering policy.
+The live Chronometer runs in its host: a launcher with its own locale override
+can differ from the device, and public widget APIs cannot guarantee digit identity
+on every OEM/custom host. This is not resolved by forcing English or disabling
+native ticking.
+
+Feature verification used API 36 native `RemoteViews` rendering/reapplication in
+both themes at 2×/3× density, including enlarged text and independent app/device
+locale fixtures. An actual Pixel Launcher Banner was checked with Arabic-Egypt
+and English-US system locales, including an English per-app override: live digit
+code points were inspected after a tick. An offline system-language change with
+the WebView closed restarted native reconciliation without changing stored
+schedule, calculation, or imported presentation data. Persian, Bengali, regional
+Arabic, and explicit Latin-numbering-extension pairs were configured native
+fixtures, not claims about physical devices offering every locale preference.
+
 ### Smoother first-time setup
 
 Revised Android permission handling and cancellable, time-bounded location requests

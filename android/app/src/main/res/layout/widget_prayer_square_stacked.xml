@@ -52,20 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/w_gap_label" />
     </LinearLayout>
-    <FrameLayout
-        android:id="@+id/widget_progress_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="@dimen/w_gap_progress">
-        <ProgressBar
-            android:id="@+id/pb_square_progress"
-            style="@style/WidgetProgress" />
-        <ProgressBar
-            android:id="@+id/pb_square_progress_warm"
-            style="@style/WidgetProgress"
-            android:progressDrawable="@drawable/widget_progress_bar_warm"
-            android:visibility="gone" />
-    </FrameLayout>
+    <include layout="@layout/widget_progress" />
     <LinearLayout
         android:id="@+id/widget_square_footer"
         android:layout_width="match_parent"

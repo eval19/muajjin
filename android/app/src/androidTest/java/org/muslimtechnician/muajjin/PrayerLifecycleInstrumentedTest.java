@@ -165,7 +165,7 @@ public class PrayerLifecycleInstrumentedTest {
             int[] actual=NativeHijriCalculator.calculate(date,presentation.hijriAdjustment,
                 presentation.hijriDateChangeAtMaghrib,date.getTimeInMillis(),Long.MAX_VALUE);
             assertArrayEquals(expected[i],actual);
-            assertEquals(labels[i],presentation.hijri(actual));
+            assertEquals(labels[i],presentation.hijri(actual,presentation.locale()));
         }
     }
 
@@ -252,10 +252,33 @@ public class PrayerLifecycleInstrumentedTest {
             worker(() -> {
                 try {
                     org.json.JSONObject display=NativePresentation.defaults("اختبار دون اتصال").json();
-                    display.put("language","ar");display.put("direction","rtl");display.put("timeFormat","12h");
+                    display.put("language","ar-EG");display.put("direction","rtl");display.put("timeFormat","12h");
                     for(int i=0;i<prayerIds.length;i++) display.getJSONObject("labels").put(prayerIds[i],translated[i]);
                     NativeScheduleStore.savePresentation(prefs,NativePresentation.parse(display),"test-rtl");
                 } catch(Exception error) { throw new IllegalStateException(error); }
+            });
+            worker(() -> {
+                NotificationManager notifications=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+                NativePresentation display=NativeScheduleStore.loadPresentation(prefs);
+                PrayerTimeline timeline=PrayerTimeline.at(renewed,now,zone);
+                PrayerWidgetHelper.WidgetTimelineState mixed=new PrayerWidgetHelper.WidgetTimelineState(
+                    context,display,timeline,now,renewed.localEvents(now,zone,timeline.day),java.util.Locale.US);
+                String appClock=display.clock(display.clockFormatter(context),mixed.targetTimestamp);
+                assertNotEquals("Fixture must distinguish widget and notification numbering",appClock,mixed.nextTime);
+                PrayerNotificationHelper.updateLiveUpdateNotification(context,mixed,true);
+                // NotificationManager.notify enqueues in system_server; await the actual
+                // posted update rather than inspecting the previous notification.
+                String title="";
+                long deliveredBy=android.os.SystemClock.uptimeMillis()+3000;
+                do {
+                    for(android.service.notification.StatusBarNotification posted:
+                            notifications.getActiveNotifications())if(posted.getId()==PrayerNotificationHelper.NOTIFICATION_ID)
+                        title=posted.getNotification().extras.getCharSequence(Notification.EXTRA_TITLE).toString();
+                    if(title.contains(appClock))break;
+                    android.os.SystemClock.sleep(10);
+                } while(android.os.SystemClock.uptimeMillis()<deliveredBy);
+                assertTrue("Notification must retain app-owned digits: "+title,title.contains(appClock));
+                assertFalse("Device-owned widget clock must not leak into notification",title.contains(mixed.nextTime));
             });
             int[] roots={R.id.widget_strip_root,R.id.widget_square_root,R.id.widget_banner_root,R.id.widget_wide_root,R.id.widget_large_root,R.id.widget_lock_small_root,R.id.widget_lock_medium_root};
             for(int height:new int[]{80,220}) {
@@ -288,13 +311,20 @@ public class PrayerLifecycleInstrumentedTest {
                 for(int i=0;i<views.length;i++) {
                     TextView title=new TextView(surface);title.setText(PrayerWidgetHelper.PROVIDERS[i%PrayerWidgetHelper.PROVIDERS.length].getSimpleName());title.setTextColor(0xffffffff);column.addView(title);
                     float density=surface.getResources().getDisplayMetrics().density;
-                    int width=i==4?(int)(250*density):ViewGroup.LayoutParams.MATCH_PARENT;
-                    column.addView(views[i],new LinearLayout.LayoutParams(width,(int)(220*density)));
+                    int width=(int)((i==4?250:360)*density)+views[i].getPaddingLeft()+views[i].getPaddingRight();
+                    int height=(int)(220*density)+views[i].getPaddingTop()+views[i].getPaddingBottom();
+                    column.addView(views[i],new LinearLayout.LayoutParams(width,height));
                 }
                 ((ViewGroup)surface.findViewById(android.R.id.content)).addView(scroll);
             });
             instrumentation.waitForIdleSync();
             instrumentation.runOnMainSync(() -> {
+                for(int i=0;i<views.length;i++) {
+                    View content=views[i].getChildAt(0);
+                    float density=context.getResources().getDisplayMetrics().density;
+                    assertEquals("Host must allocate its advertised content height",Math.round(220*density),content.getHeight());
+                    assertEquals("Host must allocate its advertised content width",Math.round((i==4?250:360)*density),content.getWidth());
+                }
                 int[] labels={R.id.tv_name_fajr,R.id.tv_name_sunrise,R.id.tv_name_dhuhr,R.id.tv_name_asr,R.id.tv_name_maghrib,R.id.tv_name_isha};
                 for(int id:labels) {
                     TextView text=views[4].findViewById(id);
@@ -328,9 +358,13 @@ public class PrayerLifecycleInstrumentedTest {
                 float density=context.getResources().getDisplayMetrics().density;
                 StringBuilder defects=new StringBuilder();
                 TextView squareClock=views[1].findViewById(R.id.tv_square_countdown);
-                View squareProgress=views[1].findViewById(R.id.pb_square_progress);
-                if(squareProgress==null || squareProgress.getVisibility()!=View.VISIBLE)
-                    squareProgress=views[1].findViewById(R.id.pb_square_progress_warm);
+                View squareProgress=null;
+                for(int progressId:new int[]{R.id.pb_widget_progress_green,R.id.pb_widget_progress_gold,
+                        R.id.pb_widget_progress_amber,R.id.pb_widget_progress_soft_red}) {
+                    View candidate=views[1].findViewById(progressId);
+                    if(candidate.getVisibility()==View.VISIBLE) squareProgress=candidate;
+                }
+                assertNotNull("Square lost its active progress stage",squareProgress);
                 android.graphics.Rect clockBounds=new android.graphics.Rect();
                 android.graphics.Rect progressBounds=new android.graphics.Rect();
                 squareClock.getDrawingRect(clockBounds);

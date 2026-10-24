@@ -8,6 +8,9 @@
     <color name="w_accent">#0B6E5B</color>
     <color name="w_accent_tint">#DCEFE9</color>
     <color name="w_track">#D5DDD9</color>
+    <color name="w_progress_gold">#8A6A20</color>
+    <color name="w_progress_amber">#B45C28</color>
+    <color name="w_progress_soft_red">#B55350</color>
     <color name="w_warm_text">#9A4A00</color>
     <color name="w_warm_fill">#D97706</color>
 </resources>

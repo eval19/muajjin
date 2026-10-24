@@ -18,6 +18,7 @@ import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Locale;
 import java.util.TimeZone;
 
 public final class PrayerWidgetHelper {
@@ -35,10 +36,8 @@ public final class PrayerWidgetHelper {
     private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown, R.id.tv_square_countdown,
         R.id.tv_banner_countdown, R.id.tv_wide_countdown, R.id.tv_large_countdown,
         R.id.tv_lock_small_countdown, R.id.tv_lock_med_countdown};
-    private static final int[] PROGRESS = {R.id.pb_strip_progress, R.id.pb_square_progress,
-        R.id.pb_banner_progress, R.id.pb_wide_progress, R.id.pb_large_progress};
-    private static final int[] WARM_PROGRESS = {R.id.pb_strip_progress_warm, R.id.pb_square_progress_warm,
-        R.id.pb_banner_progress_warm, R.id.pb_wide_progress_warm};
+    private static final int[] PROGRESS = {R.id.pb_widget_progress_green, R.id.pb_widget_progress_gold,
+        R.id.pb_widget_progress_amber, R.id.pb_widget_progress_soft_red};
     private static final int[] CHIPS = {R.id.chip_fajr, R.id.chip_sunrise, R.id.chip_dhuhr,
         R.id.chip_asr, R.id.chip_maghrib, R.id.chip_isha};
     private static final int[] CHIP_NAMES = {R.id.tv_chip_fajr_name, R.id.tv_chip_sunrise_name,
@@ -62,12 +61,20 @@ public final class PrayerWidgetHelper {
         public final String fajrStr,sunriseStr,dhuhrStr,asrStr,maghribStr,ishaStr;
         public final NativePresentation presentation;
         final PrayerTimeline timeline;
+        final Locale numericLocale;
+        final WidgetProgress progressStage;
         public WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,long[] localEvents) {
+            this(context,presentation,timeline,now,localEvents,WidgetLocale.resolve(context));
+        }
+        WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,
+                            long[] localEvents,Locale numericLocale) {
+            this.numericLocale=numericLocale;
             this.presentation=presentation;this.timeline=timeline;this.now=now;valid=timeline!=null;
-            java.text.SimpleDateFormat clock=valid?presentation.clockFormatter(context):null;
+            java.text.SimpleDateFormat clock=valid?presentation.clockFormatter(context,numericLocale):null;
             targetTimestamp=valid?timeline.target:0;startTimestamp=valid?timeline.start:0;
             chronometerBase=SystemClock.elapsedRealtime()+Math.max(0,targetTimestamp-now);
             isWarm=valid&&timeline.warm;progress=valid?timeline.progress:0;
+            progressStage=WidgetProgress.at(valid,startTimestamp,targetTimestamp,now);
             activePrayerId=valid?timeline.currentId:"";nextPrayerId=valid?timeline.nextId:"";
             nextName=valid?presentation.label(nextPrayerId):presentation.label("recovery");
             nextTime=presentation.clock(clock,targetTimestamp);
@@ -88,7 +95,7 @@ public final class PrayerWidgetHelper {
                     date.get(Calendar.DAY_OF_YEAR)==sunset.get(Calendar.DAY_OF_YEAR);
                 // Unknown Maghrib cannot safely apply a rollover. The civil date is still fresh.
                 hijri=presentation.hijri(NativeHijriCalculator.calculate(date,presentation.hijriAdjustment,
-                    sunsetToday&&presentation.hijriDateChangeAtMaghrib,now,maghribTs));
+                    sunsetToday&&presentation.hijriDateChangeAtMaghrib,now,maghribTs),numericLocale);
             } catch(IllegalArgumentException error) { Log.w("MuajjinWidget","Hijri date outside supported range",error); }
             hijriText=hijri;
         }
@@ -226,15 +233,14 @@ public final class PrayerWidgetHelper {
         views.setViewVisibility(COUNTDOWNS[variant], state.valid ? View.VISIBLE : View.GONE);
         setSize(views, COUNTDOWNS[variant], layout.countdownSize());
         views.setInt(COUNTDOWNS[variant], "setMinWidth", layout.px(layout.countdownWidth()));
+        views.setInt(COUNTDOWNS[variant], "setMinHeight", layout.px(layout.countdownHeight()));
         if (variant < 5) {
-            views.setViewVisibility(R.id.widget_progress_container, state.valid ? View.VISIBLE : View.GONE);
+            int selected=progressViewId(state.progressStage);
+            views.setViewVisibility(R.id.widget_progress_container, selected==View.NO_ID ? View.GONE : View.VISIBLE);
             views.setViewPadding(R.id.widget_progress_container, 0, layout.px(layout.progressGap()), 0, 0);
-            views.setProgressBar(PROGRESS[variant], 1000, state.progress, false);
-            if (variant < 4) {
-                views.setViewVisibility(PROGRESS[variant], state.isWarm ? View.GONE : View.VISIBLE);
-                views.setViewVisibility(WARM_PROGRESS[variant], state.isWarm ? View.VISIBLE : View.GONE);
-                views.setProgressBar(WARM_PROGRESS[variant], 1000, state.progress, false);
-            }
+            for(int progressId:PROGRESS)
+                views.setViewVisibility(progressId,progressId==selected ? View.VISIBLE : View.GONE);
+            if(selected!=View.NO_ID) views.setProgressBar(selected,1000,state.progress,false);
         }
         switch (variant) {
             case 1:
@@ -284,6 +290,16 @@ public final class PrayerWidgetHelper {
         views.setOnClickPendingIntent(ROOTS[variant], getOpenAppIntent(context));
         applyDirection(views, ROOTS[variant], state);
         return views;
+    }
+
+    private static int progressViewId(WidgetProgress stage) {
+        switch(stage) {
+            case GREEN:return R.id.pb_widget_progress_green;
+            case GOLD:return R.id.pb_widget_progress_gold;
+            case AMBER:return R.id.pb_widget_progress_amber;
+            case SOFT_RED:return R.id.pb_widget_progress_soft_red;
+            default:return View.NO_ID;
+        }
     }
 
     private static void setSize(RemoteViews views, int id, float pixels) {

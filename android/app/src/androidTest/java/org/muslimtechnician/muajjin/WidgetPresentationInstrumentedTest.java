@@ -56,10 +56,8 @@ public class WidgetPresentationInstrumentedTest {
         R.id.tv_banner_label, R.id.tv_wide_label};
     private static final int[] WARM_LABELS = {R.id.tv_strip_label_warm, R.id.tv_square_label_warm,
         R.id.tv_banner_label_warm, R.id.tv_wide_label_warm};
-    private static final int[] PROGRESS = {R.id.pb_strip_progress, R.id.pb_square_progress,
-        R.id.pb_banner_progress, R.id.pb_wide_progress, R.id.pb_large_progress};
-    private static final int[] WARM_PROGRESS = {R.id.pb_strip_progress_warm,
-        R.id.pb_square_progress_warm, R.id.pb_banner_progress_warm, R.id.pb_wide_progress_warm};
+    private static final int[] PROGRESS = {R.id.pb_widget_progress_green,R.id.pb_widget_progress_gold,
+        R.id.pb_widget_progress_amber,R.id.pb_widget_progress_soft_red};
     private static final int[] CHIPS = {R.id.chip_fajr, R.id.chip_sunrise, R.id.chip_dhuhr,
         R.id.chip_asr, R.id.chip_maghrib, R.id.chip_isha};
     private static final int[] CHIP_NAMES = {R.id.tv_chip_fajr_name, R.id.tv_chip_sunrise_name,
@@ -123,6 +121,9 @@ public class WidgetPresentationInstrumentedTest {
         target = instrumentation.getTargetContext();
         assertTrue("Only the disposable debug application may host synthetic widgets",
             target.getPackageName().endsWith(".debug"));
+        Locale originalLocale=Locale.getDefault();
+        Locale originalDisplay=Locale.getDefault(Locale.Category.DISPLAY);
+        Locale originalFormat=Locale.getDefault(Locale.Category.FORMAT);
         capture = Boolean.parseBoolean(InstrumentationRegistry.getArguments().getString("captureWidgetDesign", "false"));
         prepareSchedule(Calendar.OCTOBER,13);
         activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
@@ -187,6 +188,9 @@ public class WidgetPresentationInstrumentedTest {
                 if (surface != null) surface.removeAllViews();
                 activity.finish();
             });
+            Locale.setDefault(originalLocale);
+            Locale.setDefault(Locale.Category.DISPLAY,originalDisplay);
+            Locale.setDefault(Locale.Category.FORMAT,originalFormat);
             audit("summary cases=" + cases + " failures=" + failures.size()
                 + " theme=" + theme(target) + " density=" + target.getResources().getDisplayMetrics().density
                 + " captures=" + capture + " host=native-debug not-launcher-or-keyguard");
@@ -214,6 +218,9 @@ public class WidgetPresentationInstrumentedTest {
     private Context configured(String language, float scale) {
         Configuration config = new Configuration(target.getResources().getConfiguration());
         Locale locale = Locale.forLanguageTag(language);
+        // Serialized fixture process only. A Context alone cannot change Chronometer's
+        // host-process formatter; real device policy is covered in WidgetNumeralInstrumentedTest.
+        Locale.setDefault(locale);
         config.setLocale(locale);
         config.setLayoutDirection(locale);
         config.fontScale = scale;
@@ -257,6 +264,9 @@ public class WidgetPresentationInstrumentedTest {
             case "maghrib": now = day.maghrib + (day.isha - day.maghrib) / 3; break;
             case "isha": now = day.isha + Math.min(30 * 60000L, (day.nextFajr - day.isha) / 3); break;
             case "night-start": now = day.isha + 1000; break;
+            case "gold": now = day.asr - 20 * 60000L; break;
+            case "amber": now = day.asr - 10 * 60000L; break;
+            case "soft-red": now = day.asr - 2 * 60000L; break;
             case "warm": now = day.asr - 5 * 60000L; break;
             case "no-current": now = day.sunrise + (day.dhuhr - day.sunrise) / 2; break;
             case "overnight": now = day.fajr - 3600000L; break;
@@ -272,7 +282,8 @@ public class WidgetPresentationInstrumentedTest {
             display = NativePresentation.parse(json);
         }
         PrayerWidgetHelper.WidgetTimelineState result = new PrayerWidgetHelper.WidgetTimelineState(
-            context, display, timeline, now, localEvents);
+            context, display, timeline, now, localEvents,
+            context.getResources().getConfiguration().getLocales().get(0));
         if (fixture.startsWith("midday")) {
             assertEquals("dhuhr", result.activePrayerId); assertEquals("asr", result.nextPrayerId);
             assertTrue("Fixture must exercise an hour-bearing countdown", result.targetTimestamp - now > 3600000L);
@@ -378,9 +389,11 @@ public class WidgetPresentationInstrumentedTest {
         try {
             Context context = configured("en", 1f);
             rendered = render(profile, context, state(context, "en", "midday"));
-            for (String fixture : new String[]{"warm", "midday", "asr", "maghrib", "isha",
-                    "fajr", "no-current", "overnight", "invalid", "midday"}) {
-                rendered = runCase(profile, "en", 1f, fixture, false, rendered);
+            for (String fixture : new String[]{"gold","amber","soft-red","midday","warm","midday",
+                    "asr","maghrib","isha","fajr","no-current","overnight","invalid","midday"}) {
+                boolean stageCapture=profile.variant<5
+                    && (fixture.equals("gold")||fixture.equals("amber")||fixture.equals("soft-red"));
+                rendered = runCase(profile, "en", 1f, fixture, stageCapture, rendered);
                 // Compare visible presentation against a fresh application of the same state.
                 PrayerWidgetHelper.WidgetTimelineState next = state(context, "en", fixture);
                 Rendered fresh = null;
@@ -399,6 +412,31 @@ public class WidgetPresentationInstrumentedTest {
         } finally {
             if (rendered != null) surface.removeView(rendered.host);
         }
+    }
+
+    private void verifyProgressPixels(Rendered rendered,ProgressBar progress) {
+        int color;
+        switch(rendered.state.progressStage) {
+            case GOLD:color=R.color.w_progress_gold;break;
+            case AMBER:color=R.color.w_progress_amber;break;
+            case SOFT_RED:color=R.color.w_progress_soft_red;break;
+            default:color=R.color.w_accent;break;
+        }
+        int fillWidth=progress.getWidth()*rendered.state.progress/1000;
+        if(fillWidth<px(rendered.context,4)) return;
+        Bitmap bitmap=Bitmap.createBitmap(progress.getWidth(),progress.getHeight(),Bitmap.Config.ARGB_8888);
+        try {
+            progress.jumpDrawablesToCurrentState();
+            progress.draw(new Canvas(bitmap));
+            int y=bitmap.getHeight()/2;
+            boolean rtl=progress.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL;
+            int fillX=rtl?bitmap.getWidth()-1-fillWidth/2:fillWidth/2;
+            assertEquals("Native progress fill does not match semantic stage",
+                rendered.context.getColor(color),bitmap.getPixel(fillX,y));
+            if(bitmap.getWidth()-fillWidth>=px(rendered.context,4))
+                assertEquals("Stage recolored or removed the track",rendered.context.getColor(R.color.w_track),
+                    bitmap.getPixel(rtl?(bitmap.getWidth()-fillWidth)/2:(fillWidth+bitmap.getWidth())/2,y));
+        } finally {bitmap.recycle();}
     }
 
     private void verify(Rendered rendered, String language, float scale) {
@@ -433,14 +471,21 @@ public class WidgetPresentationInstrumentedTest {
                 root.findViewById(s.isWarm ? LABELS[p.variant] : WARM_LABELS[p.variant]).getVisibility());
         }
         if (p.variant < 5) {
-            ProgressBar progress = root.findViewById(p.variant < 4 && s.isWarm ? WARM_PROGRESS[p.variant] : PROGRESS[p.variant]);
-            assertEquals(View.VISIBLE, progress.getVisibility());
-            assertEquals(1000, progress.getMax()); assertEquals(s.progress, progress.getProgress());
-            if (p.variant < 4) assertEquals(View.GONE,
-                root.findViewById(s.isWarm ? PROGRESS[p.variant] : WARM_PROGRESS[p.variant]).getVisibility());
+            ProgressBar progress=null;
+            int visible=0;
+            for(int progressId:PROGRESS) {
+                ProgressBar candidate=root.findViewById(progressId);
+                assertNotNull("Missing shared progress stage",candidate);
+                if(candidate.getVisibility()==View.VISIBLE) {progress=candidate;visible++;}
+            }
+            boolean available=s.progressStage!=WidgetProgress.UNAVAILABLE;
+            assertEquals("Exactly one live stage; no recovery stage",available?1:0,visible);
             assertEquals("Recovery must not advertise an inactive progress display",
-                s.valid ? View.VISIBLE : View.GONE, root.findViewById(R.id.widget_progress_container).getVisibility());
-            if (s.valid) {
+                available?View.VISIBLE:View.GONE,root.findViewById(R.id.widget_progress_container).getVisibility());
+            if(available) {
+            assertNotNull(progress);
+            assertEquals(1000,progress.getMax());assertEquals(s.progress,progress.getProgress());
+            verifyProgressPixels(rendered,progress);
             Rect bar = bounds(root, progress), countdown = bounds(root, clock);
             View primaryView = root.findViewById(R.id.widget_primary_row);
             if (primaryView == null) primaryView = root.findViewById(R.id.widget_primary_group);

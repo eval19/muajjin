@@ -59,8 +59,12 @@ public final class NativePresentation {
     public String label(String key) {String label=labels.get(key);return label==null?"":label;}
     public Locale locale() {Locale result=Locale.forLanguageTag(language.replace('_','-'));return result.getLanguage().isEmpty()?Locale.getDefault():result;}
     public SimpleDateFormat clockFormatter(Context context) {
+        return clockFormatter(context,locale());
+    }
+    public SimpleDateFormat clockFormatter(Context context,Locale numericLocale) {
         boolean is24=timeFormat.equals("24h")||(timeFormat.equals("system")&&android.text.format.DateFormat.is24HourFormat(context));
-        SimpleDateFormat formatter=new SimpleDateFormat(is24?"HH:mm":"h:mm a",locale());
+        SimpleDateFormat formatter=new SimpleDateFormat(is24?"HH:mm":"h:mm a",numericLocale);
+        NumberFormat numbers=NumberFormat.getIntegerInstance(numericLocale);numbers.setGroupingUsed(false);formatter.setNumberFormat(numbers);
         DateFormatSymbols symbols=formatter.getDateFormatSymbols();symbols.setAmPmStrings(new String[]{label("am"),label("pm")});formatter.setDateFormatSymbols(symbols);
         return formatter;
     }
@@ -71,7 +75,7 @@ public final class NativePresentation {
         NumberFormat f=NumberFormat.getIntegerInstance(locale());f.setGroupingUsed(false);
         return (minutes>60?label("remainingHours"):label("remainingMinutes")).replace("{{hours}}",f.format(minutes/60)).replace("{{minutes}}",f.format(minutes>60?minutes%60:minutes));
     }
-    public String hijri(int[] date) {NumberFormat f=NumberFormat.getIntegerInstance(locale());f.setGroupingUsed(false);return f.format(date[0])+" "+months[date[1]-1]+" "+f.format(date[2]);}
+    public String hijri(int[] date,Locale numericLocale) {NumberFormat f=NumberFormat.getIntegerInstance(numericLocale);f.setGroupingUsed(false);return f.format(date[0])+" "+months[date[1]-1]+" "+f.format(date[2]);}
     public JSONObject json() throws JSONException {
         JSONObject json=new JSONObject();json.put("schema",2);json.put("language",language);json.put("direction",direction);json.put("timeFormat",timeFormat);json.put("locationName",locationName);
         json.put("hijriAdjustment",hijriAdjustment);json.put("hijriDateChangeAtMaghrib",hijriDateChangeAtMaghrib);

@@ -15,7 +15,7 @@ public class PrayerWidgetAlarmReceiver extends BroadcastReceiver {
         boolean transition=ACTION_PRAYER_TRANSITION.equals(action),cosmetic=ACTION_BAR_PROGRESS_REFRESH.equals(action);
         boolean reconcile=Intent.ACTION_BOOT_COMPLETED.equals(action)||Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)||
             Intent.ACTION_TIME_CHANGED.equals(action)||Intent.ACTION_TIMEZONE_CHANGED.equals(action)||
-            Intent.ACTION_DATE_CHANGED.equals(action)||Intent.ACTION_USER_PRESENT.equals(action)||
+            Intent.ACTION_DATE_CHANGED.equals(action)||Intent.ACTION_LOCALE_CHANGED.equals(action)||Intent.ACTION_USER_PRESENT.equals(action)||
             Intent.ACTION_USER_UNLOCKED.equals(action)||android.app.AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED.equals(action)||
             "android.app.action.APP_BLOCK_STATE_CHANGED".equals(action)||"android.app.action.NOTIFICATION_CHANNEL_BLOCK_STATE_CHANGED".equals(action);
         if(!transition&&!cosmetic&&!reconcile) return;
