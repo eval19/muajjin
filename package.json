@@ -1,7 +1,7 @@
 {
   "name": "muajjin",
   "private": true,
-  "version": "2.9.1",
+  "version": "2.9.3",
   "description": "Privacy-focused, offline prayer times app with Android home screen widgets.",
   "type": "module",
   "engines": {

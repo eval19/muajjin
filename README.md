@@ -216,7 +216,9 @@ app as a workaround: its local settings, Qaza history, and customizations may be
 
 **Background limits:** exact-alarm or notification permission denial, Android Doze,
 and manufacturer power management can delay delivery. Exact-alarm denial uses an
-inexact fallback. Force-stopping the app suspends background delivery until it is
+inexact fallback plus one non-wakeup recovery refresh shortly after the boundary.
+Display Settings → Widget reliability shows both permissions and the next/last
+update times. Force-stopping the app suspends background delivery until it is
 reopened; a powered-off device cannot deliver notifications. Ordinary app closure
 does not require the WebView to remain running for native schedule renewal.
 
@@ -351,6 +353,14 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.3 improves prayer-transition reliability. Display Settings → Widget
+reliability shows exact-alarm and battery-optimization state and links to the
+system screens. The transition alarm re-arms after delivery, and a non-wakeup
+recovery refresh runs about 15 seconds after the boundary if the exact update was
+late or missed. The live seconds countdown, layouts, calculations, notifications,
+and numerals are unchanged. Force-stop and OEM battery limits remain platform
+constraints.
+
 Version 2.9.1 fixes widget footprints. All seven widgets declare
 `resizeMode="none"` and canonical launcher cell hints, so MIUI and other
 launchers place the intended 2×1/2×2/4×1 spans at add time and do not offer a
@@ -373,8 +383,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.1
-(Android versionCode 292) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.3
+(Android versionCode 293) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -399,7 +409,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.1-292-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.3-293-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires
