@@ -5,6 +5,7 @@ Checked items mean their named implementation and verification scope is delivere
 ## Fixed widget footprints — 2026-10-24
 
 - [x] W01: Declare `resizeMode="none"` for all seven widget providers, remove resize minimums, use canonical launcher cell hints for the minimum sizes, keep target cells and compact host-size fallbacks, update the README contract, and add an installed-provider metadata regression. Verified with 35 native unit tests, debug/instrumentation APK assembly, and compiled `resizeMode=0x0` for all seven. Actual MIUI add-time placement, resize-handle behavior, and migration of already-placed instances remain runtime limits.
+- [x] W02: Publish 2.9.1 / 292 from source `43fe901`; signed workflow run `40115266456` passed both web modes, native quality, and the signed release. Uploaded APK and SHA-256 assets were downloaded anonymously and verified against the uploaded bytes, package/version, and original certificate.
 
 ## Current app-health completion — 2.8.4
 
