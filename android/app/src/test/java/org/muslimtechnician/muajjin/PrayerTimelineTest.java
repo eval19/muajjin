@@ -31,6 +31,17 @@ public class PrayerTimelineTest {
         PrayerTimeline t = PrayerTimeline.at(schedule(),date(13).getTimeInMillis()+5*3600000L,UTC);
         assertEquals("fajr",t.currentId); assertEquals("sunrise",t.nextId); assertEquals(0,t.progress);
     }
+    @Test public void everyExactBoundaryMovesForwardWithoutANegativeInterval() {
+        PrayerSchedule s=schedule();long midnight=date(13).getTimeInMillis();
+        long[] hours={5,6,12,15,18,20};
+        String[] next={"sunrise","dhuhr","asr","maghrib","isha","fajr"};
+        for(int i=0;i<hours.length;i++) {
+            PrayerTimeline t=PrayerTimeline.at(s,midnight+hours[i]*3600000L,UTC);
+            assertEquals("boundary " + hours[i],next[i],t.nextId);
+            assertTrue("target must remain in the future",t.target>t.now);
+            assertTrue("progress must stay bounded",t.progress>=0&&t.progress<=1000);
+        }
+    }
     @Test public void afterSunriseHasNoOpenPrayerAndNeverWarmDhuhr() {
         PrayerTimeline t = PrayerTimeline.at(schedule(),date(13).getTimeInMillis()+12*3600000L-60000L,UTC);
         assertEquals("",t.currentId); assertEquals("dhuhr",t.nextId); assertFalse(t.warm);

@@ -126,6 +126,7 @@
             <intent-filter>
                 <action android:name="org.muslimtechnician.muajjin.ACTION_PRAYER_TRANSITION" />
                 <action android:name="org.muslimtechnician.muajjin.ACTION_BAR_PROGRESS_REFRESH" />
+                <action android:name="org.muslimtechnician.muajjin.ACTION_TRANSITION_FALLBACK" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />

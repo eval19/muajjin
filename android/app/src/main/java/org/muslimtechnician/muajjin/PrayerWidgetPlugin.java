@@ -1,7 +1,16 @@
 package org.muslimtechnician.muajjin;
 
+import android.app.Activity;
+import android.app.AlarmManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -17,6 +26,62 @@ public class PrayerWidgetPlugin extends Plugin {
         result.put("timeFormat", android.text.format.DateFormat.is24HourFormat(getContext()) ? "24h" : "12h");
         call.resolve(result);
     }
+    @PluginMethod
+    public void getWidgetReliability(PluginCall call) {
+        Context context=getContext();if(context==null){call.reject("Context is null");return;}
+        try {
+            Context application=context.getApplicationContext();
+            AlarmManager alarms=(AlarmManager)application.getSystemService(Context.ALARM_SERVICE);
+            boolean supported=Build.VERSION.SDK_INT>=Build.VERSION_CODES.S;
+            boolean allowed=!supported||(alarms!=null&&alarms.canScheduleExactAlarms());
+            boolean unrestricted=false;
+            PowerManager power=(PowerManager)application.getSystemService(Context.POWER_SERVICE);
+            if(power!=null) try {
+                unrestricted=power.isIgnoringBatteryOptimizations(application.getPackageName());
+            } catch(RuntimeException ignored) { /* OEM may restrict the query. */ }
+            boolean widgets=false;
+            AppWidgetManager manager=AppWidgetManager.getInstance(application);
+            for(int[] ids:PrayerWidgetHelper.widgetIds(application,manager)) if(ids.length>0){widgets=true;break;}
+            SharedPreferences prefs=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
+            JSObject result=new JSObject();
+            result.put("exactAlarmSupported",supported);
+            result.put("exactAlarmAllowed",allowed);
+            result.put("batteryUnrestricted",unrestricted);
+            result.put("widgetsPresent",widgets);
+            result.put("nextTransition",prefs.getLong("next_transition_at",0L));
+            result.put("lastDispatch",prefs.getLong("last_dispatch_at",0L));
+            call.resolve(result);
+        } catch(Exception error){call.reject("Unable to read widget reliability: "+error.getMessage(),error);}
+    }
+
+    @PluginMethod
+    public void openExactAlarmSettings(PluginCall call) {
+        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S){call.resolve();return;}
+        Activity activity=getActivity();if(activity==null){call.reject("No activity");return;}
+        Intent intent=new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+            Uri.parse("package:"+activity.getPackageName()));
+        if(!startSettings(activity,intent)){call.reject("Unable to open exact alarm settings");return;}
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openBatteryOptimizationSettings(PluginCall call) {
+        Activity activity=getActivity();if(activity==null){call.reject("No activity");return;}
+        Intent intent=new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        if(!startSettings(activity,intent)){call.reject("Unable to open battery settings");return;}
+        call.resolve();
+    }
+
+    private boolean startSettings(Activity activity,Intent intent) {
+        try {activity.startActivity(intent);return true;}
+        catch(ActivityNotFoundException missing) {
+            Intent details=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:"+activity.getPackageName()));
+            try {activity.startActivity(details);return true;}
+            catch(ActivityNotFoundException ignored) {return false;}
+        }
+    }
+
     @PluginMethod
     public void getScheduleStatus(PluginCall call) {
         Context context=getContext();if(context==null){call.reject("Context is null");return;}

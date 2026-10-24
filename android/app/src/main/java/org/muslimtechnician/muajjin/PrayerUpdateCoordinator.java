@@ -45,6 +45,9 @@ public final class PrayerUpdateCoordinator {
                 }
             }
             now=System.currentTimeMillis();
+            long lastDispatch=prefs.getLong("last_dispatch_at",0L);
+            if(force||now-lastDispatch>=300000L)
+                prefs.edit().putLong("last_dispatch_at",now).apply();
             NativePresentation presentation=NativeScheduleStore.loadPresentation(prefs);
             PrayerTimeline timeline=PrayerTimeline.at(schedule,now,zone);
             long[] localEvents=timeline==null?null:schedule.localEvents(now,zone,timeline.day);

@@ -4,6 +4,8 @@ import { SettingsSection } from '@/components/settings/settings-section';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import {
   closestCenter,
   DndContext,
@@ -22,12 +24,18 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, GripVertical, Trash2, Upload } from 'lucide-react';
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { DEFAULT_CONTAINER_ORDER } from '@/constants/default-settings';
 import { useTranslation } from '@/contexts/translation-context';
+import {
+  openBatteryOptimizationSettings,
+  openExactAlarmSettings,
+  readWidgetReliability,
+} from '@/services/widget-sync-service';
+import type { WidgetReliability } from '@/services/widget-sync-service';
 import { EContainerType } from '@/types/enums';
 
 const CONTAINER_LABELS: Record<string, string> = {
@@ -111,6 +119,52 @@ const DisplaySettings: FC = () => {
     DEFAULT_CONTAINER_ORDER,
   );
   const hasCustomFont = !!customFont;
+  const nativeAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  const [reliability, setReliability] = useState<WidgetReliability | null>(null);
+  const [reliabilityError, setReliabilityError] = useState(false);
+  const refreshReliability = useCallback(async () => {
+    if (!nativeAndroid) return;
+    try {
+      setReliability(await readWidgetReliability());
+      setReliabilityError(false);
+    } catch {
+      setReliabilityError(true);
+    }
+  }, [nativeAndroid]);
+
+  useEffect(() => {
+    if (!nativeAndroid) return;
+    let disposed = false;
+    void refreshReliability();
+    const onFocus = () => {
+      if (!disposed) void refreshReliability();
+    };
+    window.addEventListener('focus', onFocus);
+    const listener = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && !disposed) void refreshReliability();
+    });
+    return () => {
+      disposed = true;
+      window.removeEventListener('focus', onFocus);
+      void listener
+        .then((handle) => handle.remove())
+        .catch(() => undefined);
+    };
+  }, [nativeAndroid, refreshReliability]);
+
+  const exactStatus = !reliability
+    ? t('settings.widgetChecking')
+    : reliability.exactAlarmSupported === false
+      ? t('settings.widgetExactAlwaysAllowed')
+      : reliability.exactAlarmAllowed
+        ? t('settings.widgetExactAllowed')
+        : t('settings.widgetExactDenied');
+  const batteryStatus = !reliability
+    ? t('settings.widgetChecking')
+    : reliability.batteryUnrestricted
+      ? t('settings.widgetBatteryUnrestricted')
+      : t('settings.widgetBatteryOptimized');
 
   const getCurrentFontInfo = () => {
     if (hasCustomFont) {
@@ -285,6 +339,94 @@ const DisplaySettings: FC = () => {
           </SortableContext>
         </DndContext>
       </SettingsSection>
+
+      {nativeAndroid && (
+        <SettingsSection
+          title={t('settings.widgetReliability')}
+          description={t('settings.widgetReliabilityDesc')}>
+          <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+            {reliabilityError && (
+              <p className="text-sm text-destructive">
+                {t('settings.widgetReliabilityUnavailable')}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">
+                {t('settings.widgetExactAlarms')}
+              </span>
+              <span
+                className={`text-sm ${
+                  reliability &&
+                  reliability.exactAlarmSupported !== false &&
+                  !reliability.exactAlarmAllowed
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
+                }`}>
+                {exactStatus}
+              </span>
+            </div>
+            {reliability &&
+              reliability.exactAlarmSupported &&
+              !reliability.exactAlarmAllowed && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    void openExactAlarmSettings()
+                      .then(refreshReliability)
+                      .catch(() => setReliabilityError(true));
+                  }}>
+                  {t('settings.widgetAllowExactAlarms')}
+                </Button>
+              )}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">
+                {t('settings.widgetBatteryOptimization')}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {batteryStatus}
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                void openBatteryOptimizationSettings()
+                  .then(refreshReliability)
+                  .catch(() => setReliabilityError(true));
+              }}>
+              {t('settings.widgetOpenBatterySettings')}
+            </Button>
+            <div className="space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
+              <p>
+                {t('settings.widgetNextUpdate')}:{' '}
+                {reliability && reliability.nextTransition > 0
+                  ? new Date(reliability.nextTransition).toLocaleTimeString(
+                      [],
+                      { hour: '2-digit', minute: '2-digit' },
+                    )
+                  : t('settings.widgetNotScheduled')}
+              </p>
+              <p>
+                {t('settings.widgetLastRefresh')}:{' '}
+                {reliability && reliability.lastDispatch > 0
+                  ? new Date(reliability.lastDispatch).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : t('settings.widgetNotRecorded')}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.widgetReliabilityNote')}
+            </p>
+          </div>
+        </SettingsSection>
+      )}
 
       <SettingsSaveButton onClick={() => navigate(-1)} />
     </SettingsPageLayout>

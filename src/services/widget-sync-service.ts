@@ -67,8 +67,20 @@ const scheduleStatusSchema = z.object({
   madhab: z.union([z.literal(0), z.literal(1)]),
   revision: z.string().min(1).max(1024),
 }).refine((status) => status.validFrom < status.validUntil);
+const widgetReliabilitySchema = z.object({
+  exactAlarmSupported: z.boolean(),
+  exactAlarmAllowed: z.boolean(),
+  batteryUnrestricted: z.boolean(),
+  widgetsPresent: z.boolean(),
+  nextTransition: z.number().finite().int().nonnegative(),
+  lastDispatch: z.number().finite().int().nonnegative(),
+});
+export type WidgetReliability = z.infer<typeof widgetReliabilitySchema>;
 export interface PrayerWidgetPluginInterface {
   getScheduleStatus?(): Promise<unknown>;
+  getWidgetReliability(): Promise<unknown>;
+  openExactAlarmSettings(): Promise<void>;
+  openBatteryOptimizationSettings(): Promise<void>;
   updateSchedule(payload: PrayerSchedulePayload): Promise<{ success: boolean }>;
   updatePresentation(payload: { revision: string; presentation: WidgetPresentation }): Promise<{ success: boolean }>;
 }
@@ -265,4 +277,16 @@ export async function readNativeSystemTimeFormat(): Promise<'12h' | '24h'> {
   const result = await PrayerWidget.getSystemClockFormat();
   if (result.timeFormat !== '12h' && result.timeFormat !== '24h') throw new Error('Invalid native system clock format');
   return result.timeFormat;
+}
+
+export async function readWidgetReliability(): Promise<WidgetReliability> {
+  return widgetReliabilitySchema.parse(await PrayerWidget.getWidgetReliability());
+}
+
+export async function openExactAlarmSettings(): Promise<void> {
+  await PrayerWidget.openExactAlarmSettings();
+}
+
+export async function openBatteryOptimizationSettings(): Promise<void> {
+  await PrayerWidget.openBatteryOptimizationSettings();
 }

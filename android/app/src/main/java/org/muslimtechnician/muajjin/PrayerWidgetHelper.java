@@ -23,6 +23,7 @@ import java.util.TimeZone;
 
 public final class PrayerWidgetHelper {
     public static final String PREFS_NAME = "MuajjinPrayerData";
+    private static final long TRANSITION_FALLBACK_MS = 15000L;
     static final Class<?>[] PROVIDERS = {PrayerWidgetStripProvider.class,PrayerWidgetSmallProvider.class,
         PrayerWidgetBannerProvider.class,PrayerWidgetMediumProvider.class,PrayerWidgetLargeProvider.class,
         PrayerLockSmallProvider.class,PrayerLockMediumProvider.class};
@@ -374,7 +375,7 @@ public final class PrayerWidgetHelper {
         else views.setTextColor(id, context.getColor(resource));
     }
 
-    private static long scheduledTransition=0,scheduledCosmetic=0;
+    private static long scheduledTransition=0,scheduledCosmetic=0,scheduledFallback=0;
     private static boolean scheduledExact=false;
     private static PendingIntent alarmIntent(Context context,int request,String action) {
         Intent intent=new Intent(context,PrayerWidgetAlarmReceiver.class);intent.setAction(action);
@@ -385,8 +386,10 @@ public final class PrayerWidgetHelper {
         if(am!=null) {
             am.cancel(alarmIntent(context,0,PrayerWidgetAlarmReceiver.ACTION_PRAYER_TRANSITION));
             am.cancel(alarmIntent(context,1,PrayerWidgetAlarmReceiver.ACTION_BAR_PROGRESS_REFRESH));
+            am.cancel(alarmIntent(context,2,PrayerWidgetAlarmReceiver.ACTION_TRANSITION_FALLBACK));
         }
-        scheduledTransition=scheduledCosmetic=0;
+        scheduledTransition=scheduledCosmetic=scheduledFallback=0;
+        context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE).edit().remove("next_transition_at").apply();
     }
     public static void scheduleNextAlarm(Context context,WidgetTimelineState state,boolean force) {
         if(!state.valid) {cancelAlarms(context);return;}
@@ -403,6 +406,16 @@ public final class PrayerWidgetHelper {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
             }
             scheduledTransition=state.targetTimestamp;scheduledExact=exact;
+            context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE).edit()
+                .putLong("next_transition_at",state.targetTimestamp).apply();
+        }
+        // One non-wakeup recovery refresh after the boundary. A successful
+        // transition re-schedules a new fallback and replaces this one.
+        long fallbackAt=state.targetTimestamp+TRANSITION_FALLBACK_MS;
+        PendingIntent fallback=alarmIntent(context,2,PrayerWidgetAlarmReceiver.ACTION_TRANSITION_FALLBACK);
+        if(force||scheduledFallback!=fallbackAt) {
+            am.set(AlarmManager.RTC,fallbackAt,fallback);
+            scheduledFallback=fallbackAt;
         }
         long next=state.timeline.cosmeticTrigger();
         PendingIntent bar=alarmIntent(context,1,PrayerWidgetAlarmReceiver.ACTION_BAR_PROGRESS_REFRESH);
