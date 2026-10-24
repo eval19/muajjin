@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_wide_root"
+    style="@style/WidgetCard"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit">
+
+    <include layout="@layout/widget_wide_header_stacked" />
+
+    <FrameLayout
+        android:id="@+id/widget_progress_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/w_gap_progress">
+
+        <ProgressBar
+            android:id="@+id/pb_wide_progress"
+            style="@style/WidgetProgress" />
+
+        <ProgressBar
+            android:id="@+id/pb_wide_progress_warm"
+            style="@style/WidgetProgress"
+            android:progressDrawable="@drawable/widget_progress_bar_warm"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <include layout="@layout/widget_wide_schedule_grid" />
+</LinearLayout>

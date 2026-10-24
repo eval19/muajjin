@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/widget_metadata"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/tv_large_location"
+            style="@style/WidgetText.Metadata"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textStyle="bold"
+            android:text="RIYADH GOVERNORATE" />
+
+        <TextView
+            android:id="@+id/tv_large_hijri"
+            style="@style/WidgetText.Metadata"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="@dimen/w_gap_columns"
+            android:gravity="end"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="19 Rabi al-Thani 1448" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_primary_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/w_gap_footer"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:id="@+id/widget_context_group"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingEnd="@dimen/w_gap_columns"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_large_current_pill"
+                style="@style/WidgetText.Context"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Current: Dhuhr · 11:43 AM" />
+
+            <TextView
+                android:id="@+id/tv_large_summary"
+                style="@style/WidgetText.Context"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/w_gap_label"
+                android:textColor="@color/w_text_primary"
+                android:textSize="@dimen/w_schedule_time_size"
+                android:textStyle="bold"
+                android:text="Asr · 03:06 PM" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_primary_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <Chronometer
+                android:id="@+id/tv_large_countdown"
+                style="@style/WidgetText.CountdownTable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

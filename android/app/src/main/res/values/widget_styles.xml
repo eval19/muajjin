@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="WidgetText" parent="">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:includeFontPadding">true</item>
+        <item name="android:textColor">@color/w_text_secondary</item>
+        <item name="android:textSize">@dimen/w_context_size</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="WidgetText.Label" parent="WidgetText">
+        <item name="android:textColor">@color/w_accent</item>
+        <item name="android:textSize">@dimen/w_label_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+    <style name="WidgetText.LabelWarm" parent="WidgetText.Label">
+        <item name="android:textColor">@color/w_warm_text</item>
+    </style>
+    <style name="WidgetText.Countdown" parent="WidgetText">
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_countdown_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+    </style>
+    <style name="WidgetText.CountdownSmall" parent="WidgetText.Countdown">
+        <item name="android:textSize">@dimen/w_countdown_small_size</item>
+    </style>
+    <style name="WidgetText.CountdownTable" parent="WidgetText.Countdown">
+        <item name="android:textSize">@dimen/w_countdown_table_size</item>
+    </style>
+    <style name="WidgetText.Context" parent="WidgetText" />
+    <style name="WidgetText.Metadata" parent="WidgetText" />
+    <style name="WidgetText.ScheduleName" parent="WidgetText">
+        <item name="android:textSize">@dimen/w_schedule_name_size</item>
+    </style>
+    <style name="WidgetText.ScheduleTime" parent="WidgetText">
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_schedule_time_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:paddingTop">@dimen/w_gap_label</item>
+    </style>
+    <style name="WidgetText.Lock" parent="WidgetText">
+        <item name="android:textColor">#E6FFFFFF</item>
+        <item name="android:shadowColor">#B3000000</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">3</item>
+    </style>
+    <style name="WidgetText.LockLabel" parent="WidgetText.Lock">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">@dimen/w_label_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+    <style name="WidgetText.LockCountdown" parent="WidgetText.LockLabel">
+        <item name="android:textSize">@dimen/w_countdown_small_size</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+        <item name="android:ellipsize">none</item>
+    </style>
+    <style name="WidgetCard" parent="">
+        <item name="android:background">@drawable/widget_card_bg</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:padding">@dimen/w_card_inset</item>
+    </style>
+    <style name="WidgetCell" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:padding">@dimen/w_cell_inset</item>
+        <item name="android:background">@drawable/widget_chip_transparent</item>
+    </style>
+    <style name="WidgetProgress" parent="@android:style/Widget.ProgressBar.Horizontal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/w_progress_height</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:maxHeight">@dimen/w_progress_height</item>
+        <item name="android:max">1000</item>
+        <item name="android:indeterminate">false</item>
+        <item name="android:progressTint">@null</item>
+        <item name="android:progressBackgroundTint">@null</item>
+        <item name="android:progressDrawable">@drawable/widget_progress_bar</item>
+    </style>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_large_root"
+    style="@style/WidgetCard"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit">
+
+    <include layout="@layout/widget_table_header_metadata_stacked" />
+
+    <FrameLayout
+        android:id="@+id/widget_progress_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/w_gap_progress">
+        <ProgressBar
+            android:id="@+id/pb_large_progress"
+            style="@style/WidgetProgress" />
+    </FrameLayout>
+
+    <include layout="@layout/widget_table_schedule" />
+</LinearLayout>

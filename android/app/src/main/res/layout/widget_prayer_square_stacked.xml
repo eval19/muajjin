@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_square_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
+    style="@style/WidgetCard">
+    <LinearLayout
+        android:id="@+id/widget_primary_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <LinearLayout
+            android:id="@+id/widget_square_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tv_square_label"
+                    style="@style/WidgetText.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="start" />
+                <TextView
+                    android:id="@+id/tv_square_label_warm"
+                    style="@style/WidgetText.LabelWarm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="start"
+                    android:visibility="gone" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tv_square_next_time"
+                style="@style/WidgetText.Context"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:fontFeatureSettings="tnum"
+                android:layout_marginTop="@dimen/w_gap_label" />
+        </LinearLayout>
+        <Chronometer
+            android:id="@+id/tv_square_countdown"
+            style="@style/WidgetText.Countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/w_gap_label" />
+    </LinearLayout>
+    <FrameLayout
+        android:id="@+id/widget_progress_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/w_gap_progress">
+        <ProgressBar
+            android:id="@+id/pb_square_progress"
+            style="@style/WidgetProgress" />
+        <ProgressBar
+            android:id="@+id/pb_square_progress_warm"
+            style="@style/WidgetProgress"
+            android:progressDrawable="@drawable/widget_progress_bar_warm"
+            android:visibility="gone" />
+    </FrameLayout>
+    <LinearLayout
+        android:id="@+id/widget_square_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:paddingTop="@dimen/w_gap_footer">
+        <TextView
+            android:id="@+id/tv_square_footer_left"
+            style="@style/WidgetText.Context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+        <TextView
+            android:id="@+id/tv_square_footer_right"
+            style="@style/WidgetText.Context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:fontFeatureSettings="tnum"
+            android:layout_marginTop="@dimen/w_gap_label" />
+    </LinearLayout>
+</LinearLayout>

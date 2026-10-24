@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_lock_medium_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
+    android:background="@android:color/transparent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:paddingStart="@dimen/w_compact_inset_horizontal"
+    android:paddingEnd="@dimen/w_compact_inset_horizontal"
+    android:paddingTop="@dimen/w_compact_inset_vertical"
+    android:paddingBottom="@dimen/w_compact_inset_vertical">
+    <LinearLayout
+        android:id="@+id/widget_primary_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+        <LinearLayout
+            android:id="@+id/widget_primary_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/tv_lock_med_label"
+                style="@style/WidgetText.LockLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <Chronometer
+                android:id="@+id/tv_lock_med_countdown"
+                style="@style/WidgetText.LockCountdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/w_gap_label"
+                android:textSize="@dimen/w_countdown_table_size" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/widget_context_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/w_gap_label">
+            <TextView
+                android:id="@+id/tv_lock_med_current"
+                style="@style/WidgetText.Lock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start" />
+            <TextView
+                android:id="@+id/tv_lock_med_next"
+                style="@style/WidgetText.Lock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:layout_marginTop="@dimen/w_gap_label" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

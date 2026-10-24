@@ -1,65 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_lock_small_root"
-    android:layoutDirection="inherit"
-    android:textDirection="inherit"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layoutDirection="inherit"
+    android:textDirection="inherit"
     android:background="@android:color/transparent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="4dp">
-
-    <!-- Prayer Name / Label (e.g. Asr in) with shadow for legibility on any wallpaper -->
-    <TextView
-        android:id="@+id/tv_lock_small_label"
+    android:gravity="center_vertical"
+    android:paddingStart="@dimen/w_compact_inset_horizontal"
+    android:paddingEnd="@dimen/w_compact_inset_horizontal"
+    android:paddingTop="@dimen/w_compact_inset_vertical"
+    android:paddingBottom="@dimen/w_compact_inset_vertical">
+    <LinearLayout
+        android:id="@+id/widget_primary_group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:text="Asr in"
-        android:textColor="#FFFFFF"
-        android:textSize="13sp"
-        android:textStyle="bold"
-        android:shadowColor="#B3000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:includeFontPadding="false" />
-
-    <!-- Android-hosted countdown; no app-owned per-second refresh. -->
-    <Chronometer
-        android:id="@+id/tv_lock_small_countdown"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textColor="#FFFFFF"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:fontFeatureSettings="tnum"
-        android:shadowColor="#B3000000"
-        android:shadowDx="0"
-        android:shadowDy="2"
-        android:shadowRadius="4"
-        android:includeFontPadding="false" />
-
-    <!-- Next Prayer Time (e.g. at 3:06 PM) -->
-    <TextView
-        android:id="@+id/tv_lock_small_time"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:gravity="center"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:text="at 15:12"
-        android:textColor="#E6FFFFFF"
-        android:textSize="11sp"
-        android:shadowColor="#B3000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:includeFontPadding="false" />
-
+        android:orientation="vertical"
+        android:gravity="center">
+        <TextView
+            android:id="@+id/tv_lock_small_label"
+            style="@style/WidgetText.LockLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center" />
+        <Chronometer
+            android:id="@+id/tv_lock_small_countdown"
+            style="@style/WidgetText.LockCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/w_gap_label"
+            android:layout_gravity="center_horizontal" />
+        <TextView
+            android:id="@+id/tv_lock_small_time"
+            style="@style/WidgetText.Lock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="1"
+            android:fontFeatureSettings="tnum"
+            android:layout_marginTop="@dimen/w_gap_label" />
+    </LinearLayout>
 </LinearLayout>

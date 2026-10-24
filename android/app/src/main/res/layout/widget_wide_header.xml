@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_primary_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:baselineAligned="false">
+
+    <LinearLayout
+        android:id="@+id/widget_primary_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_wide_label"
+            style="@style/WidgetText.Label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Asr in" />
+
+        <TextView
+            android:id="@+id/tv_wide_label_warm"
+            style="@style/WidgetText.LabelWarm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Asr in"
+            android:visibility="gone" />
+
+        <Chronometer
+            android:id="@+id/tv_wide_countdown"
+            style="@style/WidgetText.Countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/w_gap_label"
+            android:singleLine="true" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_context_group"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingStart="@dimen/w_gap_columns"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/tv_wide_footer_top"
+            style="@style/WidgetText.Context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:text="Now: Dhuhr" />
+
+        <TextView
+            android:id="@+id/tv_wide_footer_bottom"
+            style="@style/WidgetText.Context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/w_gap_label"
+            android:gravity="end"
+            android:text="Asr at 3:06 PM" />
+    </LinearLayout>
+</LinearLayout>

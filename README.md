@@ -24,9 +24,9 @@
 ## Widgets in action
 
 <p align="center">
-  <img src="docs/images/widgets-home-screen.png" width="640" alt="Muajjin strip and square widgets on an Android home screen, showing a live countdown to Dhuhr">
+  <img src="docs/images/widgets-home-screen.png" width="640" alt="Native Muajjin strip and square widget renders with a live countdown to Asr">
   <br>
-  <em>Compact strip and square layouts.</em>
+  <em>Strip and Square — compact, countdown-led native layouts.</em>
 </p>
 
 <details>
@@ -35,37 +35,69 @@
 **Wide card** — the next-prayer countdown and daily schedule in one widget.
 
 <p align="center">
-  <img src="docs/images/widget-wide.png" width="640" alt="Muajjin wide-card widget with a Dhuhr countdown and all six daily prayer and sunrise times">
+  <img src="docs/images/widget-wide.png" width="640" alt="Native Muajjin wide card with an Asr countdown and six daily entries in an equal-cell three-column grid">
 </p>
 
 **Full daily table** — location, Hijri date, countdown, and the day's times.
 
 <p align="center">
-  <img src="docs/images/widget-full-table.png" width="640" alt="Muajjin full-table widget for Makkah, showing the Hijri date and a three-column, two-row daily schedule">
+  <img src="docs/images/widget-full-table.png" width="640" alt="Native Muajjin full table with sample location, Hijri date, countdown, and a three-column, two-row daily schedule">
 </p>
 
 </details>
 
-Actual captures from the [2.8.4 APK](https://github.com/eval19/muajjin/releases/tag/v2.8.4)
-on an Android 16 (API 36) emulator, using Makkah as a sample location. Screenshots
-are cropped for readability; appearance and sizing vary by launcher.
+Native renders from the current development source on Android 16 (API 36), at
+2× display density and font scale 1.0. These use synthetic layout fixtures, not
+prayer-time reference data or a published APK; the first image combines two native
+views. Launcher allocation, insets, system corners, and fonts affect actual
+appearance. Equivalent usable bounds share the same visual hierarchy, not a
+promise of identical screenshot pixels on every phone.
+
+[Actual Pixel Launcher capture](docs/images/widget-launcher-api36.png): Full Table
+from the development debug build, using a synthetic Makkah fixture and 24-hour
+clocks. Two Wide instances on separate home pages retained independent 3×2 and
+six-column compositions; actual resizing, theme changes, and tap-to-open were
+observed.
+
+Native visual checks cover all seven variants on API 36, both resource themes,
+2×/3× density, English/Bengali/Arabic RTL, and font scales 1.0/1.3/1.5/2.0 at
+appropriately enlarged bounds. Xiaomi/HyperOS, API 24–30, and a real keyguard host
+were not available for runtime verification. The transparent variants were
+reviewed in the native debug host on light, dark, and busy sample backdrops.
 
 ## What this fork adds
 
 ### Prayer times at a glance
 
-See prayer times without opening the app. Choose from five Android home-screen
-layouts to suit your launcher:
+See prayer times without opening the app. Five home-screen layouts and two
+transparent keyguard-oriented variants retain their stable provider identities:
 
-- **Strip (2×1):** a compact horizontal layout.
-- **Square (2×2):** a small card for a compact home screen.
-- **Banner (4×1):** a wide, single-row layout.
-- **Wide card (4×2):** a larger card with the daily schedule.
-- **Full table (4×3):** the day's prayer times in one view.
+| Layout | Target cells | Requested initial minimum (dp) | Resize minimum (dp) |
+| --- | --- | --- | --- |
+| Strip | 2×1 | 130×88 | 120×88 |
+| Square | 2×2 | 130×160 | 130×160 |
+| Banner | 4×1 | 280×96 | 280×96 |
+| Wide card | 4×2 | 288×220 | 288×220 |
+| Full table | 4×3 | 288×220 | 288×220 |
+| Lock Small | 2×1 | 170×96 | 170×96 |
+| Lock Medium | 4×1 | 280×80 | 280×80 |
 
-Actual size and resizing depend on your launcher. Two additional keyguard-oriented
-variants are included, but lock-screen widget availability depends on Android and
-the widget host; they are not universally supported.
+Cell counts and minimums are launcher hints, not guaranteed content bounds.
+Larger font scales, long countdowns, and imported labels may require a larger
+widget. Undersized Square/Wide instances use Strip/Banner only when the full
+composition cannot fit and the simpler layout can. An undersized Full Table keeps
+its location, Hijri date, countdown, and current/next summary while hiding a daily
+grid that cannot be rendered completely. Enlarging restores all six daily entries.
+Hosts can ignore minimums, so an extremely small existing instance may need manual
+resizing. Lock-screen widget availability depends on Android and its widget host;
+these two providers remain keyguard-only, not universally supported home widgets.
+Their white text and restrained shadow remain wallpaper-dependent. Picker artwork
+uses a sample backdrop; the live keyguard views remain transparent.
+
+The 288dp daily-widget width was selected after native Bengali 12-hour noon
+measurements at two densities: the full clock needs a 286dp three-column budget
+with 4dp cell side padding. This is a tested reference floor, not a guarantee about
+every OEM font or launcher. Minimum hints do not migrate already-placed widgets.
 
 ### Smoother first-time setup
 
@@ -190,8 +222,15 @@ obsolete requests activating stale selections.
 
 The native handoff separates acknowledged calculation and presentation revisions,
 reuses valid status, and retries failed delivery. All seven provider identities are
-retained. The full daily widget uses a three-column, two-row table; wide clocks wrap
-rather than hiding AM/PM.
+retained. The full daily widget uses a bounded three-column, two-row table. Wide
+cards prefer six columns when complete labels/clocks fit; otherwise they reflow
+to three columns and two rows. Shallow legacy sizes may use uniformly reserved
+two-line clock slots, never one accidentally taller AM/PM tile. At tightly
+constrained three-column widths, shared side padding is fitted in native pixels,
+down to a 1dp floor. Schedule clocks never shrink below 12sp or lose localized day
+periods; impossible bounds still require a larger widget.
+All seven widgets retain native Chronometers, existing prayer-state meaning,
+whole-widget tap behavior, and the shared schedule/update pipeline.
 
 Implementation decisions and recorded verification:
 [plan](tasks/plan.md), [checklist](tasks/todo.md), and
@@ -254,6 +293,15 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.0 refines all seven native widgets with consistent spacing,
+typography, corners, and progress bars. Wide schedules reflow into equal-sized
+cells; Full Table uses a bounded current-prayer highlight and the shared green
+palette. Prayer calculations, native countdowns, alarms, and storage are unchanged.
+Wide and Full Table now request at least 288×220dp to preserve complete localized
+clocks. Already-undersized Full Table instances show their metadata and prayer
+summary until enlarged. Actual captures, tested environments, and device limits
+are documented in the widget section above.
+
 Version 2.8.4 completes the pending font/import, timezone, adjustment and
 widget-sync corrections. Settings save only their own fields; responsive
 resizing preserves drafts; Qibla subscriptions and update requests have
@@ -261,8 +309,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.8.4
-(Android versionCode 284) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.0
+(Android versionCode 290) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -287,7 +335,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.8.4-284-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.0-290-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

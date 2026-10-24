@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="130dp"
-    android:minHeight="50dp"
-    android:minResizeWidth="110dp"
-    android:minResizeHeight="50dp"
+    android:minHeight="88dp"
+    android:minResizeWidth="120dp"
+    android:minResizeHeight="88dp"
     android:targetCellWidth="2"
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_prayer_strip"
+    android:previewImage="@drawable/widget_preview_strip"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="w_card_radius">20dp</dimen>
+    <dimen name="w_cell_radius">8dp</dimen>
+    <dimen name="w_card_inset">16dp</dimen>
+    <dimen name="w_compact_inset_horizontal">12dp</dimen>
+    <dimen name="w_compact_inset_vertical">8dp</dimen>
+    <dimen name="w_gap_label">4dp</dimen>
+    <dimen name="w_gap_progress">12dp</dimen>
+    <dimen name="w_gap_schedule">16dp</dimen>
+    <dimen name="w_gap_footer">8dp</dimen>
+    <dimen name="w_gap_columns">8dp</dimen>
+    <dimen name="w_gap_cells">4dp</dimen>
+    <dimen name="w_gap_rows">8dp</dimen>
+    <dimen name="w_cell_inset">8dp</dimen>
+    <dimen name="w_progress_height">4dp</dimen>
+    <dimen name="w_label_size">13sp</dimen>
+    <dimen name="w_label_size_compact">12sp</dimen>
+    <dimen name="w_countdown_small_size">26sp</dimen>
+    <dimen name="w_countdown_small_size_compact">22sp</dimen>
+    <dimen name="w_countdown_size">32sp</dimen>
+    <dimen name="w_countdown_size_compact">26sp</dimen>
+    <dimen name="w_countdown_table_size">28sp</dimen>
+    <dimen name="w_countdown_table_size_compact">24sp</dimen>
+    <dimen name="w_context_size">12sp</dimen>
+    <dimen name="w_context_size_compact">11sp</dimen>
+    <dimen name="w_schedule_name_size">12sp</dimen>
+    <dimen name="w_schedule_name_size_compact">11sp</dimen>
+    <dimen name="w_schedule_time_size">14sp</dimen>
+    <dimen name="w_schedule_time_size_compact">12sp</dimen>
+</resources>

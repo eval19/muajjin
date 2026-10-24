@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_schedule_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="@dimen/w_gap_schedule"
+    android:orientation="vertical">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+        <LinearLayout
+            android:id="@+id/chip_fajr"
+            style="@style/WidgetCell"
+            android:minHeight="0dp">
+    
+            <TextView
+                android:id="@+id/tv_chip_fajr_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Fajr" />
+    
+            <TextView
+                android:id="@+id/tv_chip_fajr_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="04:26 AM" />
+        </LinearLayout>
+    
+        <LinearLayout
+            android:id="@+id/chip_sunrise"
+            style="@style/WidgetCell"
+            android:minHeight="0dp"
+            android:layout_marginStart="@dimen/w_gap_cells">
+    
+            <TextView
+                android:id="@+id/tv_chip_sunrise_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Sunrise" />
+    
+            <TextView
+                android:id="@+id/tv_chip_sunrise_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="05:44 AM" />
+        </LinearLayout>
+    
+        <LinearLayout
+            android:id="@+id/chip_dhuhr"
+            style="@style/WidgetCell"
+            android:minHeight="0dp"
+            android:layout_marginStart="@dimen/w_gap_cells">
+    
+            <TextView
+                android:id="@+id/tv_chip_dhuhr_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Dhuhr" />
+    
+            <TextView
+                android:id="@+id/tv_chip_dhuhr_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="11:43 AM" />
+        </LinearLayout>
+    
+        <LinearLayout
+            android:id="@+id/chip_asr"
+            style="@style/WidgetCell"
+            android:minHeight="0dp"
+            android:layout_marginStart="@dimen/w_gap_cells">
+    
+            <TextView
+                android:id="@+id/tv_chip_asr_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Asr" />
+    
+            <TextView
+                android:id="@+id/tv_chip_asr_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="03:06 PM" />
+        </LinearLayout>
+    
+        <LinearLayout
+            android:id="@+id/chip_maghrib"
+            style="@style/WidgetCell"
+            android:minHeight="0dp"
+            android:layout_marginStart="@dimen/w_gap_cells">
+    
+            <TextView
+                android:id="@+id/tv_chip_maghrib_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Maghrib" />
+    
+            <TextView
+                android:id="@+id/tv_chip_maghrib_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="06:15 PM" />
+        </LinearLayout>
+    
+        <LinearLayout
+            android:id="@+id/chip_isha"
+            style="@style/WidgetCell"
+            android:minHeight="0dp"
+            android:layout_marginStart="@dimen/w_gap_cells">
+    
+            <TextView
+                android:id="@+id/tv_chip_isha_name"
+                style="@style/WidgetText.ScheduleName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Isha" />
+    
+            <TextView
+                android:id="@+id/tv_chip_isha_time"
+                style="@style/WidgetText.ScheduleTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="07:36 PM" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

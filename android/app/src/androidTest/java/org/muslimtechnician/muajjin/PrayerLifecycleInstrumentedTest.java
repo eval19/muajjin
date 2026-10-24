@@ -12,9 +12,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.SizeF;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Chronometer;
@@ -28,6 +32,7 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
@@ -39,6 +44,29 @@ import static org.junit.Assert.*;
  * No WebView/network is needed to renew or render the expired schedule. */
 @RunWith(AndroidJUnit4.class)
 public class PrayerLifecycleInstrumentedTest {
+    private static final class ObservedHostView extends AppWidgetHostView {
+        private volatile CountDownLatch layoutReady=new CountDownLatch(0);
+        private int expectedRoot,expectedRows,expectedWidth;
+        ObservedHostView(Context context) { super(context); }
+        void expectLayout(int root,int rows,int width) {
+            expectedRoot=root;expectedRows=rows;expectedWidth=width;
+            layoutReady=new CountDownLatch(1);
+        }
+        boolean awaitLayout() throws InterruptedException { return layoutReady.await(30,TimeUnit.SECONDS); }
+        @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
+            super.onLayout(changed,left,top,right,bottom);
+            if(expectedRoot==0 || getWidth()!=expectedWidth || findViewById(expectedRoot)==null)return;
+            if(expectedRows!=0) {
+                View first=findViewById(R.id.chip_fajr),last=findViewById(R.id.chip_isha);
+                if(first==null || last==null)return;
+                Rect a=new Rect(),b=new Rect();first.getDrawingRect(a);last.getDrawingRect(b);
+                offsetDescendantRectToMyCoords(first,a);offsetDescendantRectToMyCoords(last,b);
+                if((Math.abs(a.top-b.top)<=1?1:2)!=expectedRows)return;
+            }
+            layoutReady.countDown();
+        }
+    }
+
     private void worker(Runnable action) throws Exception {
         CountDownLatch done = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -73,6 +101,57 @@ public class PrayerLifecycleInstrumentedTest {
         }
         return count;
     }
+    private void checkHostSizeDelivery(Instrumentation instrumentation,Context context,AppWidgetManager manager,
+                                       AppWidgetHost host,int id,ObservedHostView wide,ScrollView scroll,long deadline) throws Exception {
+        float density=context.getResources().getDisplayMetrics().density;
+        Rect padding=AppWidgetHostView.getDefaultPaddingForWidget(context,
+            new ComponentName(context,PrayerWidgetMediumProvider.class),null);
+        int horizontal=padding.left+padding.right,vertical=padding.top+padding.bottom;
+        LinearLayout column=(LinearLayout)scroll.getChildAt(0);
+        if(Build.VERSION.SDK_INT>=31) {
+            // Host API takes outer bounds and subtracts its default padding before provider callbacks.
+            // https://developer.android.com/reference/android/appwidget/AppWidgetHostView#updateAppWidgetSize(android.os.Bundle,java.util.List)
+            ArrayList<SizeF> sizes=new ArrayList<>(2);
+            sizes.add(new SizeF(250+horizontal/density,220+vertical/density));
+            sizes.add(new SizeF(600+horizontal/density,220+vertical/density));
+            instrumentation.runOnMainSync(() -> wide.updateAppWidgetSize(new Bundle(),sizes));
+            for(int width:new int[]{250,600,250}) {
+                int pixels=Math.round(width*density)+horizontal;
+                instrumentation.runOnMainSync(() -> {
+                    wide.expectLayout(R.id.widget_wide_root,width==600?1:2,pixels);
+                    wide.setLayoutParams(new LinearLayout.LayoutParams(pixels,Math.round(220*density)+vertical));
+                    wide.requestLayout();
+                });
+                assertTrue("Host never applied its responsive size alternative at "+width+"dp",wide.awaitLayout());
+                instrumentation.runOnMainSync(() -> assertTrue("Host alternative lost its real deadline",checkChronometers(wide,deadline)>0));
+            }
+        }
+        Configuration orientation=new Configuration(context.getResources().getConfiguration());
+        orientation.orientation=Configuration.ORIENTATION_LANDSCAPE;
+        Context landscapeContext=context.createConfigurationContext(orientation);
+        AtomicReference<ObservedHostView> landscape=new AtomicReference<>();
+        int width=Math.round(600*density)+horizontal,height=Math.round(96*density)+vertical;
+        instrumentation.runOnMainSync(() -> {
+            ObservedHostView view=(ObservedHostView)host.createView(landscapeContext,id,manager.getAppWidgetInfo(id));
+            landscape.set(view);view.expectLayout(R.id.widget_banner_root,0,width);
+            column.addView(view,new LinearLayout.LayoutParams(width,height));
+            Bundle range=manager.getAppWidgetOptions(id);
+            if(Build.VERSION.SDK_INT>=31) range.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,null);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,250);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,600);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,96);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,220);
+            manager.updateAppWidgetOptions(id,range);
+        });
+        assertTrue("Provider callback did not deliver the distinct legacy landscape alternative",landscape.get().awaitLayout());
+        instrumentation.runOnMainSync(() -> {
+            assertNotNull(landscape.get().findViewById(R.id.tv_banner_countdown));
+            assertTrue("Legacy orientation alternative lost its real deadline",checkChronometers(landscape.get(),deadline)>0);
+            column.removeView(landscape.get());
+        });
+    }
+
+
     @Test public void persistedHijriAdjustmentsKeepTheSameDatesAsTheWebCalculator() throws Exception {
         Calendar date=Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         date.clear();date.set(2026,Calendar.OCTOBER,13,12,0,0);
@@ -97,7 +176,11 @@ public class PrayerLifecycleInstrumentedTest {
         SharedPreferences prefs=context.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
         Map<String,?> original=prefs.getAll();
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
-        AppWidgetHost host=new AppWidgetHost(context,480271);
+        AppWidgetHost host=new AppWidgetHost(context,480271) {
+            @Override protected AppWidgetHostView onCreateView(Context viewContext,int id,AppWidgetProviderInfo info) {
+                return new ObservedHostView(viewContext);
+            }
+        };
         AppWidgetHostView[] views=new AppWidgetHostView[PrayerWidgetHelper.PROVIDERS.length+1];
         int[] ids=new int[views.length];
         Activity activity=null;
@@ -241,6 +324,37 @@ public class PrayerLifecycleInstrumentedTest {
                 try(FileOutputStream output=new FileOutputStream(new File(context.getCacheDir(),"widget-smoke-"+page+".png"))) {image.compress(Bitmap.CompressFormat.PNG,100,output);}
                 image.recycle();
             }
+            instrumentation.runOnMainSync(() -> {
+                float density=context.getResources().getDisplayMetrics().density;
+                StringBuilder defects=new StringBuilder();
+                TextView squareClock=views[1].findViewById(R.id.tv_square_countdown);
+                View squareProgress=views[1].findViewById(R.id.pb_square_progress);
+                if(squareProgress==null || squareProgress.getVisibility()!=View.VISIBLE)
+                    squareProgress=views[1].findViewById(R.id.pb_square_progress_warm);
+                android.graphics.Rect clockBounds=new android.graphics.Rect();
+                android.graphics.Rect progressBounds=new android.graphics.Rect();
+                squareClock.getDrawingRect(clockBounds);
+                squareProgress.getDrawingRect(progressBounds);
+                views[1].offsetDescendantRectToMyCoords(squareClock,clockBounds);
+                views[1].offsetDescendantRectToMyCoords(squareProgress,progressBounds);
+                int squareGap=progressBounds.top-clockBounds.bottom;
+                if(squareGap>20*density) defects.append("Square separates countdown/progress by ").append(squareGap/density).append("dp; ");
+                int[] cells={R.id.chip_fajr,R.id.chip_sunrise,R.id.chip_dhuhr,R.id.chip_asr,R.id.chip_maghrib,R.id.chip_isha};
+                int firstHeight=views[3].findViewById(cells[0]).getHeight();
+                for(int cell:cells) {
+                    View item=views[3].findViewById(cell);
+                    if(Math.abs(item.getHeight()-firstHeight)>1)
+                        defects.append("Wide prayer cells have unequal heights: ").append(firstHeight).append("/").append(item.getHeight()).append("; ");
+                }
+                int[] tableCells={R.id.row_fajr,R.id.row_sunrise,R.id.row_dhuhr,R.id.row_asr,R.id.row_maghrib,R.id.row_isha};
+                for(int cell:tableCells) {
+                    View item=views[4].findViewById(cell);
+                    if(item.getHeight()>80*density*context.getResources().getConfiguration().fontScale)
+                        defects.append("Table decoration stretches to ").append(item.getHeight()/density).append("dp; ");
+                }
+                assertEquals(defects.toString(),"",defects.toString());
+            });
+            checkHostSizeDelivery(instrumentation,context,manager,host,ids[3],(ObservedHostView)views[3],scroll,expected);
         } finally {
             if(activity!=null) {
                 Activity closing=activity;
