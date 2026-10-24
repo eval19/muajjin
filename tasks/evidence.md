@@ -9,6 +9,13 @@
 - Limits: a launcher that ignores `resizeMode` can still stretch a host cell. Widgets placed by an older build keep their host-stored footprint; remove and re-add them once. Actual MIUI add-time cell counts, resize-handle behavior, and existing-instance migration were not runtime-verified in this step; MIUI's effective cell metrics were inferred from the supplied screenshot and the platform 70dp/30dp convention.
 - Release: 2.9.1 / Android versionCode 292 published at `https://github.com/eval19/muajjin/releases/tag/v2.9.1` from source `43fe901af72b02af5c456f371a5bffefda35b09f`; tag `v2.9.1` points to that commit. Signed workflow run `40115266456` passed resolve, both web modes, native quality, and signed release. APK SHA-256 `ab7f4c2496a233ffdebbc2c24d7ae28c1faa775e0d5c19ebade690a808bc63ca`; original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`. The anonymous public download matched the uploaded bytes, package `org.muslimtechnician.muajjin`, version 2.9.1/292, and signature.
 
+## 2.9.0 widget overhaul and 291 rebuild — 2026-10-24
+
+- 2.9.0 (Android versionCode 290) shipped the seven-widget visual overhaul from source `3fe8ab4` and tag `v2.9.0`: shared spacing, typography, corners, equal schedule cells, and a bounded Full Table highlight.
+- The replacement build 291 (`de1440a`) added staged progress-bar colors, device-numeral formatting, `ACTION_LOCALE_CHANGED` reconciliation, and the widget presentation regressions. Signed workflow run `40111207055` passed; asset `muajjin-2.9.0-291-github-release.apk`, 4,554,484 bytes, SHA-256 `7bd798d80b56ea4a8cfdb28eda79e45f9abccc57038138c2b8b4123c7847131d`, original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`.
+- Provenance caveat: the `v2.9.0` tag targets `3fe8ab4` (the build-290 source), while the published 291 asset metadata identifies `de1440a`. The release body's statement that the tag identifies the 291 rebuild is inaccurate; the fixed-footprint 2.9.1 tag is correct at `43fe901`.
+- The 2.9.1 section above records the fixed-size correction and its signed release.
+
 ## App-health completion — 2.8.4 / Android versionCode 284
 
 Completed app-health release, 2026-10-18. The historical sections below retain their original scope; their earlier signing/publication prerequisites are not current release-status claims.
