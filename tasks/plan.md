@@ -1,5 +1,12 @@
 # Muajjin implementation plan
 
+## 2.9.0 / 2.9.1 widget work — 2026-10-24
+
+- 2.9.0 shipped the seven-widget visual overhaul (build 290, source `3fe8ab4`). The 291 replacement (source `de1440a`) added staged progress-bar colors, device-numeral formatting, locale-change reconciliation, and presentation regressions.
+- 2.9.1 (source/tag `43fe901` / `v2.9.1`) fixes widget footprints: `resizeMode="none"`, canonical launcher cell hints, and an installed-provider metadata regression. Fixed size supersedes user resizing; compact host-size fallbacks remain.
+- Provenance: the historical `v2.9.0` tag remains on `3fe8ab4` (the 290 source), while its published 291 asset was built from `de1440a`. The 2.9.1 tag correctly identifies its built source.
+- The release branch has later docs-only commits after the 2.9.1 tag; the published APK remains the tagged `43fe901` build.
+
 Source specification: `C:/Users/Mohamed Tawfig/Desktop/Muajjin-Improvement-Implementation-Plan.md` (T00–T17). All tasks remain in scope; this file records execution decisions, not a reduced replacement specification.
 
 ## Current app-health completion — approved 2.8.4 scope
@@ -110,4 +117,4 @@ Follows `secend improvments.md`:
 - Preserve all seven providers and existing data. Correct layout changes retain six daily prayers and complete clock markers.
 - Keep the widget instrumentation host in non-exported `src/debug` only. Launching the real WebView during native fixture capture can overwrite that fixture through the bridge.
 - Scope performance claims to measured work counts and asset bytes. JavaScript grew; visible startup and physical battery savings were not measured.
-- Leave source uncommitted and release version unchanged. Delete task-created probes/build outputs; retain permanent fixtures, isolated working runtimes and approved original-icon rollback copies.
+- Earlier scopes left source uncommitted and the release version unchanged; the approved 2.9.0 and 2.9.1 releases superseded that restriction. Delete task-created probes/build outputs; retain permanent fixtures, isolated working runtimes and approved original-icon rollback copies.

@@ -98,6 +98,8 @@ Do not blame all defects on the launcher. The stretching and inconsistent stylin
 
 ### 3.1 Seven stable variants
 
+The size columns below describe the authoring snapshot. In 2.9.1 the resize minimums were removed and the legacy minimums were replaced with canonical fixed cell hints; see the top status line.
+
 Java classes live under `android/app/src/main/java/org/muslimtechnician/muajjin/`. Layout and metadata filenames below are relative to `android/app/src/main/res/layout/` and `res/xml/` respectively. Dimensions are declared dp hints, not guaranteed measured content bounds.
 
 | Product name | Provider class | Active layout | Metadata file | Declared min W×H | Resize min W×H | Target cells / category |
