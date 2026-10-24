@@ -56,7 +56,7 @@ promise of identical screenshot pixels on every phone.
 [Actual Pixel Launcher capture](docs/images/widget-launcher-api36.png): Full Table
 from the development debug build, using a synthetic Makkah fixture and 24-hour
 clocks. Two Wide instances on separate home pages retained independent 3×2 and
-six-column compositions; actual resizing, theme changes, and tap-to-open were
+six-column compositions; host-size changes, theme changes, and tap-to-open were
 observed.
 
 Native visual checks cover all seven variants on API 36, both resource themes,
@@ -72,32 +72,41 @@ reviewed in the native debug host on light, dark, and busy sample backdrops.
 See prayer times without opening the app. Five home-screen layouts and two
 transparent keyguard-oriented variants retain their stable provider identities:
 
-| Layout | Target cells | Requested initial minimum (dp) | Resize minimum (dp) |
-| --- | --- | --- | --- |
-| Strip | 2×1 | 130×88 | 120×88 |
-| Square | 2×2 | 130×160 | 130×160 |
-| Banner | 4×1 | 280×96 | 280×96 |
-| Wide card | 4×2 | 288×220 | 288×220 |
-| Full table | 4×3 | 288×220 | 288×220 |
-| Lock Small | 2×1 | 170×96 | 170×96 |
-| Lock Medium | 4×1 | 280×80 | 280×80 |
+| Layout | Fixed target cells | Requested initial minimum (dp) |
+| --- | --- | --- |
+| Strip | 2×1 | 110×40 |
+| Square | 2×2 | 110×110 |
+| Banner | 4×1 | 250×40 |
+| Wide card | 4×2 | 250×220 |
+| Full table | 4×3 | 250×220 |
+| Lock Small | 2×1 | 110×40 |
+| Lock Medium | 4×1 | 250×40 |
 
 Cell counts and minimums are launcher hints, not guaranteed content bounds.
-Larger font scales, long countdowns, and imported labels may require a larger
-widget. Undersized Square/Wide instances use Strip/Banner only when the full
-composition cannot fit and the simpler layout can. An undersized Full Table keeps
-its location, Hijri date, countdown, and current/next summary while hiding a daily
-grid that cannot be rendered completely. Enlarging restores all six daily entries.
-Hosts can ignore minimums, so an extremely small existing instance may need manual
-resizing. Lock-screen widget availability depends on Android and its widget host;
-these two providers remain keyguard-only, not universally supported home widgets.
-Their white text and restrained shadow remain wallpaper-dependent. Picker artwork
-uses a sample backdrop; the live keyguard views remain transparent.
+All seven widgets declare a fixed footprint (`resizeMode="none"`); launchers
+should not offer resize handles. Widgets placed by an older resizable build keep
+their host-stored footprint, so remove and re-add such an instance once after
+updating. Minimum hints use the platform's 70dp cell convention: 110dp for two
+columns and 250dp for four; 40dp for one row and 110dp for two, so launchers that
+add the usual 30dp margin place the intended span. The Wide and Full Table retain
+a 220dp height because their daily grid needs it. These are cell hints, not
+content bounds; hosts can still allocate a different area because of grid size,
+insets, or font scale, and the layouts keep their compact fallbacks. Larger font
+scales, long countdowns, and imported labels may not fit a fixed cell; choose a
+larger widget variant instead of resizing. An undersized Full Table keeps its
+location, Hijri date, countdown, and current/next summary while hiding a daily
+grid that cannot be rendered completely. A larger host allocation restores all
+six daily entries. Lock-screen widget availability depends on Android and its
+widget host; these two providers remain keyguard-only, not universally supported
+home widgets. Their white text and restrained shadow remain wallpaper-dependent.
+Picker artwork uses a sample backdrop; the live keyguard views remain transparent.
 
-The 288dp daily-widget width was selected after native Bengali 12-hour noon
-measurements at two densities: the full clock needs a 286dp three-column budget
-with 4dp cell side padding. This is a tested reference floor, not a guarantee about
-every OEM font or launcher. Minimum hints do not migrate already-placed widgets.
+The 288dp daily-widget content width was selected after native Bengali 12-hour
+noon measurements at two densities: the full clock needs a 286dp three-column
+budget with 4dp cell side padding. The provider's 250dp minimum width is the
+four-cell launcher hint, not the content floor; the renderer verifies the usable
+width. This is a tested reference floor, not a guarantee about every OEM font or
+launcher. Existing instances do not adopt the new fixed footprint automatically.
 
 ### Progress colors and device numerals — 2.9.0 rebuild
 
@@ -277,7 +286,7 @@ to three columns and two rows. Shallow legacy sizes may use uniformly reserved
 two-line clock slots, never one accidentally taller AM/PM tile. At tightly
 constrained three-column widths, shared side padding is fitted in native pixels,
 down to a 1dp floor. Schedule clocks never shrink below 12sp or lose localized day
-periods; impossible bounds still require a larger widget.
+periods; impossible bounds still require a larger widget variant or launcher cell.
 All seven widgets retain native Chronometers, existing prayer-state meaning,
 whole-widget tap behavior, and the shared schedule/update pipeline.
 
@@ -342,14 +351,20 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.1 fixes widget footprints. All seven widgets declare
+`resizeMode="none"` and canonical launcher cell hints, so MIUI and other
+launchers place the intended 2×1/2×2/4×1 spans at add time and do not offer a
+resize handle. Existing placed instances keep their stored size until removed
+and re-added. The 2.9.0 progress colors, device numerals, layouts, schedules,
+calculations, and notifications are unchanged.
+
 Version 2.9.0 refines all seven native widgets with consistent spacing,
 typography, corners, and progress bars. Wide schedules reflow into equal-sized
 cells; Full Table uses a bounded current-prayer highlight and the shared green
 palette. Prayer calculations, native countdowns, alarms, and storage are unchanged.
-Wide and Full Table now request at least 288×220dp to preserve complete localized
-clocks. Already-undersized Full Table instances show their metadata and prayer
-summary until enlarged. Actual captures, tested environments, and device limits
-are documented in the widget section above.
+Wide and Full Table requested at least 288×220dp in that release; their content
+requirements and compact fallbacks are unchanged. Actual captures, tested
+environments, and device limits are documented in the widget section above.
 
 Version 2.8.4 completes the pending font/import, timezone, adjustment and
 widget-sync corrections. Settings save only their own fields; responsive
@@ -358,8 +373,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.0
-(Android versionCode 290) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.1
+(Android versionCode 292) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -384,7 +399,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.0-290-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.1-292-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

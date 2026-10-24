@@ -1,5 +1,13 @@
 # Muajjin implementation evidence
 
+## Fixed widget footprints — 2026-10-24
+
+- Scope: all seven `android/app/src/main/res/xml/widget_*_info.xml` provider metadata files, `README.md`, and one installed-provider regression in `androidTest`. No schedule, layout, countdown, alarm, notification, or storage behavior changed.
+- Change: `android:resizeMode="none"` and removal of `android:minResizeWidth`/`android:minResizeHeight` for all seven providers. Legacy `minWidth`/`minHeight` hints now use the platform cell convention: 110×40 (2×1), 110×110 (2×2), 250×40 (4×1), 250×220 (4×2/4×3). Target cells, compact host-size fallbacks, provider identities, and layouts are unchanged.
+- Reason: the seven widgets are deliberately composed fixed variants. Resizing exposed no designed intermediate composition; a resized Strip could occupy a 2×2 host cell with centered dead space, and MIUI retained the enlarged footprint instead of returning to 2×1. Separately, the old content-sized hints (for example 88dp for a 1-row Strip) made launchers that add a 30dp margin round the initial placement up to two rows.
+- Verification: `:app:testDebugUnitTest` passed 35 tests (5 parity, 22 timeline, 8 progress); `:app:assembleDebug` and `:app:assembleDebugAndroidTest` passed. `aapt2 dump xmltree` of `muajjin-2.9.0-291-nongithub-debug.apk` reports `resizeMode=0x0` (none), no `minResize*` attributes, and the canonical min pairs (110×40, 110×110, 250×40, 250×220, 250×220, 110×40, 250×40) for all seven providers. The instrumentation APK containing `WidgetProviderInfoInstrumentedTest`, which pins `resizeMode`, `minWidth`, and `minHeight` per provider, was assembled but not executed.
+- Limits: a launcher that ignores `resizeMode` can still stretch a host cell. Widgets placed by an older build keep their host-stored footprint; remove and re-add them once. Actual MIUI add-time cell counts, resize-handle behavior, and existing-instance migration were not runtime-verified in this step; MIUI's effective cell metrics were inferred from the supplied screenshot and the platform 70dp/30dp convention.
+
 ## App-health completion — 2.8.4 / Android versionCode 284
 
 Completed app-health release, 2026-10-18. The historical sections below retain their original scope; their earlier signing/publication prerequisites are not current release-status claims.
