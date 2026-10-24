@@ -1,5 +1,14 @@
 # Muajjin implementation evidence
 
+## 2.9.3 transition reliability — 2026-10-24
+
+- Scope: exact-alarm/battery status and system-settings links, forced transition/fallback re-arm, one non-wakeup post-target fallback refresh, and next/last transition diagnostics. No countdown, layout, calculation, notification, numeral, or storage-schema change.
+- Implementation: `PrayerWidgetAlarmReceiver` treats transition/fallback/reconcile as forced re-arms; `PrayerWidgetHelper` schedules the fallback at target + 15s and replaces it on the next target; `PrayerUpdateCoordinator` records throttled dispatch diagnostics; `PrayerWidgetPlugin` exposes reliability state and settings intents; Display Settings renders the reliability section.
+- Local verification: app/tooling TypeScript, zero-warning ESLint, both Vite modes, **37 native unit tests** (5 parity, 23 timeline, 1 receiver policy, 8 progress), debug and instrumentation APK assembly. No Bun binary was available locally, so the Bun domain suite was left to the hosted workflow.
+- Signed workflow run `40124978266` passed all jobs. APK `muajjin-2.9.3-293-github-release.apk`, 4,554,484 bytes, SHA-256 `0f0e7b5a6a6990d99b6f84154e289cf452378dac06f133a93338e50c89f955e3`, original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`; package/version 2.9.3/293, GitHub mode. The release asset digest matches. The fallback action and reliability UI strings were present in the release APK.
+- Release: `v2.9.3` is published as a **prerelease** from source `2e9f5d7a8f6bec6ab10fc709bb7989c927036577`. `/releases/latest` remains v2.9.1, so the in-app updater does not advertise the test build.
+- Not yet verified: physical MIUI transition behavior, exact-alarm grant/deny/revoke, battery-optimization state, fallback timing, and force-stop limits. These are the purpose of the prerelease test. The release-triggered Pages deployment shares the previously documented hosting limitation and is independent of the APK.
+
 ## Fixed widget footprints — 2026-10-24
 
 - Scope: all seven `android/app/src/main/res/xml/widget_*_info.xml` provider metadata files, `README.md`, and one installed-provider regression in `androidTest`. No schedule, layout, countdown, alarm, notification, or storage behavior changed.

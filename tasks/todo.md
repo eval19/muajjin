@@ -2,6 +2,10 @@
 
 Checked items mean their named implementation and verification scope is delivered. They do not certify unmeasured physical-device performance or every OEM/launcher/accessibility configuration. Exact runtime outcomes, trusted release identity and remaining limits are in `tasks/evidence.md`.
 
+## 2.9.3 transition reliability
+
+- [x] W03: Add exact-alarm/battery status and links, force transition/fallback re-arms, a non-wakeup post-target fallback, and next/last diagnostics. Local web gates, 37 native tests, and signed workflow `40124978266` passed. Published 2.9.3/293 as a prerelease; physical MIUI transition/exact-permission/fallback/force-stop validation remains the test goal.
+
 ## Fixed widget footprints — 2026-10-24
 
 - [x] W01: Declare `resizeMode="none"` for all seven widget providers, remove resize minimums, use canonical launcher cell hints for the minimum sizes, keep target cells and compact host-size fallbacks, update the README contract, and add an installed-provider metadata regression. Verified with 35 native unit tests, debug/instrumentation APK assembly, and compiled `resizeMode=0x0` for all seven. Actual MIUI add-time placement, resize-handle behavior, and migration of already-placed instances remain runtime limits.

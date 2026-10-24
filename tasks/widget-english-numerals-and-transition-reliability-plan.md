@@ -1,6 +1,6 @@
 # Widget English numerals toggle and prayer-transition reliability
 
-Status: planning only. No application code has been changed.
+Status: the transition-reliability portion is implemented and published as a 2.9.3 prerelease. The English-widget-numerals toggle remains planned and has not been implemented.
 
 Prepared: 2026-10-24. Baseline: 2.9.1 / Android versionCode 292, source
 `43fe901af72b02af5c456f371a5bffefda35b09f`.
