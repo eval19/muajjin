@@ -13,7 +13,7 @@
 
 - 2.9.0 (Android versionCode 290) shipped the seven-widget visual overhaul from source `3fe8ab4` and tag `v2.9.0`: shared spacing, typography, corners, equal schedule cells, and a bounded Full Table highlight.
 - The replacement build 291 (`de1440a`) added staged progress-bar colors, device-numeral formatting, `ACTION_LOCALE_CHANGED` reconciliation, and the widget presentation regressions. Signed workflow run `40111207055` passed; asset `muajjin-2.9.0-291-github-release.apk`, 4,554,484 bytes, SHA-256 `7bd798d80b56ea4a8cfdb28eda79e45f9abccc57038138c2b8b4123c7847131d`, original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`.
-- Provenance caveat: the `v2.9.0` tag targets `3fe8ab4` (the build-290 source), while the published 291 asset metadata identifies `de1440a`. The release body's statement that the tag identifies the 291 rebuild is inaccurate; the fixed-footprint 2.9.1 tag is correct at `43fe901`.
+- Provenance caveat: the `v2.9.0` tag targets `3fe8ab4` (the build-290 source), while the published 291 asset metadata identifies `de1440a`. The release note was corrected on 2026-10-24 to state that split; the tag and assets were not moved. The fixed-footprint 2.9.1 tag is correct at `43fe901`.
 - The 2.9.1 section above records the fixed-size correction and its signed release.
 
 ## App-health completion — 2.8.4 / Android versionCode 284
