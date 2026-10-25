@@ -11,6 +11,20 @@
     <color name="w_progress_gold">#8A6A20</color>
     <color name="w_progress_amber">#B45C28</color>
     <color name="w_progress_soft_red">#B55350</color>
+    <!-- Progress-fill anchors, index/11 of the live interval. Index 0 and 1
+         repeat intentionally so the first 1/11 keeps the app green unchanged. -->
+    <color name="w_progress_fill_0">#369679</color>
+    <color name="w_progress_fill_1">#369679</color>
+    <color name="w_progress_fill_2">#359375</color>
+    <color name="w_progress_fill_3">#338F6B</color>
+    <color name="w_progress_fill_4">#308B5E</color>
+    <color name="w_progress_fill_5">#2C8750</color>
+    <color name="w_progress_fill_6">#2B8538</color>
+    <color name="w_progress_fill_7">#3D831C</color>
+    <color name="w_progress_fill_8">#63800F</color>
+    <color name="w_progress_fill_9">#7D790A</color>
+    <color name="w_progress_fill_10">#B36A08</color>
+    <color name="w_progress_fill_11">#D62828</color>
     <color name="w_warm_text">#9A4A00</color>
     <color name="w_warm_fill">#D97706</color>
 </resources>

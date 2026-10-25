@@ -116,18 +116,18 @@ public final class PrayerWidgetHelper {
     }
     public static void updateAllWidgets(Context context,WidgetTimelineState state,int[][] ids) {
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
-        for(int i=0;i<ids.length;i++) for(int id:ids[i]) {
-            switch(i) {
-                case 0:updateStripWidget(context,manager,id,state);break;
-                case 1:updateSquareWidget(context,manager,id,state);break;
-                case 2:updateBannerWidget(context,manager,id,state);break;
-                case 3:updateWideWidget(context,manager,id,state);break;
-                case 4:updateLargeWidget(context,manager,id,state);break;
-                case 5:updateLockSmallWidget(context,manager,id,state);break;
-                case 6:updateLockMediumWidget(context,manager,id,state);break;
-                default:throw new IllegalArgumentException("Unknown widget variant");
-            }
-        }
+        // One sample pair per dispatch, shared by every bar-bearing variant and
+        // duplicate instance. Keyguard-only dispatches need no color work.
+        WidgetProgressPalette.Fill fill=null;
+        for(int i=0;i<Math.min(5,ids.length)&&fill==null;i++)
+            if(ids[i].length>0) fill=progressFill(context,state);
+        for(int i=0;i<ids.length;i++) for(int id:ids[i])
+            updateWidget(context,manager,id,state,i,fill);
+    }
+
+    private static WidgetProgressPalette.Fill progressFill(Context context,WidgetTimelineState state) {
+        return WidgetProgressPalette.Fill.of(context,state.valid,state.startTimestamp,
+            state.targetTimestamp,state.now);
     }
 
     private static void setupChronometer(RemoteViews views,int viewId,WidgetTimelineState state) {
@@ -149,29 +149,29 @@ public final class PrayerWidgetHelper {
     }
 
     public static void updateStripWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 0);
+        updateWidget(context, manager, id, state, 0, progressFill(context, state));
     }
     public static void updateSquareWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 1);
+        updateWidget(context, manager, id, state, 1, progressFill(context, state));
     }
     public static void updateBannerWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 2);
+        updateWidget(context, manager, id, state, 2, progressFill(context, state));
     }
     public static void updateWideWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 3);
+        updateWidget(context, manager, id, state, 3, progressFill(context, state));
     }
     public static void updateLargeWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 4);
+        updateWidget(context, manager, id, state, 4, progressFill(context, state));
     }
     public static void updateLockSmallWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 5);
+        updateWidget(context, manager, id, state, 5, null);
     }
     public static void updateLockMediumWidget(Context context, AppWidgetManager manager, int id, WidgetTimelineState state) {
-        updateWidget(context, manager, id, state, 6);
+        updateWidget(context, manager, id, state, 6, null);
     }
 
     private static void updateWidget(Context context, AppWidgetManager manager, int id,
-                                     WidgetTimelineState state, int variant) {
+                                     WidgetTimelineState state, int variant, WidgetProgressPalette.Fill fill) {
         Bundle options = manager.getAppWidgetOptions(id);
         if (options == null) options = Bundle.EMPTY;
         if (Build.VERSION.SDK_INT >= 31) {
@@ -183,7 +183,8 @@ public final class PrayerWidgetHelper {
                 Map<SizeF, RemoteViews> layouts = new LinkedHashMap<>();
                 for (SizeF size : sizes) {
                     if (size != null && size.getWidth() > 0 && size.getHeight() > 0)
-                        layouts.put(size, createWidgetViews(context, state, variant, size.getWidth(), size.getHeight()));
+                        layouts.put(size, createWidgetViews(context, state, variant, size.getWidth(),
+                            size.getHeight(), fill));
                 }
                 if (!layouts.isEmpty()) {
                     manager.updateAppWidget(id, new RemoteViews(layouts));
@@ -196,9 +197,9 @@ public final class PrayerWidgetHelper {
         float minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
         float maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
         RemoteViews portrait = createWidgetViews(context, state, variant, minWidth,
-            maxHeight > 0 ? maxHeight : minHeight);
+            maxHeight > 0 ? maxHeight : minHeight, fill);
         if (maxWidth > 0 && minHeight > 0 && (maxWidth != minWidth || minHeight != maxHeight)) {
-            RemoteViews landscape = createWidgetViews(context, state, variant, maxWidth, minHeight);
+            RemoteViews landscape = createWidgetViews(context, state, variant, maxWidth, minHeight, fill);
             manager.updateAppWidget(id, new RemoteViews(landscape, portrait));
         } else {
             manager.updateAppWidget(id, portrait);
@@ -208,6 +209,13 @@ public final class PrayerWidgetHelper {
     /** The same per-size native presentation used by the host and native visual regressions. */
     static RemoteViews createWidgetViews(Context context, WidgetTimelineState state,
                                          int requestedVariant, float widthDp, float heightDp) {
+        return createWidgetViews(context, state, requestedVariant, widthDp, heightDp,
+            progressFill(context, state));
+    }
+
+    static RemoteViews createWidgetViews(Context context, WidgetTimelineState state,
+                                         int requestedVariant, float widthDp, float heightDp,
+                                         WidgetProgressPalette.Fill fill) {
         WidgetLayout layout = new WidgetLayout(context, state, requestedVariant, widthDp, heightDp);
         if ((layout.variant == 1 || layout.variant == 3) && widthDp > 0 && heightDp > 0
                 && !layout.fitsWithinBounds()) {
@@ -236,12 +244,28 @@ public final class PrayerWidgetHelper {
         views.setInt(COUNTDOWNS[variant], "setMinWidth", layout.px(layout.countdownWidth()));
         views.setInt(COUNTDOWNS[variant], "setMinHeight", layout.px(layout.countdownHeight()));
         if (variant < 5) {
-            int selected=progressViewId(state.progressStage);
-            views.setViewVisibility(R.id.widget_progress_container, selected==View.NO_ID ? View.GONE : View.VISIBLE);
             views.setViewPadding(R.id.widget_progress_container, 0, layout.px(layout.progressGap()), 0, 0);
-            for(int progressId:PROGRESS)
-                views.setViewVisibility(progressId,progressId==selected ? View.VISIBLE : View.GONE);
-            if(selected!=View.NO_ID) views.setProgressBar(selected,1000,state.progress,false);
+            if (Build.VERSION.SDK_INT >= 31) {
+                // One green bar carries the sampled OKLab fill. The theme-qualified
+                // tint lists let the host re-select the palette on its own
+                // configuration changes without another widget dispatch.
+                boolean live=fill!=null;
+                views.setViewVisibility(R.id.widget_progress_container, live ? View.VISIBLE : View.GONE);
+                for(int progressId:PROGRESS)
+                    views.setViewVisibility(progressId,
+                        progressId==R.id.pb_widget_progress_green&&live ? View.VISIBLE : View.GONE);
+                if(live) {
+                    views.setProgressBar(R.id.pb_widget_progress_green,1000,state.progress,false);
+                    views.setColorStateList(R.id.pb_widget_progress_green,"setProgressTintList",
+                        fill.lightList,fill.darkList);
+                }
+            } else {
+                int selected=progressViewId(state.progressStage);
+                views.setViewVisibility(R.id.widget_progress_container, selected==View.NO_ID ? View.GONE : View.VISIBLE);
+                for(int progressId:PROGRESS)
+                    views.setViewVisibility(progressId,progressId==selected ? View.VISIBLE : View.GONE);
+                if(selected!=View.NO_ID) views.setProgressBar(selected,1000,state.progress,false);
+            }
         }
         switch (variant) {
             case 1:

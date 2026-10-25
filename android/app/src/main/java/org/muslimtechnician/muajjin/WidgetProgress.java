@@ -4,8 +4,13 @@ package org.muslimtechnician.muajjin;
 enum WidgetProgress {
     UNAVAILABLE, GREEN, GOLD, AMBER, SOFT_RED;
 
+    /** True when a live interval may display an elapsed fill at all. */
+    static boolean available(boolean valid, long start, long target, long now) {
+        return valid && target > start && now < target;
+    }
+
     static WidgetProgress at(boolean valid, long start, long target, long now) {
-        if (!valid || target <= start || now >= target) return UNAVAILABLE;
+        if (!available(valid, start, target, now)) return UNAVAILABLE;
         if (now < start) return GREEN;
 
         long duration = target - start;

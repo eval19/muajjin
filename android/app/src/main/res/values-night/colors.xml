@@ -11,6 +11,19 @@
     <color name="w_progress_gold">#CBB568</color>
     <color name="w_progress_amber">#D99A64</color>
     <color name="w_progress_soft_red">#D98C89</color>
+    <!-- Dark progress-fill anchors; same order and indices as res/values. -->
+    <color name="w_progress_fill_0">#369679</color>
+    <color name="w_progress_fill_1">#369679</color>
+    <color name="w_progress_fill_2">#369777</color>
+    <color name="w_progress_fill_3">#359972</color>
+    <color name="w_progress_fill_4">#339D6A</color>
+    <color name="w_progress_fill_5">#31A25B</color>
+    <color name="w_progress_fill_6">#2EAB42</color>
+    <color name="w_progress_fill_7">#39B629</color>
+    <color name="w_progress_fill_8">#6CC423</color>
+    <color name="w_progress_fill_9">#C0D61A</color>
+    <color name="w_progress_fill_10">#EE960F</color>
+    <color name="w_progress_fill_11">#FF0C0C</color>
     <color name="w_warm_text">#FFB74D</color>
     <color name="w_warm_fill">#F59E0B</color>
 </resources>
