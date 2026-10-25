@@ -353,6 +353,16 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.4 makes the home-screen widget progress fill follow a twelve-anchor
+theme palette across the live interval. Both themes start at the app green
+`#369679`; adjacent anchors blend in OKLab and the fill reaches `#FF0C0C` (dark)
+or `#D62828` (light) at the target. The first 1/11 intentionally stays green.
+Only the fill changes: Android 12/API 31+ receives the progression, while
+Android 7–11 keeps the existing four-stage colours. Labels, track, countdowns,
+layouts, notifications and scheduling are unchanged. Runtime checks used the
+native debug host; launcher/keyguard hosts and API <31 devices remain
+unverified.
+
 Version 2.9.3 improves prayer-transition reliability. Display Settings → Widget
 reliability shows exact-alarm and battery-optimization state and links to the
 system screens. The transition alarm re-arms after delivery, and a non-wakeup
@@ -383,8 +393,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.3
-(Android versionCode 293) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.4
+(Android versionCode 294) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -409,7 +419,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.3-293-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.4-294-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

@@ -1,6 +1,6 @@
 # Home-screen widget progress fill: 12-anchor OKLab progression
 
-Status: implemented on `feature/widget-progress-color` (not released, not pushed).
+Status: implemented; first shipped in 2.9.4 (Android versionCode 294).
 Prepared: 2026-10-25. Baseline: `8fa8296` (2.9.3 prerelease evidence).
 
 ## Contract
