@@ -1,5 +1,15 @@
 # Muajjin implementation evidence
 
+## 2.9.4 widget progress fill — 2026-10-25
+
+- Scope: only the filled portion of the five bar-bearing home-screen widgets and its palette resources. Track, labels, keyguard widgets, layouts, countdowns, notifications, calculations, alarms and scheduling are unchanged.
+- Implementation: `WidgetProgressColor` (pure OKLab; 12 anchors at `index/11`, opaque, endpoint-safe), `WidgetProgressPalette` (both theme palettes prepared once per process; one shared light/dark `ColorStateList` pair per dispatch), API 31+ dual-theme `setProgressTintList`. API 24–30 keeps the existing four stages and colours.
+- Verification: `:app:testDebugUnitTest` passed 50 tests, including 13 new colour cases. `:app:lintDebug` reported only the pre-existing `MainActivity` `GestureBackNavigation` error and no findings in changed files. Instrumentation on the owned API 36 emulator in light and dark passed the three new tests (anchors/interiors/boundaries, host configuration selecting the prepared palette without redispatch, reset/duplicate/hidden). The existing presentation matrix reproduced four pre-existing failures identically on an untouched `8fa8296` baseline build. Sampled fill/track contrast minima: light 2.62:1 at anchor 0, dark 2.74:1 at anchor 11. Native captures matched every sampled anchor exactly.
+- Source: commit `6245203` (`chore(release): prepare 2.9.4 (294)`) on `release/2.9.4`; tag `v2.9.4`; `package.json` 2.9.4, Android versionCode 294.
+- Signed workflow run `40190447791` passed; tag-push quality run `40190435553` passed. APK `muajjin-2.9.4-294-github-release.apk`, 4,558,580 bytes, SHA-256 `c644315c1a955981c9bafa0350a2d73140fe7eca13f7bcec80cbd7e23a9363c5`, original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`; package `org.muslimtechnician.muajjin`, version 2.9.4/294, target SDK 36, GitHub mode. `zipalign`, v2/v3 signature and merged-manifest checks passed; no `WidgetTestActivity` is packaged. The anonymous public download matched the uploaded hash.
+- Release: `https://github.com/eval19/muajjin/releases/tag/v2.9.4` published as a **prerelease** with the signed APK and `.sha256`; `/releases/latest` remains v2.9.1, so the in-app updater does not advertise this build.
+- Not verified: real launcher/keyguard hosts, live theme toggles performed by a host, API 24–30 devices, Doze/alarm delivery, battery comparison and physical-device behaviour. No physical device was used.
+
 ## 2.9.3 transition reliability — 2026-10-24
 
 - Scope: exact-alarm/battery status and system-settings links, forced transition/fallback re-arm, one non-wakeup post-target fallback refresh, and next/last transition diagnostics. No countdown, layout, calculation, notification, numeral, or storage-schema change.
