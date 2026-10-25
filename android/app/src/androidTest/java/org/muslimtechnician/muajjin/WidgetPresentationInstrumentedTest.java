@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.text.Layout;
@@ -39,6 +40,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 /** Real RemoteViews in the non-exported native host; never writes app preferences.
  * Run once per externally selected light/dark mode. This is not launcher/keyguard proof. */
@@ -74,6 +76,24 @@ public class WidgetPresentationInstrumentedTest {
         new Profile(0, 160, 96), new Profile(1, 180, 180), new Profile(2, 360, 96),
         new Profile(3, 360, 220), new Profile(4, 360, 320),
         new Profile(5, 180, 96), new Profile(6, 360, 96)
+    };
+    /** Approved anchors, independent of the production helper. */
+    private static final int[] LIGHT_PALETTE = {
+        0xFF369679, 0xFF369679, 0xFF359375, 0xFF338F6B, 0xFF308B5E, 0xFF2C8750,
+        0xFF2B8538, 0xFF3D831C, 0xFF63800F, 0xFF7D790A, 0xFFB36A08, 0xFFD62828
+    };
+    private static final int[] DARK_PALETTE = {
+        0xFF369679, 0xFF369679, 0xFF369777, 0xFF359972, 0xFF339D6A, 0xFF31A25B,
+        0xFF2EAB42, 0xFF39B629, 0xFF6CC423, 0xFFC0D61A, 0xFFEE960F, 0xFFFF0C0C
+    };
+    /** Independently computed OKLab midpoints; index is the segment. */
+    private static final int[] LIGHT_INTERIOR = {
+        0, 0xFF359477, 0xFF349170, 0xFF318D65, 0xFF2E8957, 0xFF2B8645,
+        0xFF35842C, 0xFF528216, 0xFF717D0D, 0xFF997309, 0xFFC6511D, 0
+    };
+    private static final int[] DARK_INTERIOR = {
+        0, 0xFF369778, 0xFF359875, 0xFF349B6E, 0xFF32A063, 0xFF2FA750,
+        0xFF34B137, 0xFF55BD26, 0xFF99CD1F, 0xFFDBB715, 0xFFF9670E, 0
     };
 
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -415,12 +435,18 @@ public class WidgetPresentationInstrumentedTest {
     }
 
     private void verifyProgressPixels(Rendered rendered,ProgressBar progress) {
-        int color;
-        switch(rendered.state.progressStage) {
-            case GOLD:color=R.color.w_progress_gold;break;
-            case AMBER:color=R.color.w_progress_amber;break;
-            case SOFT_RED:color=R.color.w_progress_soft_red;break;
-            default:color=R.color.w_accent;break;
+        int expected;
+        if (Build.VERSION.SDK_INT >= 31) {
+            expected = expectedFill(rendered.context, rendered.state);
+        } else {
+            int color;
+            switch(rendered.state.progressStage) {
+                case GOLD:color=R.color.w_progress_gold;break;
+                case AMBER:color=R.color.w_progress_amber;break;
+                case SOFT_RED:color=R.color.w_progress_soft_red;break;
+                default:color=R.color.w_accent;break;
+            }
+            expected = rendered.context.getColor(color);
         }
         int fillWidth=progress.getWidth()*rendered.state.progress/1000;
         if(fillWidth<px(rendered.context,4)) return;
@@ -431,12 +457,18 @@ public class WidgetPresentationInstrumentedTest {
             int y=bitmap.getHeight()/2;
             boolean rtl=progress.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL;
             int fillX=rtl?bitmap.getWidth()-1-fillWidth/2:fillWidth/2;
-            assertEquals("Native progress fill does not match semantic stage",
-                rendered.context.getColor(color),bitmap.getPixel(fillX,y));
+            assertEquals("Native progress fill does not match the semantic stage",
+                expected,bitmap.getPixel(fillX,y));
             if(bitmap.getWidth()-fillWidth>=px(rendered.context,4))
                 assertEquals("Stage recolored or removed the track",rendered.context.getColor(R.color.w_track),
                     bitmap.getPixel(rtl?(bitmap.getWidth()-fillWidth)/2:(fillWidth+bitmap.getWidth())/2,y));
         } finally {bitmap.recycle();}
+    }
+
+    private static int expectedFill(Context context, PrayerWidgetHelper.WidgetTimelineState state) {
+        WidgetProgressColor.Palette palette = "dark".equals(theme(context))
+            ? WidgetProgressPalette.dark(context) : WidgetProgressPalette.light(context);
+        return WidgetProgressColor.sample(palette, state.startTimestamp, state.targetTimestamp, state.now);
     }
 
     private void verify(Rendered rendered, String language, float scale) {
@@ -484,6 +516,9 @@ public class WidgetPresentationInstrumentedTest {
                 available?View.VISIBLE:View.GONE,root.findViewById(R.id.widget_progress_container).getVisibility());
             if(available) {
             assertNotNull(progress);
+            if (Build.VERSION.SDK_INT >= 31)
+                assertEquals("API 31+ owns the fill through the shared green bar",
+                    R.id.pb_widget_progress_green, progress.getId());
             assertEquals(1000,progress.getMax());assertEquals(s.progress,progress.getProgress());
             verifyProgressPixels(rendered,progress);
             Rect bar = bounds(root, progress), countdown = bounds(root, clock);
@@ -539,6 +574,321 @@ public class WidgetPresentationInstrumentedTest {
         if (s.valid && (p.variant==2 || p.variant==3 || p.variant==4 || p.variant==6))
             verifyColumnSeparation(rendered);
         verifyTextGeometry(root, root);
+    }
+
+    /** Native-host proof of the sampled fill; never a production preview override. */
+    @Test public void approvedPaletteDrivesEveryAnchorAndInteriorOnTheNewPath() throws Exception {
+        assumeTrue("Sampled fill requires API 31+", Build.VERSION.SDK_INT >= 31);
+        openHost();
+        try {
+            assertApprovedPalettes();
+            auditFillContrast();
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (boolean night : new boolean[]{false, true}) {
+                        Context context = themed(night);
+                        int[] anchors = night ? DARK_PALETTE : LIGHT_PALETTE;
+                        int[] interior = night ? DARK_INTERIOR : LIGHT_INTERIOR;
+                        // Anchor 11 is sampled just before the target: the live
+                        // timeline advances at the exact boundary, so an expired
+                        // frame is helper-only.
+                        for (int anchor = 0; anchor <= 11; anchor++) {
+                            long now = anchor == 11 ? day.asr - 1
+                                : day.dhuhr + Math.round((day.asr - day.dhuhr) * (anchor / 11.0));
+                            Rendered rendered = render(NORMAL[0], context,
+                                stateAt(context, now, "en"));
+                            assertProgressFill(rendered, anchors[anchor], 1);
+                            if (capture) capture(rendered,
+                                "progress-" + (night ? "dark" : "light") + "-anchor" + anchor);
+                            surface.removeView(rendered.host);
+                        }
+                        for (int segment = 1; segment <= 10; segment++) {
+                            Rendered rendered = renderVariant(context, 0, (segment + 0.5) / 11.0, "en");
+                            assertProgressFill(rendered, interior[segment], 1);
+                            surface.removeView(rendered.host);
+                        }
+                        for (double fraction : new double[]{0, 0.02, 0.5, 0.98}) {
+                            Rendered rendered = renderVariant(context, 0, fraction, "en");
+                            assertProgressFill(rendered, expectedFill(context, rendered.state), 1);
+                            surface.removeView(rendered.host);
+                        }
+                        for (int variant = 0; variant < 5; variant++) {
+                            for (String language : new String[]{"en", "ar"}) {
+                                Rendered rendered = renderVariant(context, variant, 6.5 / 11.0, language);
+                                assertProgressFill(rendered, expectedFill(context, rendered.state), 1);
+                                surface.removeView(rendered.host);
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("progress-palette", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("Sampled progress-fill defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    @Test public void hostConfigurationSelectsThePaletteWithoutAnotherDispatch() throws Exception {
+        assumeTrue("Sampled fill requires API 31+", Build.VERSION.SDK_INT >= 31);
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    Context light = themed(false), dark = themed(true);
+                    PrayerWidgetHelper.WidgetTimelineState state = fractionState(light, 6.5 / 11.0, "en");
+                    RemoteViews remote = PrayerWidgetHelper.createWidgetViews(light, state, 0, 160, 96);
+                    Rendered lightRender = renderRemote(remote, light, state);
+                    Rendered darkRender = renderRemote(remote, dark, state);
+                    int lightExpected = WidgetProgressColor.sample(WidgetProgressPalette.light(light),
+                        state.startTimestamp, state.targetTimestamp, state.now);
+                    int darkExpected = WidgetProgressColor.sample(WidgetProgressPalette.dark(light),
+                        state.startTimestamp, state.targetTimestamp, state.now);
+                    assertTrue("Approved palettes must differ mid-interval", lightExpected != darkExpected);
+                    assertProgressFill(lightRender, lightExpected, 0);
+                    assertProgressFill(darkRender, darkExpected, 0);
+                    assertEquals("Host theme must not change elapsed fill",
+                        lightRender.state.progress, darkRender.state.progress);
+                    remote.reapply(dark, darkRender.root);
+                    assertProgressFill(darkRender, darkExpected, 0);
+                    if (capture) {
+                        capture(lightRender, "progress-theme-light-host");
+                        capture(darkRender, "progress-theme-dark-host");
+                    }
+                    surface.removeView(lightRender.host);
+                    surface.removeView(darkRender.host);
+                } catch (Throwable error) {
+                    record("progress-theme", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("Theme-qualified fill defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    @Test public void reapplyResetsUrgentFillAndHidesUnavailableBars() throws Exception {
+        assumeTrue("Sampled fill requires API 31+", Build.VERSION.SDK_INT >= 31);
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    Context context = themed(false);
+                    PrayerWidgetHelper.WidgetTimelineState urgent = fractionState(context, 0.995, "en");
+                    int urgentColor = expectedFill(context, urgent);
+                    assertChannelDelta("Near-target fill", LIGHT_PALETTE[11], urgentColor, 12);
+                    Rendered rendered = render(NORMAL[0], context, urgent);
+                    assertProgressFill(rendered, urgentColor, 0);
+                    PrayerWidgetHelper.WidgetTimelineState fresh = fractionState(context, 0.02, "en");
+                    int freshColor = expectedFill(context, fresh);
+                    Rendered other = render(NORMAL[0], context, fresh);
+                    assertProgressFill(other, freshColor, 0);
+
+                    RemoteViews next = PrayerWidgetHelper.createWidgetViews(context, fresh, 0, 160, 96);
+                    assertEquals("Reapply needs the same composition", rendered.layoutId, next.getLayoutId());
+                    next.reapply(context, rendered.root);
+                    layoutHost(rendered.host, context, rendered.profile);
+                    Rendered rebound = new Rendered(context, rendered.profile, rendered.host,
+                        rendered.root, fresh, next.getLayoutId());
+                    assertProgressFill(rebound, freshColor, 0);
+                    assertProgressFill(other, freshColor, 0);
+
+                    PrayerWidgetHelper.WidgetTimelineState invalid = state(context, "en", "invalid");
+                    RemoteViews none = PrayerWidgetHelper.createWidgetViews(context, invalid, 0, 160, 96);
+                    none.reapply(context, rendered.root);
+                    layoutHost(rendered.host, context, rendered.profile);
+                    assertEquals("Unavailable data must hide the bar",
+                        View.GONE, rendered.root.findViewById(R.id.widget_progress_container).getVisibility());
+                    for (int id : PROGRESS)
+                        assertEquals("Unavailable data left a live bar", View.GONE,
+                            rendered.root.findViewById(id).getVisibility());
+                    if (capture) capture(rebound, "progress-reset-after-urgent");
+                    surface.removeView(rendered.host);
+                    surface.removeView(other.host);
+                } catch (Throwable error) {
+                    record("progress-reset", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("Fill reset defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    private void openHost() {
+        target = instrumentation.getTargetContext();
+        assertTrue("Only the disposable debug application may host synthetic widgets",
+            target.getPackageName().endsWith(".debug"));
+        capture = Boolean.parseBoolean(
+            InstrumentationRegistry.getArguments().getString("captureWidgetDesign", "false"));
+        prepareSchedule(Calendar.OCTOBER, 13);
+        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        instrumentation.runOnMainSync(() -> {
+            surface = new FrameLayout(activity);
+            activity.setContentView(surface);
+        });
+    }
+
+    private void closeHost() {
+        if (activity != null) instrumentation.runOnMainSync(() -> {
+            if (surface != null) surface.removeAllViews();
+            activity.finish();
+        });
+        activity = null;
+        surface = null;
+    }
+
+    /** Host-like configuration for fill selection; only the night bit differs. */
+    private Context themed(boolean night) {
+        Configuration configuration = new Configuration(target.getResources().getConfiguration());
+        configuration.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK)
+            | (night ? Configuration.UI_MODE_NIGHT_YES : Configuration.UI_MODE_NIGHT_NO);
+        return target.createConfigurationContext(configuration);
+    }
+
+    private PrayerWidgetHelper.WidgetTimelineState fractionState(Context context, double fraction,
+                                                                String language) throws Exception {
+        long start = day.dhuhr, targetMs = day.asr;
+        return stateAt(context, start + Math.round((targetMs - start) * fraction), language);
+    }
+
+    private PrayerWidgetHelper.WidgetTimelineState stateAt(Context context, long now, String language)
+            throws Exception {
+        long start = day.dhuhr, targetMs = day.asr;
+        PrayerTimeline timeline = PrayerTimeline.at(schedule, now, zone);
+        assertNotNull("Fraction left the Dhuhr interval", timeline);
+        assertEquals("Fixture must keep the same interval", start, timeline.start);
+        assertEquals("Fixture must keep the same target", targetMs, timeline.target);
+        long[] localEvents = schedule.localEvents(now, zone, timeline.day);
+        return new PrayerWidgetHelper.WidgetTimelineState(context, presentation(language, "midday"),
+            timeline, now, localEvents, context.getResources().getConfiguration().getLocales().get(0));
+    }
+
+    private Rendered renderVariant(Context context, int variant, double fraction, String language)
+            throws Exception {
+        return render(NORMAL[variant], context, fractionState(context, fraction, language));
+    }
+
+    private Rendered renderRemote(RemoteViews remote, Context context,
+                                  PrayerWidgetHelper.WidgetTimelineState state) {
+        Profile profile = NORMAL[0];
+        FrameLayout host = new FrameLayout(context);
+        host.setBackgroundColor("dark".equals(theme(context)) ? 0xff182030 : 0xffe0d6c2);
+        View applied = remote.apply(context, host);
+        assertNotNull("RemoteViews did not inflate", applied);
+        host.addView(applied, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        surface.addView(host, new FrameLayout.LayoutParams(
+            px(context, profile.width), px(context, profile.height)));
+        layoutHost(host, context, profile);
+        ViewGroup root = applied.findViewById(ROOTS[0]);
+        assertNotNull("Theme host lost the variant root", root);
+        return new Rendered(context, profile, host, root, state, remote.getLayoutId());
+    }
+
+    private void assertProgressFill(Rendered rendered, int expected, int tolerance) {
+        ViewGroup root = rendered.root;
+        ProgressBar visible = null;
+        int count = 0;
+        for (int id : PROGRESS) {
+            ProgressBar bar = root.findViewById(id);
+            if (bar.getVisibility() == View.VISIBLE) {
+                visible = bar;
+                count++;
+            }
+        }
+        assertEquals("Exactly one bar is live", 1, count);
+        assertEquals("API 31+ uses the shared green bar",
+            R.id.pb_widget_progress_green, visible.getId());
+        assertEquals("Progress scale changed", 1000, visible.getMax());
+        assertEquals("Progress value changed", rendered.state.progress, visible.getProgress());
+        int fillWidth = visible.getWidth() * rendered.state.progress / 1000;
+        Bitmap bitmap = Bitmap.createBitmap(visible.getWidth(), visible.getHeight(),
+            Bitmap.Config.ARGB_8888);
+        try {
+            visible.jumpDrawablesToCurrentState();
+            visible.draw(new Canvas(bitmap));
+            int y = bitmap.getHeight() / 2;
+            boolean rtl = visible.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            if (fillWidth >= px(rendered.context, 4)) {
+                int x = rtl ? bitmap.getWidth() - 1 - fillWidth / 2 : fillWidth / 2;
+                assertChannelDelta("Fill at progress " + rendered.state.progress,
+                    expected, bitmap.getPixel(x, y), tolerance);
+            }
+            if (bitmap.getWidth() - fillWidth >= px(rendered.context, 4)) {
+                int x = rtl ? (bitmap.getWidth() - fillWidth) / 2
+                    : (fillWidth + bitmap.getWidth()) / 2;
+                assertEquals("Track must not be tinted",
+                    rendered.context.getColor(R.color.w_track), bitmap.getPixel(x, y));
+            }
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private void assertApprovedPalettes() {
+        assertPalette("light", WidgetProgressPalette.light(target), LIGHT_PALETTE);
+        assertPalette("dark", WidgetProgressPalette.dark(target), DARK_PALETTE);
+        assertTrue("Both themes must not resolve to one prepared palette",
+            LIGHT_PALETTE[2] != DARK_PALETTE[2]);
+    }
+
+    private void assertPalette(String name, WidgetProgressColor.Palette palette, int[] expected) {
+        assertEquals("Prepared anchors", 12, palette.size());
+        for (int i = 0; i < expected.length; i++)
+            assertEquals(name + " palette anchor " + i, expected[i], palette.colorAt(i));
+    }
+
+    private void auditFillContrast() {
+        for (boolean night : new boolean[]{false, true}) {
+            Context context = themed(night);
+            int track = context.getColor(R.color.w_track);
+            int[] anchors = night ? DARK_PALETTE : LIGHT_PALETTE;
+            int[] interior = night ? DARK_INTERIOR : LIGHT_INTERIOR;
+            double minimum = Double.MAX_VALUE;
+            String where = "";
+            for (int i = 0; i < anchors.length; i++) {
+                double ratio = contrast(anchors[i], track);
+                if (ratio < minimum) {
+                    minimum = ratio;
+                    where = "anchor " + i;
+                }
+            }
+            for (int segment = 1; segment <= 10; segment++) {
+                double ratio = contrast(interior[segment], track);
+                if (ratio < minimum) {
+                    minimum = ratio;
+                    where = "segment " + segment + " midpoint";
+                }
+            }
+            audit("progress-contrast theme=" + (night ? "dark" : "light")
+                + " min=" + String.format(Locale.US, "%.2f", minimum) + " at " + where);
+        }
+    }
+
+    private static double contrast(int first, int second) {
+        double a = luminance(first), b = luminance(second);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
+    private static double luminance(int color) {
+        return 0.2126 * linearChannel(color >> 16) + 0.7152 * linearChannel(color >> 8)
+            + 0.0722 * linearChannel(color);
+    }
+
+    private static double linearChannel(int raw) {
+        double value = (raw & 0xFF) / 255.0;
+        return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+    }
+
+    private static void assertChannelDelta(String message, int expected, int actual, int tolerance) {
+        for (int shift : new int[]{16, 8, 0}) {
+            int delta = Math.abs(((expected >> shift) & 0xFF) - ((actual >> shift) & 0xFF));
+            assertTrue(message + " expected " + Integer.toHexString(expected) + " but was "
+                + Integer.toHexString(actual), delta <= tolerance);
+        }
     }
 
     private void verifyColumnSeparation(Rendered rendered) {
