@@ -1,6 +1,7 @@
 # Home-screen widget progress fill: 12-anchor OKLab progression
 
-Status: palette revision prepared for 2.9.5 (Android versionCode 295).
+Status: published in [2.9.5 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.5)
+(Android versionCode 295); signed-build and download evidence is in `tasks/evidence.md`.
 The runtime progression first shipped in 2.9.4 (Android versionCode 294).
 Original implementation prepared: 2026-10-25; baseline `8fa8296`.
 
