@@ -1,7 +1,8 @@
 # Home-screen widget progress fill: 12-anchor OKLab progression
 
-Status: implemented; first shipped in 2.9.4 (Android versionCode 294).
-Prepared: 2026-10-25. Baseline: `8fa8296` (2.9.3 prerelease evidence).
+Status: palette revision prepared for 2.9.5 (Android versionCode 295).
+The runtime progression first shipped in 2.9.4 (Android versionCode 294).
+Original implementation prepared: 2026-10-25; baseline `8fa8296`.
 
 ## Contract
 
@@ -20,8 +21,9 @@ colour   = mixOKLab(palette[floor(position)], palette[floor(position)+1],
 
 - Twelve anchors at `index/11`, i.e. eleven equal segments. No 45/50% hold, no
   90/40-minute cap, no old stage thresholds on the new path.
-- Anchors 0 and 1 are both `#369679`, so the first 1/11 of every interval stays
-  the app green. The fill is absent at the exact start (progress 0).
+- Anchors 0 and 1 reference `w_accent`: `#5FD3B5` dark / `#0B6E5B` light,
+  exactly matching current-prayer text through the first 1/11 of each interval.
+  The fill is absent at the exact start (progress 0).
 - `now <= start` returns the first anchor and `now >= target` the last, so the
   helper never indexes a thirteenth colour. `target <= start` returns the first
   anchor without dividing; the renderer still hides invalid intervals.
@@ -33,26 +35,31 @@ Approved palettes (opaque; `res/values` and `res/values-night` hold the same
 
 | # | dark | light |
 |---:|---|---|
-| 0 | `#369679` | `#369679` |
-| 1 | `#369679` | `#369679` |
-| 2 | `#369777` | `#359375` |
-| 3 | `#359972` | `#338F6B` |
-| 4 | `#339D6A` | `#308B5E` |
-| 5 | `#31A25B` | `#2C8750` |
-| 6 | `#2EAB42` | `#2B8538` |
-| 7 | `#39B629` | `#3D831C` |
-| 8 | `#6CC423` | `#63800F` |
-| 9 | `#C0D61A` | `#7D790A` |
-| 10 | `#EE960F` | `#B36A08` |
-| 11 | `#FF0C0C` | `#D62828` |
+| 0 | `#5FD3B5` | `#0B6E5B` |
+| 1 | `#5FD3B5` | `#0B6E5B` |
+| 2 | `#89D3A1` | `#4D7D58` |
+| 3 | `#AAD38C` | `#778B52` |
+| 4 | `#C7D173` | `#9E9948` |
+| 5 | `#E1CF53` | `#C4A636` |
+| 6 | `#FACC15` | `#EAB308` |
+| 7 | `#FBB929` | `#F0A824` |
+| 8 | `#FCA634` | `#F69D32` |
+| 9 | `#FB923C` | `#FB923C` |
+| 10 | `#F66F41` | `#ED6431` |
+| 11 | `#EF4444` | `#DC2626` |
 
-The first green intentionally matches the app primary, not the widget label
-(`w_accent` stays `#5FD3B5` dark / `#0B6E5B` light). Sampled contrast against
-the unchanged track (`#34403A` dark, `#D5DDD9` light) is 2.99:1 at dark anchor 0,
-2.62:1 at light anchor 0, 2.74:1 at the dark red endpoint and 2.68:1 for the
-light segment-1 midpoint (WCAG relative-luminance ratio). Those early values
-below 3:1 are accepted to preserve the exact app-colour match; contrast is
-reported, never auto-corrected.
+The selected controls hold prayer-text green through 9.09%, reach yellow at
+54.55%, shared orange at 81.82%, and red at 100%. Other literals were derived
+with the existing OKLab conversion and rounding: indices 2–5 mix green→yellow
+at `(index-1)/5`; 7–8 mix yellow→orange at `(index-6)/3`; 10 is orange→red at
+`1/2`. No generator is retained in production; numerical midpoint references
+were computed independently in double precision from the published matrices.
+
+Among 221 equally spaced production samples per theme, minimum WCAG
+relative-luminance contrast against the unchanged track (`#34403A` dark,
+`#D5DDD9` light) is 1.39:1 at light yellow and 2.88:1 at the dark red endpoint.
+These are weak fill/track contrasts, not a 3:1 pass. The exact selected colours
+are retained without changing the track or silently darkening the palette.
 
 ## Rendering
 
@@ -73,8 +80,7 @@ reported, never auto-corrected.
   separate `@android:id/background` layer and is never tinted.
 - API 24–30: unchanged four-stage behaviour (`WidgetProgress` thresholds,
   `w_accent`/`w_progress_gold`/`w_progress_amber`/`w_progress_soft_red`). These
-  devices do **not** receive the new progression and do not get the new
-  starting green.
+  devices do **not** receive the new yellow→orange→red progression.
 - The helper endpoint is exactly red, but a live timeline advances at the
   boundary; a widget need not display a full-red frame before resetting.
 
@@ -89,7 +95,37 @@ the current colour immediately. No frame animation or catch-up replay exists.
 Some theme-change latency remains possible when the host delays re-applying
 RemoteViews, but the dual-theme tint list means no app-side dispatch is needed.
 
-## Verification (performed)
+## Palette revision verification (2026-10-27)
+
+Using the existing isolated JDK 21, SDK 36 and Gradle cache, from `android/`:
+
+```
+gradlew.bat :app:testDebugUnitTest --tests org.muslimtechnician.muajjin.WidgetProgressColorTest --offline --no-daemon
+gradlew.bat :app:testDebugUnitTest :app:assembleDebugAndroidTest --offline --no-daemon --console=plain
+```
+
+- Focused colour suite: 13 tests passed. Integrated native suite: 50 tests,
+  zero failures/errors/skips; instrumentation APK assembled successfully.
+- Disposable package-local Java main compiled the unchanged production sampler
+  and checked resolved resource literals. Interval start `1800000000000`,
+  duration `6600000` ms: elapsed 0/300000/600000 returned exact theme green;
+  3600000 returned exact theme yellow; 5400000 returned `#FB923C` for both;
+  6599999 and 6600000 returned the exact selected endpoint reds. A new interval
+  beginning at the old target returned green.
+- Dense output: 221 samples per theme inspected as swatches; green→yellow→
+  orange→red without a visible reversal. Transitional shades remain inherent
+  to OKLab interpolation; this is not an Android pixel capture.
+- Rendered assertions retain independent midpoints, variants/RTL, theme
+  selection, reset and hidden-invalid-bar coverage. Initial hold/reset now
+  compare to `w_accent`; host-theme checks use the distinct selected yellows.
+  Removed the resource-array-copy checks; no tolerance was increased.
+- ADB reported no connected devices. No emulator was started, app installed,
+  permission changed, or instrumentation executed. Actual Android pixels for
+  this revision remain unverified; the historical captures below used the
+  superseded palette. Existing flatDir, SDK XML and Gradle deprecation warnings
+  remain. No signing, publication or dependency installation was performed.
+
+## Original progression verification (2026-10-25; superseded palette)
 
 Toolchain: isolated `.tools/jdk-21.0.12.1+1`, `.tools/android-sdk` (platform 36,
 build-tools 36.0.0), `GRADLE_USER_HOME=.tools/gradle-cache`, checked-in Gradle

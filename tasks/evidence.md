@@ -1,5 +1,15 @@
 # Muajjin implementation evidence
 
+## 2.9.5 widget progress palette — 2026-10-27 (release preparation)
+
+- Release approval: prepare/push `release/2.9.5` and tag `v2.9.5`, version 2.9.5/295; build/sign with the existing GitHub workflow/secrets; verify and publish a prerelease containing only the signed APK and checksum. Prior releases and stable-latest selection stay unchanged; unrelated untracked files are excluded. Publication evidence is recorded after completion.
+- Scope: only modern `w_progress_fill_0..11` resources/comments in both themes and affected numerical/rendered assertions; runtime sampler, theme resolver, widget helper, geometry, scheduling and API 24–30 legacy stages are unchanged.
+- Selected controls: light `#0B6E5B → #EAB308 → #FB923C → #DC2626`; dark `#5FD3B5 → #FACC15 → #FB923C → #EF4444`. Green holds through index 1, yellow is index 6, orange index 9, red index 11; both initial resources reference `w_accent`. Intermediate literals were generated with the existing production OKLab conversion in a disposable Java helper; midpoint expectations used an independent double-precision implementation.
+- Verification: checked-in `gradlew.bat` with existing JDK21/SDK36, offline; focused `WidgetProgressColorTest` passed all 13 cases; integrated `:app:testDebugUnitTest :app:assembleDebugAndroidTest` passed all 50 native unit tests (zero failures/errors/skips) and instrumentation-APK assembly. Existing flatDir, SDK XML and Gradle deprecation warnings remain.
+- Runtime smoke: actual compiled production sampler, start `1800000000000`, duration `6600000` ms. Elapsed 0/300000/600000 gives exact theme green; 3600000 exact theme yellow; 5400000 exact shared orange; 6599999/6600000 exact selected red. New-interval reset returns green. Inspected 221 production samples per theme as dense swatches; no visible progression reversal.
+- Contrast limitation: sampled minimum fill/unchanged-track ratios are light **1.39:1** at yellow and dark **2.88:1** at the red endpoint, below 3:1. Exact selected colours were retained; no track substitution or tolerance increase.
+- Android pixel limit: ADB listed no connected device; no emulator was started and instrumentation was not run. Rendered hold/accent, selected yellow/orange/red, independent midpoints, host-theme switch, reset, RTL/variants and hidden-invalid-bar assertions compile but their pixels remain unverified for this palette. Historical 2.9.4 captures below do not verify this revision. No installation, signing or publication.
+
 ## 2.9.4 widget progress fill — 2026-10-25
 
 - Scope: only the filled portion of the five bar-bearing home-screen widgets and its palette resources. Track, labels, keyguard widgets, layouts, countdowns, notifications, calculations, alarms and scheduling are unchanged.

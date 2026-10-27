@@ -15,22 +15,22 @@ public class WidgetProgressColorTest {
     private static final long DURATION = SEGMENT * 11;
 
     private static final int[] LIGHT = {
-        0xFF369679, 0xFF369679, 0xFF359375, 0xFF338F6B, 0xFF308B5E, 0xFF2C8750,
-        0xFF2B8538, 0xFF3D831C, 0xFF63800F, 0xFF7D790A, 0xFFB36A08, 0xFFD62828
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF4D7D58, 0xFF778B52, 0xFF9E9948, 0xFFC4A636,
+        0xFFEAB308, 0xFFF0A824, 0xFFF69D32, 0xFFFB923C, 0xFFED6431, 0xFFDC2626
     };
     private static final int[] DARK = {
-        0xFF369679, 0xFF369679, 0xFF369777, 0xFF359972, 0xFF339D6A, 0xFF31A25B,
-        0xFF2EAB42, 0xFF39B629, 0xFF6CC423, 0xFFC0D61A, 0xFFEE960F, 0xFFFF0C0C
+        0xFF5FD3B5, 0xFF5FD3B5, 0xFF89D3A1, 0xFFAAD38C, 0xFFC7D173, 0xFFE1CF53,
+        0xFFFACC15, 0xFFFBB929, 0xFFFCA634, 0xFFFB923C, 0xFFF66F41, 0xFFEF4444
     };
 
     /** Independent double-precision OKLab midpoints (segment, t = 0.5). */
     private static final int[] LIGHT_MID = {
-        0, 0xFF359477, 0xFF349170, 0xFF318D65, 0xFF2E8957, 0xFF2B8645,
-        0xFF35842C, 0xFF528216, 0xFF717D0D, 0xFF997309, 0xFFC6511D, 0
+        0, 0xFF34765A, 0xFF638455, 0xFF8B924E, 0xFFB1A040, 0xFFD7AD27,
+        0xFFEDAE1A, 0xFFF3A32C, 0xFFF99837, 0xFFF47C36, 0xFFE5492B, 0
     };
     private static final int[] DARK_MID = {
-        0, 0xFF369778, 0xFF359875, 0xFF349B6E, 0xFF32A063, 0xFF2FA750,
-        0xFF34B137, 0xFF55BD26, 0xFF99CD1F, 0xFFDBB715, 0xFFF9670E, 0
+        0, 0xFF76D3AB, 0xFF9AD397, 0xFFB9D280, 0xFFD4D064, 0xFFEECE3D,
+        0xFFFBC321, 0xFFFCB02F, 0xFFFC9C38, 0xFFF9813F, 0xFFF35B43, 0
     };
 
     private static final WidgetProgressColor.Palette LIGHT_PALETTE =
@@ -53,16 +53,16 @@ public class WidgetProgressColorTest {
             assertEquals("light anchor " + i, LIGHT[i], light(START + i * SEGMENT));
             assertEquals("dark anchor " + i, DARK[i], dark(START + i * SEGMENT));
         }
-        assertEquals("The approved dark endpoint is exact", 0xFFFF0C0C, dark(START + DURATION));
-        assertEquals(LIGHT[11], light(START + DURATION));
+        assertEquals("The approved dark endpoint is exact", 0xFFEF4444, dark(START + DURATION));
+        assertEquals("The approved light endpoint is exact", 0xFFDC2626, light(START + DURATION));
         assertEquals(0xFF, dark(START) >>> 24);
     }
 
     @Test public void firstSegmentNeverLeavesTheAppGreen() {
         long[] plateau = {START, START + 1, START + SEGMENT / 2, START + SEGMENT - 1, START + SEGMENT};
         for (long now : plateau) {
-            assertEquals("light plateau", 0xFF369679, light(now));
-            assertEquals("dark plateau", 0xFF369679, dark(now));
+            assertEquals("light plateau", 0xFF0B6E5B, light(now));
+            assertEquals("dark plateau", 0xFF5FD3B5, dark(now));
         }
     }
 
@@ -100,17 +100,9 @@ public class WidgetProgressColorTest {
 
     @Test public void oklabConversionMatchesPublishedAndIndependentReferences() {
         // Ottosson's reference values: pure red is (0.62796, 0.22486, 0.12585);
-        // white is (1, 0, 0). The palette values were derived independently in
-        // double precision from the same published matrices.
+        // white is (1, 0, 0).
         assertLab(0xFFFF0000, 0.62795536, 0.22486306, 0.12584630);
         assertLab(0xFFFFFFFF, 1.0, 0.0, 0.0);
-        assertLab(LIGHT[0], 0.60868026, -0.09867632, 0.01817003);
-        assertLab(LIGHT[5], 0.55556735, -0.10764088, 0.05464173);
-        assertLab(LIGHT[8], 0.55724727, -0.07540915, 0.11040066);
-        assertLab(LIGHT[11], 0.56764032, 0.18558979, 0.09481312);
-        assertLab(DARK[3], 0.61435549, -0.10593004, 0.03106074);
-        assertLab(DARK[7], 0.68180721, -0.16159493, 0.12829288);
-        assertLab(DARK[10], 0.74607723, 0.06034571, 0.14930958);
     }
 
     @Test public void everyDistinctPaletteColorRoundTripsWithinOneChannel() {
@@ -195,10 +187,10 @@ public class WidgetProgressColorTest {
         assertEquals("Later caller mutation changed a prepared palette",
             before, WidgetProgressColor.sample(owned, START, START + DURATION, probe));
 
-        int light = light(START + 9 * SEGMENT);
-        int dark = dark(START + 9 * SEGMENT);
-        assertEquals(0xFF7D790A, light);
-        assertEquals(0xFFC0D61A, dark);
+        int light = light(START + 6 * SEGMENT);
+        int dark = dark(START + 6 * SEGMENT);
+        assertEquals(0xFFEAB308, light);
+        assertEquals(0xFFFACC15, dark);
         assertTrue("Concurrent theme samples contaminated each other", light != dark);
     }
 

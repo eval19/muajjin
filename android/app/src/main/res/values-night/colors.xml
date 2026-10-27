@@ -11,19 +11,20 @@
     <color name="w_progress_gold">#CBB568</color>
     <color name="w_progress_amber">#D99A64</color>
     <color name="w_progress_soft_red">#D98C89</color>
-    <!-- Dark progress-fill anchors; same order and indices as res/values. -->
-    <color name="w_progress_fill_0">#369679</color>
-    <color name="w_progress_fill_1">#369679</color>
-    <color name="w_progress_fill_2">#369777</color>
-    <color name="w_progress_fill_3">#359972</color>
-    <color name="w_progress_fill_4">#339D6A</color>
-    <color name="w_progress_fill_5">#31A25B</color>
-    <color name="w_progress_fill_6">#2EAB42</color>
-    <color name="w_progress_fill_7">#39B629</color>
-    <color name="w_progress_fill_8">#6CC423</color>
-    <color name="w_progress_fill_9">#C0D61A</color>
-    <color name="w_progress_fill_10">#EE960F</color>
-    <color name="w_progress_fill_11">#FF0C0C</color>
+    <!-- Dark OKLab anchors: prayer-text green through index 1, yellow at 6,
+         orange at 9 and red at 11; equal index/11 positions as res/values. -->
+    <color name="w_progress_fill_0">@color/w_accent</color>
+    <color name="w_progress_fill_1">@color/w_accent</color>
+    <color name="w_progress_fill_2">#89D3A1</color>
+    <color name="w_progress_fill_3">#AAD38C</color>
+    <color name="w_progress_fill_4">#C7D173</color>
+    <color name="w_progress_fill_5">#E1CF53</color>
+    <color name="w_progress_fill_6">#FACC15</color>
+    <color name="w_progress_fill_7">#FBB929</color>
+    <color name="w_progress_fill_8">#FCA634</color>
+    <color name="w_progress_fill_9">#FB923C</color>
+    <color name="w_progress_fill_10">#F66F41</color>
+    <color name="w_progress_fill_11">#EF4444</color>
     <color name="w_warm_text">#FFB74D</color>
     <color name="w_warm_fill">#F59E0B</color>
 </resources>

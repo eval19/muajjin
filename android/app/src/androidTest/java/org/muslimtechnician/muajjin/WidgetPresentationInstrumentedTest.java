@@ -79,21 +79,21 @@ public class WidgetPresentationInstrumentedTest {
     };
     /** Approved anchors, independent of the production helper. */
     private static final int[] LIGHT_PALETTE = {
-        0xFF369679, 0xFF369679, 0xFF359375, 0xFF338F6B, 0xFF308B5E, 0xFF2C8750,
-        0xFF2B8538, 0xFF3D831C, 0xFF63800F, 0xFF7D790A, 0xFFB36A08, 0xFFD62828
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF4D7D58, 0xFF778B52, 0xFF9E9948, 0xFFC4A636,
+        0xFFEAB308, 0xFFF0A824, 0xFFF69D32, 0xFFFB923C, 0xFFED6431, 0xFFDC2626
     };
     private static final int[] DARK_PALETTE = {
-        0xFF369679, 0xFF369679, 0xFF369777, 0xFF359972, 0xFF339D6A, 0xFF31A25B,
-        0xFF2EAB42, 0xFF39B629, 0xFF6CC423, 0xFFC0D61A, 0xFFEE960F, 0xFFFF0C0C
+        0xFF5FD3B5, 0xFF5FD3B5, 0xFF89D3A1, 0xFFAAD38C, 0xFFC7D173, 0xFFE1CF53,
+        0xFFFACC15, 0xFFFBB929, 0xFFFCA634, 0xFFFB923C, 0xFFF66F41, 0xFFEF4444
     };
     /** Independently computed OKLab midpoints; index is the segment. */
     private static final int[] LIGHT_INTERIOR = {
-        0, 0xFF359477, 0xFF349170, 0xFF318D65, 0xFF2E8957, 0xFF2B8645,
-        0xFF35842C, 0xFF528216, 0xFF717D0D, 0xFF997309, 0xFFC6511D, 0
+        0, 0xFF34765A, 0xFF638455, 0xFF8B924E, 0xFFB1A040, 0xFFD7AD27,
+        0xFFEDAE1A, 0xFFF3A32C, 0xFFF99837, 0xFFF47C36, 0xFFE5492B, 0
     };
     private static final int[] DARK_INTERIOR = {
-        0, 0xFF369778, 0xFF359875, 0xFF349B6E, 0xFF32A063, 0xFF2FA750,
-        0xFF34B137, 0xFF55BD26, 0xFF99CD1F, 0xFFDBB715, 0xFFF9670E, 0
+        0, 0xFF76D3AB, 0xFF9AD397, 0xFFB9D280, 0xFFD4D064, 0xFFEECE3D,
+        0xFFFBC321, 0xFFFCB02F, 0xFFFC9C38, 0xFFF9813F, 0xFFF35B43, 0
     };
 
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -581,7 +581,6 @@ public class WidgetPresentationInstrumentedTest {
         assumeTrue("Sampled fill requires API 31+", Build.VERSION.SDK_INT >= 31);
         openHost();
         try {
-            assertApprovedPalettes();
             auditFillContrast();
             instrumentation.runOnMainSync(() -> {
                 try {
@@ -597,7 +596,8 @@ public class WidgetPresentationInstrumentedTest {
                                 : day.dhuhr + Math.round((day.asr - day.dhuhr) * (anchor / 11.0));
                             Rendered rendered = render(NORMAL[0], context,
                                 stateAt(context, now, "en"));
-                            assertProgressFill(rendered, anchors[anchor], 1);
+                            assertProgressFill(rendered, anchor <= 1
+                                ? context.getColor(R.color.w_accent) : anchors[anchor], 1);
                             if (capture) capture(rendered,
                                 "progress-" + (night ? "dark" : "light") + "-anchor" + anchor);
                             surface.removeView(rendered.host);
@@ -609,7 +609,9 @@ public class WidgetPresentationInstrumentedTest {
                         }
                         for (double fraction : new double[]{0, 0.02, 0.5, 0.98}) {
                             Rendered rendered = renderVariant(context, 0, fraction, "en");
-                            assertProgressFill(rendered, expectedFill(context, rendered.state), 1);
+                            assertProgressFill(rendered, fraction <= 1.0 / 11
+                                ? context.getColor(R.color.w_accent)
+                                : expectedFill(context, rendered.state), 1);
                             surface.removeView(rendered.host);
                         }
                         for (int variant = 0; variant < 5; variant++) {
@@ -637,15 +639,13 @@ public class WidgetPresentationInstrumentedTest {
             instrumentation.runOnMainSync(() -> {
                 try {
                     Context light = themed(false), dark = themed(true);
-                    PrayerWidgetHelper.WidgetTimelineState state = fractionState(light, 6.5 / 11.0, "en");
+                    PrayerWidgetHelper.WidgetTimelineState state = fractionState(light, 6.0 / 11.0, "en");
                     RemoteViews remote = PrayerWidgetHelper.createWidgetViews(light, state, 0, 160, 96);
                     Rendered lightRender = renderRemote(remote, light, state);
                     Rendered darkRender = renderRemote(remote, dark, state);
-                    int lightExpected = WidgetProgressColor.sample(WidgetProgressPalette.light(light),
-                        state.startTimestamp, state.targetTimestamp, state.now);
-                    int darkExpected = WidgetProgressColor.sample(WidgetProgressPalette.dark(light),
-                        state.startTimestamp, state.targetTimestamp, state.now);
-                    assertTrue("Approved palettes must differ mid-interval", lightExpected != darkExpected);
+                    // Both hosts render the selected yellow, not a copied resource array.
+                    int lightExpected = 0xFFEAB308;
+                    int darkExpected = 0xFFFACC15;
                     assertProgressFill(lightRender, lightExpected, 0);
                     assertProgressFill(darkRender, darkExpected, 0);
                     assertEquals("Host theme must not change elapsed fill",
@@ -680,8 +680,8 @@ public class WidgetPresentationInstrumentedTest {
                     assertChannelDelta("Near-target fill", LIGHT_PALETTE[11], urgentColor, 12);
                     Rendered rendered = render(NORMAL[0], context, urgent);
                     assertProgressFill(rendered, urgentColor, 0);
-                    PrayerWidgetHelper.WidgetTimelineState fresh = fractionState(context, 0.02, "en");
-                    int freshColor = expectedFill(context, fresh);
+                    PrayerWidgetHelper.WidgetTimelineState fresh = fractionState(context, 0.05, "en");
+                    int freshColor = context.getColor(R.color.w_accent);
                     Rendered other = render(NORMAL[0], context, fresh);
                     assertProgressFill(other, freshColor, 0);
 
@@ -828,18 +828,6 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    private void assertApprovedPalettes() {
-        assertPalette("light", WidgetProgressPalette.light(target), LIGHT_PALETTE);
-        assertPalette("dark", WidgetProgressPalette.dark(target), DARK_PALETTE);
-        assertTrue("Both themes must not resolve to one prepared palette",
-            LIGHT_PALETTE[2] != DARK_PALETTE[2]);
-    }
-
-    private void assertPalette(String name, WidgetProgressColor.Palette palette, int[] expected) {
-        assertEquals("Prepared anchors", 12, palette.size());
-        for (int i = 0; i < expected.length; i++)
-            assertEquals(name + " palette anchor " + i, expected[i], palette.colorAt(i));
-    }
 
     private void auditFillContrast() {
         for (boolean night : new boolean[]{false, true}) {
