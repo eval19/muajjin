@@ -6,11 +6,11 @@ Checked items mean their named implementation and verification scope is delivere
 
 - [x] R298-01: Obtain exact-scope approval; verify destination, existing signing
   workflow/access, unused branch/tag and stable-latest baseline.
-- [ ] R298-02: Prepare version 2.9.8/298, release documentation and the explicit
+- [x] R298-02: Prepare version 2.9.8/298, release documentation and the explicit
   source allowlist; commit/tag/push without numeral-policy changes.
-- [ ] R298-03: Pass hosted quality/signing gates and independently verify the
+- [x] R298-03: Pass hosted quality/signing gates and independently verify the
   downloaded signed APK's identity, original signer, alignment and checksum.
-- [ ] R298-04: Publish only APK/checksum as a prerelease; verify public asset
+- [x] R298-04: Publish only APK/checksum as a prerelease; verify public asset
   bytes, prior-release preservation and stable/latest v2.9.1.
 
 

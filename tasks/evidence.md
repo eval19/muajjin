@@ -1,6 +1,6 @@
 # Muajjin implementation evidence
 
-## 2.9.8 Arabic visual prerelease — 2026-10-31 (preparing)
+## 2.9.8 Arabic visual prerelease — 2026-10-31 (published prerelease)
 
 - User explicitly approved version 2.9.8/298, the session's tracked visual fixes,
   release documentation, new branch/tag, hosted signing with existing secrets,
@@ -13,9 +13,43 @@
 - Existing verified visual/runtime evidence below applies to the included
   implementation. The keyguard-provider enumeration limitation is retained,
   not hidden by a claim of complete launcher/lock-screen acceptance.
+- Source: 47 explicitly allowlisted files committed as
+  `b26565493f830a871aa143206740bed944febc5c`; annotated `v2.9.8` targets that
+  exact source. The release branch's later evidence-only commit does not move
+  the tag or change the published artifact's source.
+- Local versioned regression smoke: artifact identity resolves to 2.9.8/298;
+  Bun 1.2.2 reports 301 tests / 793 expectations / zero failures.
+- Hosted [signed run 41140634852](https://github.com/eval19/muajjin/actions/runs/41140634852)
+  passed both web modes' quality gates, native unit/debug/test-APK assembly and
+  controlled signed release assembly from that exact source, epoch 1793400517.
+  Hosted assembly is not native instrumentation execution; the earlier rendered
+  implementation evidence and its limits remain separately recorded below.
+- Downloaded Actions artifact `13017869101`; archive SHA-256
+  `7f27f46120041cb554797fda5664fc1081a17fc1fb2fc745d529d200b9bd49b5`
+  matches GitHub's digest. Inspected artifact members; no signing material was
+  downloaded, exported or uploaded.
+- Signed APK: `muajjin-2.9.8-298-github-release.apk`, 5,091,658 bytes,
+  SHA-256 `0a0f583b85e6cd68ec11220c0817f8d81ed50bec356e9b3359ae246e1f947fe7`.
+  Local verification confirms v2/v3 signatures for API 24–36, original release
+  certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`,
+  16 KB alignment, ZIP integrity, package `org.muslimtechnician.muajjin`,
+  version 2.9.8/298, minSDK24/targetSDK36, GitHub mode and matching source epoch.
+  Debug widget activity is absent. New visual CSS and changed web/native
+  payloads are present relative to 2.9.7; equal whole-file size is not identity.
+  This is signed artifact/provenance verification, not an independent rebuild.
+- Published [v2.9.8 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.8),
+  release ID `429564951`. Only the signed APK and its 103-byte `.sha256` are
+  public assets. Server digests, authenticated draft-download bytes and anonymous
+  canonical public-download bytes match the independently verified local files.
+  Stable/latest remains v2.9.1; its assets and the prior v2.9.7 release/assets
+  retain their original IDs/digests.
+- Final APK/checksum remain in `.tools/release-2.9.8-output/`. Cleanup verified:
+  only those two files remain; temporary watcher/verifier, build metadata and
+  Actions result JSON removed. No new local packages, device mutations, signing
+  keys, repository settings or unrelated files were changed.
 
 
-## Arabic visual finish — 2026-10-31 (local source, not published)
+## Arabic visual finish — 2026-10-31 (implementation verified; shipped in 2.9.8)
 
 - Approval: visual-only app and existing seven-widget refinements, temporary
   screenshots/builds and an isolated read-only instance of the existing API 36

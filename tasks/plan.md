@@ -20,6 +20,12 @@ checksum in `.tools/release-2.9.8-output/`; remove temporary helpers/downloads.
 Failed artifact verification blocks publication. Prior releases stay intact.
 The known emulator keyguard-provider enumeration limitation remains disclosed.
 
+Completed: source/tag `b26565493f830a871aa143206740bed944febc5c`, signed Actions
+run `41140634852`, published prerelease `429564951`. Original signer, 2.9.8/298
+identity, alignment, artifact/public download checksums and unchanged stable
+v2.9.1 verified. Final APK/checksum retained; task-owned temporary files removed.
+Evidence-only branch follow-up does not move the release tag.
+
 
 ## Arabic visual finish — 2026-10-31
 
