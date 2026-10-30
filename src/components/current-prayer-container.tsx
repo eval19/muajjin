@@ -53,7 +53,7 @@ const CurrentPrayerDisplay = ({
     <Card className="relative shadow-lg">
       <CardContent className="space-y-4 p-6">
         <div className="flex items-start justify-between">
-          <div className="text-left">
+          <div className="text-start">
             <h2 className="text-3xl font-bold uppercase text-primary">
               {currentPrayer.name}
             </h2>
@@ -62,12 +62,12 @@ const CurrentPrayerDisplay = ({
             </p>
           </div>
 
-          <div className="text-right">
+          <div className="text-end">
             {!currentPrayer.jamaah ? (
               <div className="gap-2 text-2xl font-bold text-primary">
                 {currentPrayer.end
                   ? formatTime(currentPrayer.end, timeFormat, t)
-                  : 'N/A'}
+                  : '—'}
                 <p className="text-xs text-muted-foreground">
                   {t('salatTimes.end')}
                 </p>
@@ -117,7 +117,7 @@ const CurrentPrayerDisplay = ({
                 <p className="text-xl font-bold">
                   {currentPrayer.end
                     ? formatTime(currentPrayer.end, timeFormat, t)
-                    : 'N/A'}
+                    : '—'}
                 </p>
               </div>
             </Fragment>

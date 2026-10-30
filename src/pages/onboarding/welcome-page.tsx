@@ -108,7 +108,7 @@ export default function WelcomePage() {
             rel="noopener noreferrer"
             className="mx-auto block text-center text-xs text-primary hover:underline">
             {t('onboarding.translationImportDescriptionWithLearnMore')}{' '}
-            <ArrowUpRight className="inline h-4 w-4" />
+            <ArrowUpRight className="inline h-4 w-4 rtl:-scale-x-100" />
           </a>
         }
         helperPosition="after"

@@ -71,7 +71,7 @@ export function TranslationImportControl({
         variant="outline"
         onClick={() => fileInputRef.current?.click()}
         className="w-full">
-        <Upload className="mr-2 h-4 w-4" />
+        <Upload className="me-2 h-4 w-4" />
         {buttonLabel}
       </Button>
       <input

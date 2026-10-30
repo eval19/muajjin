@@ -3,7 +3,7 @@ import { useTranslation } from '@/contexts/translation-context';
 import type { ProhibitedTime } from '@/types';
 import { formatTime, isWithinWindow, prayerBoundaries } from '@/utils/time-utils';
 import { useBoundaryClock } from '@/hooks/use-visible-clock';
-import { AlertTriangle, Sun, Sunrise, Sunset } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Sun, Sunrise, Sunset } from 'lucide-react';
 import { useMemo } from 'react';
 import type { FC } from 'react';
 
@@ -71,9 +71,13 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
                     {time.name}
                   </span>
                 </div>
-                <span className="text-sm font-bold">
-                  {formatTime(time.start, timeFormat, t)} →{' '}
-                  {formatTime(time.end, timeFormat, t)}
+                <span className="inline-flex items-center gap-1.5 text-sm font-bold">
+                  <bdi dir="ltr">{formatTime(time.start, timeFormat, t)}</bdi>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180"
+                  />
+                  <bdi dir="ltr">{formatTime(time.end, timeFormat, t)}</bdi>
                 </span>
               </div>
             );

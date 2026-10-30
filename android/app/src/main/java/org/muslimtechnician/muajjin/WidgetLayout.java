@@ -18,6 +18,7 @@ final class WidgetLayout {
     final PrayerWidgetHelper.WidgetTimelineState state;
     final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     final Paint.FontMetricsInt metrics = new Paint.FontMetricsInt();
+    private final Typeface regularTypeface, boldTypeface;
     boolean compact, stacked, metadataStacked, wrapClocks, summaryOnly;
     int columns = 3;
     float minimumHeight;
@@ -34,10 +35,13 @@ final class WidgetLayout {
         this.state = state;
         this.width = width;
         this.height = height;
+        regularTypeface = WidgetTypeface.regular(context);
+        boldTypeface = WidgetTypeface.bold(context);
         variant = height > 0 && height < 100 && requestedVariant == 1 ? 0
             : height > 0 && height < 100 && requestedVariant == 3 ? 2 : requestedVariant;
         paint.setFontFeatureSettings("tnum");
-        paint.setTextLocale(state.numericLocale);
+        paint.setTextLocale("rtl".equals(state.presentation.direction)
+            ? state.presentation.locale() : state.numericLocale);
         if(state.valid) {
             long seconds=Math.max(0,state.targetTimestamp-state.now)/1000;
             NumberFormat numbers=NumberFormat.getIntegerInstance(state.numericLocale);
@@ -61,9 +65,12 @@ final class WidgetLayout {
     }
 
     private void chooseScale() {
-        compact = false;
+        // Keyguard widgets are fixed one-row surfaces; their regular type scale
+        // cannot absorb a custom font's line height. Use the compact scale that
+        // the 2x1/4x1 hosts were designed around.
+        compact = variant == 5 || variant == 6;
         chooseComposition();
-        if ((height > 0 && minimumHeight > height) || !fitsWidth()) {
+        if (!compact && ((height > 0 && minimumHeight > height) || !fitsWidth())) {
             compact = true;
             chooseComposition();
         }
@@ -107,7 +114,7 @@ final class WidgetLayout {
 
     private void font(float size, boolean bold) {
         paint.setTextSize(size);
-        paint.setTypeface(bold ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+        paint.setTypeface(bold ? boldTypeface : regularTypeface);
     }
 
     float textWidth(String text, float size, boolean bold) {
@@ -131,7 +138,7 @@ final class WidgetLayout {
         int measuredWidth = availableWidth >= 0 ? px(availableWidth)
             : (int)Math.ceil(paint.measureText(text)) + px(4);
         StaticLayout.Builder builder = StaticLayout.Builder.obtain(text, 0, text.length(), paint, Math.max(1, measuredWidth))
-            .setIncludePad(true);
+            .setIncludePad(false);
         if (Build.VERSION.SDK_INT >= 28) builder.setUseLineSpacingFromFallbacks(true);
         return builder.build().getHeight() / context.getResources().getDisplayMetrics().density;
     }
@@ -163,7 +170,7 @@ final class WidgetLayout {
     private float contextWidth() {
         if (variant == 4)
             return Math.max(textWidth(state.footerText, contextSize(), false),
-                textWidth(state.valid ? state.nextName + " · " + state.nextTime : state.nextName, timeSize(), true));
+                textWidth(state.summaryText, timeSize(), true));
         if (!state.valid) return 0;
         return Math.max(textWidth(state.footerText, contextSize(), false),
             textWidth(state.contextLine2, contextSize(), false));
@@ -257,7 +264,7 @@ final class WidgetLayout {
             String clock = state.chipClock(id);
             font(timeSize(), true);
             StaticLayout lines = StaticLayout.Builder.obtain(clock, 0, clock.length(), paint, cellWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(true).build();
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).build();
             if (lines.getLineCount() > 2) return false;
             for (int line = 0; line < lines.getLineCount(); line++)
                 if (lines.getLineWidth(line) > cellWidth) return false;
@@ -280,7 +287,7 @@ final class WidgetLayout {
     private float tableSummaryHeight() {
         float allocated = width <= 0 ? -1 : Math.max(0, contentWidth()
             - (state.valid && !stacked ? countdownWidth() + 8 : 0));
-        String summary = state.valid ? state.nextName + " · " + state.nextTime : state.nextName;
+        String summary = state.summaryText;
         return (state.valid ? textHeight(state.footerText, contextSize(), false, allocated) : 0)
             + 4 + textHeight(summary, timeSize(), true, allocated);
     }

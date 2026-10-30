@@ -61,9 +61,11 @@ observed.
 
 Native visual checks cover all seven variants on API 36, both resource themes,
 2×/3× density, English/Bengali/Arabic RTL, and font scales 1.0/1.3/1.5/2.0 at
-appropriately enlarged bounds. Xiaomi/HyperOS, API 24–30, and a real keyguard host
-were not available for runtime verification. The transparent variants were
-reviewed in the native debug host on light, dark, and busy sample backdrops.
+appropriately enlarged bounds. From API 26 the native widget uses IBM Plex Sans
+Arabic; API 24–25 retain the platform typeface. Xiaomi/HyperOS, API 24–30, and a
+real keyguard host were not available for runtime verification. The transparent
+variants were reviewed in the native debug host on light, dark, and busy sample
+backdrops.
 
 ## What this fork adds
 
@@ -156,6 +158,19 @@ the WebView closed restarted native reconciliation without changing stored
 schedule, calculation, or imported presentation data. Persian, Bengali, regional
 Arabic, and explicit Latin-numbering-extension pairs were configured native
 fixtures, not claims about physical devices offering every locale preference.
+
+### Arabic interface
+
+Arabic is a built-in language with a complete translation. The web interface
+uses IBM Plex Sans Arabic (SIL Open Font License, included in
+`public/fonts/`) with logical RTL spacing, mirrored dividers and borders, and
+direction-aware arrows. Imported Arabic translations fill missing keys from the
+built-in Arabic template instead of English, and Arabic Hijri months are
+canonical even when an older import omits them. The same seven native widget
+IDs are reused when the app language changes; no language-specific providers
+are added. The app sends a presentation update to those existing IDs, and the
+widget switches labels, direction, and type together. Native time strings are
+bidi-isolated, and keyguard variants use the compact type scale.
 
 ### Smoother first-time setup
 
@@ -353,6 +368,15 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.7 completes Arabic localization for both the web application and
+the Android home-screen widgets. The web interface ships with a complete built-in
+Arabic translation, an IBM Plex Sans Arabic font family, logical RTL layout,
+bidi-safe prayer ranges, and automatic Arabic repair for imported translations.
+Android widgets adopt IBM Plex Sans Arabic from API 26 with matching text
+measurement, natural countdown phrasing, bidi-isolated clocks, and compact
+keyguard scales, while keeping the same seven widget identities across language
+changes.
+
 Version 2.9.6 refines the Android 12+ home-screen widget progress colours with
 the approved emerald → lime → yellow → orange → orange-red → red progression.
 Both themes use identical timing: accent green holds through 4/11, yellow is
@@ -409,8 +433,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.6
-(Android versionCode 296) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.7
+(Android versionCode 297) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -435,7 +459,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.6-296-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.7-297-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

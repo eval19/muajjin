@@ -170,16 +170,21 @@ const DisplaySettings: FC = () => {
     if (hasCustomFont) {
       return { name: 'customfont.woff2', type: 'custom' as const };
     }
-    const translationId = activeTranslation?.id;
-    if (
-      !activeTranslation ||
-      translationId === null ||
-      translationId === 'en'
-    ) {
+    const language = activeTranslation?.meta.languageCode
+      .toLowerCase()
+      .replace(/_/g, '-')
+      .split('-')[0];
+    if (!activeTranslation || language === 'en') {
       return { name: 'Ubuntu-Regular.ttf', type: 'builtin' as const };
     }
-    if (translationId === 'bn') {
+    if (language === 'bn') {
       return { name: 'NotoSerifBengali.ttf', type: 'builtin' as const };
+    }
+    if (language === 'ar') {
+      return {
+        name: 'IBMPlexSansArabic-Regular.ttf',
+        type: 'builtin' as const,
+      };
     }
     return { name: t('settings.systemFont'), type: 'system' as const };
   };

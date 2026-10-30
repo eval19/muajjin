@@ -43,6 +43,7 @@
                 android:layout_height="wrap_content"
                 android:maxLines="1"
                 android:fontFeatureSettings="tnum"
+                android:textDirection="ltr"
                 android:layout_marginTop="@dimen/w_gap_label" />
         </LinearLayout>
         <Chronometer

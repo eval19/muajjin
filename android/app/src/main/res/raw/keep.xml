@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@font/ibm_plex_sans_arabic,@font/ibm_plex_sans_arabic_regular,@font/ibm_plex_sans_arabic_bold,@raw/ofl_ibm_plex_sans_arabic" />

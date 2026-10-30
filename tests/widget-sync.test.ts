@@ -122,6 +122,13 @@ describe('native schedule delivery', () => {
     const first = schedules[0];
     for (let i = 0; i < 20; i++) await sync({ settings, presentation });
     await sync({ settings, presentation: { ...presentation, timeFormat: '12h' } });
+    await sync({
+      settings,
+      presentation: { ...presentation, language: 'ar', direction: 'rtl' },
+    });
+    const languageSwitch = display[display.length - 1];
+    expect(languageSwitch.language).toBe('ar');
+    expect(languageSwitch.direction).toBe('rtl');
     expect(schedules).toEqual([first]);
     expect(first.schedule.days[29].nextFajr).toBeGreaterThan(first.schedule.days[29].isha);
     expect(first.schedule.days[0].previousIsha).toBeLessThan(first.schedule.days[0].fajr);

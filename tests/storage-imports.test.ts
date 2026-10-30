@@ -4,6 +4,7 @@ import { createPersistentStore, commitStorageChanges } from '../src/utils/persis
 import { validateTranslation, normalizeStoredTranslations } from '../src/utils/translation-validation';
 import { validateWoff2, decodeLegacyFont, LatestFontRequest, saveFontRecord } from '../src/utils/font-storage';
 import type { FontRecord } from '../src/utils/font-storage';
+import arTemplate from '../src/i18n/template-ar.json';
 import enTemplate from '../src/i18n/template-en.json';
 import { calculatePrayerInstants } from '../src/services/prayer-times-local';
 
@@ -191,6 +192,16 @@ describe('translation boundary', () => {
     expect(translation.translations.salats.isha).toBe(enTemplate.translations.salats.isha);
     const stored = normalizeStoredTranslations({ valid: { ...translation, id: 'valid', importedAt: '2025-01-01T00:00:00.000Z' }, invalid: { meta: 4 } });
     expect(Object.keys(stored)).toEqual(['valid']);
+  });
+  test('fills missing Arabic leaves from Arabic instead of English', () => {
+    const translation = validateTranslation({
+      meta: { languageName: 'العربية', languageCode: 'ar', direction: 'rtl', version: '1.0' },
+      translations: { salats: { fajr: 'الفجر' } },
+    });
+    expect(translation.translations.salats.fajr).toBe('الفجر');
+    expect(translation.translations.salats.isha).toBe(arTemplate.translations.salats.isha);
+    expect(translation.translations.common.appName).toBe(arTemplate.translations.common.appName);
+    expect(translation.translations.hijri.months['1']).toBe(arTemplate.translations.hijri.months['1']);
   });
   test('raw stored translations preserve valid imports and allow corrupt collections to be repaired', () => {
     const entry = { meta: enTemplate.meta, translations: { salats: { fajr: 'Dawn' } } };

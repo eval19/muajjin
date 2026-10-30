@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,6 +28,7 @@ import android.widget.TextView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -154,9 +156,11 @@ public class WidgetPresentationInstrumentedTest {
                 activity.setContentView(surface);
                 // English family + independently selected narrow/grid and six-column Wide.
                 for (Profile profile : NORMAL) runCase(profile, "en", 1f, "midday", true, null);
+                // Arabic at the same normal sizes; captures every provider's RTL render.
+                for (Profile profile : NORMAL) runCase(profile, "ar", 1f, "midday", true, null);
                 runCase(new Profile(3, 600, 220), "en", 1f, "midday", true, null);
                 runCase(new Profile(4, 250, 220), "en", 1f, "midday", true, null);
-                runCase(new Profile(4,250,220),"en",1f,"midday-long-location",true,null);
+                runCase(new Profile(4,250,220),"en",1f,"midday-long-location",true,null,true);
                 for (Profile profile : NORMAL) runCase(profile, "en", 1f, "midday-24h", false, null);
 
                 // Same attached native hierarchy is reapplied, never replaced with a mock.
@@ -256,12 +260,20 @@ public class WidgetPresentationInstrumentedTest {
         json.put("timeFormat", "12h");
         JSONObject labels = json.getJSONObject("labels");
         if (language.equals("ar")) {
-            String[] names = {"الفَجْر", "الشُّرُوق", "الظُّهْر", "العَصْر", "المَغْرِب", "العِشَاء"};
+            String[] names = {"الفجر", "الشروق", "الظهر", "العصر", "المغرب", "العشاء"};
             for (int i = 0; i < PRAYERS.length; i++) labels.put(PRAYERS[i], names[i]);
             labels.put("now", "الآن"); labels.put("current", "الصلاة الحالية");
-            labels.put("in", "بعد"); labels.put("at", "عند");
+            labels.put("next", "الصلاة القادمة"); labels.put("in", "بعد"); labels.put("at", "عند");
+            labels.put("startsIn", "يبدأ بعد");
             labels.put("am", "ص"); labels.put("pm", "م");
-            labels.put("recovery", "افتح المؤذن لاستعادة إعدادات الصلاة");
+            labels.put("remainingHours", "{{hours}} س {{minutes}} د");
+            labels.put("remainingMinutes", "{{minutes}} د");
+            labels.put("recovery", "افتح مؤذّن لاستعادة إعدادات الصلاة");
+            String[] arabicMonths = {"محرم", "صفر", "ربيع الأول", "ربيع الثاني",
+                "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال",
+                "ذو القعدة", "ذو الحجة"};
+            JSONArray months = json.getJSONArray("months");
+            for (int i = 0; i < arabicMonths.length; i++) months.put(i, arabicMonths[i]);
         } else if (language.equals("bn")) {
             String[] names = {"ফজর", "সূর্যোদয়", "যোহর", "আসর", "মাগরিব", "ইশা"};
             for (int i = 0; i < PRAYERS.length; i++) labels.put(PRAYERS[i], names[i]);
@@ -491,6 +503,25 @@ public class WidgetPresentationInstrumentedTest {
             clock.getResources().getConfiguration().getLocales().get(0).getLanguage());
         assertTrue("Native countdown direction changed", clock.isCountDown());
         assertEquals("Native countdown base changed", s.chronometerBase, clock.getBase());
+        if ("ar".equals(language) && s.valid) {
+            assertTrue("Arabic countdown label lost its particle: " + s.label, s.label.contains("بعد"));
+            assertTrue("Arabic current label lost its wording: " + s.footerText,
+                s.footerText.startsWith("الآن") || s.footerText.contains("الصلاة الحالية"));
+            assertTrue("Arabic context line lost its particle: " + s.contextLine2,
+                s.contextLine2.contains("عند"));
+            assertTrue("Arabic summary lost its separator: " + s.summaryText,
+                s.summaryText.contains("·"));
+            assertTrue("Arabic lock line lost its particle: " + s.lockTime,
+                s.lockTime.startsWith("عند"));
+            assertFalse("Arabic widget leaked English clock markers: " + s.nextTime,
+                s.nextTime.contains("AM") || s.nextTime.contains("PM"));
+            assertFalse("Arabic context leaked English clock markers: " + s.contextLine2,
+                s.contextLine2.contains("AM") || s.contextLine2.contains("PM"));
+            assertFalse("Arabic summary leaked English clock markers: " + s.summaryText,
+                s.summaryText.contains("AM") || s.summaryText.contains("PM"));
+            assertTrue("Arabic Hijri month did not reach the widget: " + s.hijriText,
+                s.hijriText.matches(".*[\\u0600-\\u06FF].*"));
+        }
         if (s.valid) {
             long displayedSeconds = parseCountdown(clock.getText().toString());
             long expectedSeconds = Math.max(0, (s.chronometerBase - SystemClock.elapsedRealtime() + 999) / 1000);
@@ -554,7 +585,7 @@ public class WidgetPresentationInstrumentedTest {
                 text(root, R.id.tv_large_hijri, s.hijriText);
                 if (s.valid) text(root, R.id.tv_large_current_pill, s.footerText);
                 else assertEquals(View.GONE,root.findViewById(R.id.tv_large_current_pill).getVisibility());
-                text(root, R.id.tv_large_summary, s.valid ? s.nextName + " · " + s.nextTime : s.nextName);
+                text(root, R.id.tv_large_summary, s.summaryText);
                 assertEquals("Full Table must match the approved information envelope",
                     summaryOnly ? View.GONE : View.VISIBLE,root.findViewById(R.id.widget_schedule_container).getVisibility());
                 if(!summaryOnly) {
@@ -564,7 +595,7 @@ public class WidgetPresentationInstrumentedTest {
                 break;
             case 5:
                 text(root, R.id.tv_lock_small_label, s.label);
-                text(root, R.id.tv_lock_small_time, s.valid ? s.presentation.label("at") + " " + s.nextTime : ""); break;
+                text(root, R.id.tv_lock_small_time, s.lockTime); break;
             case 6:
                 text(root, R.id.tv_lock_med_label, s.label);
                 text(root, R.id.tv_lock_med_current, s.footerText);
@@ -574,6 +605,18 @@ public class WidgetPresentationInstrumentedTest {
         if (s.valid && (p.variant==2 || p.variant==3 || p.variant==4 || p.variant==6))
             verifyColumnSeparation(rendered);
         verifyTextGeometry(root, root);
+    }
+
+    @Test public void bundledWidgetTypefaceIsAvailableOnSupportedApis() {
+        assumeTrue("Bundled font resources require API 26+", Build.VERSION.SDK_INT >= 26);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        Typeface regular = WidgetTypeface.regular(context);
+        Typeface bold = WidgetTypeface.bold(context);
+        assertNotNull("Regular widget typeface missing", regular);
+        assertNotNull("Bold widget typeface missing", bold);
+        assertNotSame("Regular widget typeface fell back to the platform face",
+            Typeface.DEFAULT, regular);
+        assertNotSame("Bold widget typeface resolved to the regular face", regular, bold);
     }
 
     /** Native-host proof of the sampled fill; never a production preview override. */
@@ -961,6 +1004,10 @@ public class WidgetPresentationInstrumentedTest {
             TextView text = (TextView)view;
             if (text.getText().length() > 0) {
                 String label = resourceName(text) + " '" + text.getText() + "'";
+                if (Build.VERSION.SDK_INT >= 26) {
+                    assertNotSame("Widget text fell back to the platform typeface: " + label,
+                        Typeface.DEFAULT, text.getTypeface());
+                }
                 Layout layout = text.getLayout();
                 assertNotNull("No native text layout: " + label, layout);
                 assertTrue("Zero-size text: " + label, text.getWidth() > 0 && text.getHeight() > 0);

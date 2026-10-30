@@ -33,7 +33,7 @@ export const SettingsPageLayout: FC<SettingsPageLayoutProps> = ({
                 aria-label={t('common.back')}
                 onClick={() => navigate(-1)}
                 className="size-10 rounded-full">
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
               </Button>
               <h1 className="flex-1 text-center text-2xl font-bold tracking-tight">
                 {title}

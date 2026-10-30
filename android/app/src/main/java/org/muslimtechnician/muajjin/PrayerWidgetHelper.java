@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.BidiFormatter;
+import android.text.TextDirectionHeuristics;
 import android.util.Log;
 import android.util.SizeF;
 import android.util.TypedValue;
@@ -57,7 +59,7 @@ public final class PrayerWidgetHelper {
         public final long now,targetTimestamp,startTimestamp,chronometerBase;
         public final boolean valid,isWarm;
         public final int progress;
-        public final String label,nextName,nextTime,footerText,contextLine2,activePrayerId,nextPrayerId,hijriText,currentStartTime;
+        public final String label,nextName,nextTime,footerText,contextLine2,summaryText,lockTime,activePrayerId,nextPrayerId,hijriText,currentStartTime;
         public final long fajrTs,sunriseTs,dhuhrTs,asrTs,maghribTs,ishaTs;
         public final String fajrStr,sunriseStr,dhuhrStr,asrStr,maghribStr,ishaStr;
         public final NativePresentation presentation;
@@ -79,9 +81,17 @@ public final class PrayerWidgetHelper {
             activePrayerId=valid?timeline.currentId:"";nextPrayerId=valid?timeline.nextId:"";
             nextName=valid?presentation.label(nextPrayerId):presentation.label("recovery");
             nextTime=presentation.clock(clock,targetTimestamp);
+            // Keep the clock as an independent LTR run when it is embedded in an
+            // Arabic sentence; otherwise bidi reordering can move the AM/PM word.
+            boolean rtl="rtl".equals(presentation.direction);
+            String embeddedTime=rtl
+                ? BidiFormatter.getInstance(true).unicodeWrap(nextTime, TextDirectionHeuristics.LTR)
+                : nextTime;
             label=valid?nextName+" "+presentation.label("in"):presentation.label("recovery");
             footerText=valid?(activePrayerId.isEmpty()?presentation.label("current")+": —":presentation.label("now")+": "+presentation.label(activePrayerId)):presentation.label("recovery");
-            contextLine2=valid?nextName+" "+presentation.label("at")+" "+nextTime:"";
+            contextLine2=valid?nextName+" "+presentation.label("at")+" "+embeddedTime:"";
+            summaryText=valid?nextName+" · "+embeddedTime:nextName;
+            lockTime=valid?presentation.label("at")+" "+embeddedTime:"";
             currentStartTime=valid&&!activePrayerId.isEmpty()?presentation.clock(clock,startTimestamp):"";
             fajrTs=valid?localEvents[0]:0;sunriseTs=valid?localEvents[1]:0;dhuhrTs=valid?localEvents[2]:0;
             asrTs=valid?localEvents[3]:0;maghribTs=valid?localEvents[4]:0;ishaTs=valid?localEvents[5]:0;
@@ -287,8 +297,7 @@ public final class PrayerWidgetHelper {
                 bindText(views, R.id.tv_large_location, state.presentation.locationName, layout.contextSize());
                 bindText(views, R.id.tv_large_hijri, state.hijriText, layout.contextSize());
                 bindText(views, R.id.tv_large_current_pill, state.footerText, layout.contextSize());
-                bindText(views, R.id.tv_large_summary,
-                    state.valid ? state.nextName + " · " + state.nextTime : state.nextName, layout.timeSize());
+                bindText(views, R.id.tv_large_summary, state.summaryText, layout.timeSize());
                 views.setInt(R.id.tv_large_summary, "setMaxLines", state.valid ? 1 : 4);
                 views.setViewVisibility(R.id.tv_large_current_pill, state.valid ? View.VISIBLE : View.GONE);
                 views.setViewVisibility(R.id.widget_primary_group, state.valid ? View.VISIBLE : View.GONE);
@@ -296,8 +305,7 @@ public final class PrayerWidgetHelper {
                 if (!layout.summaryOnly) renderSchedule(context, views, state, layout, true);
                 break;
             case 5:
-                bindText(views, R.id.tv_lock_small_time,
-                    state.valid ? state.presentation.label("at") + " " + state.nextTime : "", layout.contextSize());
+                bindText(views, R.id.tv_lock_small_time, state.lockTime, layout.contextSize());
                 views.setViewVisibility(R.id.tv_lock_small_time, state.valid ? View.VISIBLE : View.GONE);
                 break;
             case 6:

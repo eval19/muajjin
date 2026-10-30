@@ -18,7 +18,7 @@ const Progress = React.forwardRef<
     {...props}>
     <ProgressPrimitive.Indicator
       className={cn(
-        'h-full w-full flex-1 transition-all duration-500 ease-out',
+        'h-full transition-all duration-500 ease-out',
         variant === 'default' && 'bg-primary',
         variant === 'glow' &&
           'bg-primary shadow-[0_0_10px_rgba(6,153,106,0.6),0_0_20px_rgba(6,153,106,0.4)]',
@@ -29,7 +29,7 @@ const Progress = React.forwardRef<
         variant === 'danger' &&
           'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.6)]',
       )}
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      style={{ width: `${Math.min(100, Math.max(0, value || 0))}%` }}
     />
   </ProgressPrimitive.Root>
 ));

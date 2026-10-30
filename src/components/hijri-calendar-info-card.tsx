@@ -10,7 +10,7 @@ export function HijriCalendarInfoCard() {
         <Info className="h-4 w-4 text-primary" />
         <span>{t('settings.hijriCalendarInfoTitle')}</span>
       </div>
-      <p className="text-left text-sm text-muted-foreground">
+      <p className="text-start text-sm text-muted-foreground">
         {t('settings.hijriCalendarInfoDesc')}
       </p>
     </div>

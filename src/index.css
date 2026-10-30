@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Arabic UI face. Kept separate from the Latin Ubuntu face so Arabic text
+   keeps a consistent weight and rhythm across Android WebView and desktop. */
+@font-face {
+  font-family: 'MuajjinArabic';
+  src: url('/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MuajjinArabic';
+  src: url('/fonts/IBMPlexSansArabic-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MuajjinArabic';
+  src: url('/fonts/IBMPlexSansArabic-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 180 20% 99%;
@@ -156,31 +182,15 @@
     margin-right: auto;
   }
 
-  /* Flip directional icons in RTL */
-  [dir='rtl'] .fa-arrow-left,
-  [dir='rtl'] .lucide-arrow-left {
-    transform: scaleX(-1);
+  /* Letter-spacing breaks Arabic cursive joins and makes labels look uneven. */
+  [dir='rtl'] [class*='tracking-'] {
+    letter-spacing: 0;
   }
 
-  [dir='rtl'] .fa-arrow-right,
-  [dir='rtl'] .lucide-arrow-right {
-    transform: scaleX(-1);
-  }
-
-  /* Ensure proper spacing in RTL for flex containers */
-  [dir='rtl'] .gap-2 > * + * {
-    margin-right: 0;
-    margin-left: 0.5rem;
-  }
-
-  [dir='rtl'] .gap-3 > * + * {
-    margin-right: 0;
-    margin-left: 0.75rem;
-  }
-
-  [dir='rtl'] .gap-4 > * + * {
-    margin-right: 0;
-    margin-left: 1rem;
+  /* Arabic 12px labels sit low and need a little more leading than Latin. */
+  [dir='rtl'] .text-xs {
+    font-size: 0.8125rem;
+    line-height: 1.45;
   }
 }
 
@@ -211,6 +221,10 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+html[dir='rtl'] #root {
+  text-align: start;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,5 @@
 import { toast } from '@/components/ui/use-toast';
+import arTemplate from '@/i18n/template-ar.json';
 import bnTemplate from '@/i18n/template-bn.json';
 import enTemplate from '@/i18n/template-en.json';
 import type { StoredTranslation, TranslationFile, TranslationState } from '@/types/translation';
@@ -13,9 +14,18 @@ import type { ReactNode } from 'react';
 const TRANSLATION_STORAGE_KEY = 'muajjin-translations';
 const ACTIVE_TRANSLATION_KEY = 'muajjin-active-translation';
 const BUILTIN_FONTS: Record<string, string> = { en: '/fonts/Ubuntu-Regular.ttf', bn: '/fonts/NotoSerifBengali.ttf' };
+const ARABIC_FONT_FAMILY = "'MuajjinArabic', system-ui, -apple-system, sans-serif";
+const ARABIC_FONT_WEIGHTS = ['400', '600', '700'] as const;
+const ARABIC_APP_NAME_KEYS: Record<string, true> = {
+  'common.appName': true,
+  'onboarding.welcome': true,
+  'aboutPage.appName': true,
+};
+const ARABIC_APP_NAME_FIXES: Record<string, string> = { 'معجّن': 'مؤذّن' };
 const BUILTIN_TRANSLATIONS: Record<string, StoredTranslation> = {
   en: { ...(enTemplate as unknown as TranslationFile), id: 'en', importedAt: new Date(0).toISOString() },
   bn: { ...(bnTemplate as unknown as TranslationFile), id: 'bn', importedAt: new Date(0).toISOString() },
+  ar: { ...(arTemplate as unknown as TranslationFile), id: 'ar', importedAt: new Date(0).toISOString() },
 };
 interface TranslationContextType {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -55,7 +65,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   const cachedFont = useRef<FontRecord | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const requests = useRef(new LatestFontRequest());
-  const working = useRef<{ face: FontFace | null; selection: string } | null>(null);
+  const working = useRef<{ face: FontFace | null; family: string; selection: string } | null>(null);
   const live = useRef(false);
 
   const report = useCallback((error: unknown, token?: number, cleanupMessage?: string) => {
@@ -65,24 +75,39 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Device data or font operation failed', description: message, variant: 'destructive' });
   }, []);
   const publish = useCallback((next: TranslationState) => { stateRef.current = next; setState(next); setStorageError(null); }, []);
-  const selectedLanguage = useCallback(() => stateRef.current.activeTranslationId === 'bn' ? 'bn' : !stateRef.current.activeTranslationId || stateRef.current.activeTranslationId === 'en' ? 'en' : null, []);
+  const selectedLanguage = useCallback(() => {
+    const id = stateRef.current.activeTranslationId;
+    if (!id) return 'en';
+    const active = stateRef.current.translations[id] ?? BUILTIN_TRANSLATIONS[id];
+    const code = active?.meta.languageCode.toLowerCase().replace(/_/g, '-').split('-')[0];
+    return code && (code === 'en' || code === 'bn' || code === 'ar') ? code : null;
+  }, []);
   const prepareFont = useCallback(async (selection: StoredFont | null, token: number) => {
     let face: FontFace | null = null;
+    let family = '';
     const identity = selection?.id ?? selectedLanguage() ?? 'system';
     if (selection) {
       const record = cachedFont.current?.id === selection.id ? cachedFont.current : await readFontRecord(selection);
       face = new FontFace(`MuajjinCustomFont-${token}`, record.bytes);
+      await face.load();
+      family = `'${face.family}', system-ui, -apple-system, sans-serif`;
     } else {
       const language = selectedLanguage();
-      if (language) face = new FontFace(`MuajjinBuiltinFont-${language}-${token}`, `url(${BUILTIN_FONTS[language]})`);
+      if (language === 'ar') {
+        await Promise.all(ARABIC_FONT_WEIGHTS.map((weight) => document.fonts.load(`${weight} 16px "MuajjinArabic"`)));
+        family = ARABIC_FONT_FAMILY;
+      } else if (language) {
+        face = new FontFace(`MuajjinBuiltinFont-${language}-${token}`, `url(${BUILTIN_FONTS[language]})`);
+        await face.load();
+        family = `'${face.family}', system-ui, -apple-system, sans-serif`;
+      }
     }
-    if (face) await face.load();
-    return { face, selection: identity };
+    return { face, family, selection: identity };
   }, [selectedLanguage]);
-  const activateFont = useCallback((prepared: { face: FontFace | null; selection: string }) => {
+  const activateFont = useCallback((prepared: { face: FontFace | null; family: string; selection: string }) => {
     const previous = working.current;
     if (prepared.face) document.fonts.add(prepared.face);
-    document.documentElement.style.fontFamily = prepared.face ? `'${prepared.face.family}', system-ui, -apple-system, sans-serif` : '';
+    document.documentElement.style.fontFamily = prepared.family;
     working.current = prepared;
     if (previous?.face && previous.face !== prepared.face) document.fonts.delete(previous.face);
   }, []);
@@ -126,7 +151,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       if (!requests.current.isCurrent(token)) return;
       requests.current.commit(token, () => {
         cachedFont.current = record; selectionRef.current = record; setCustomFont(record);
-        activateFont({ face, selection: record.id });
+        activateFont({ face, family: `'${face.family}', system-ui, -apple-system, sans-serif`, selection: record.id });
       });
       let committed = false;
       try {
@@ -195,11 +220,34 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   const activeTranslation = state.activeTranslationId ? state.translations[state.activeTranslationId] || BUILTIN_TRANSLATIONS[state.activeTranslationId] || null : null;
   const direction = activeTranslation?.meta.direction ?? 'ltr';
+  const languageCode = (activeTranslation?.meta.languageCode ?? 'en').replace(/_/g, '-');
+  const baseLanguage = languageCode.toLowerCase().split('-')[0];
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = { lang: root.lang, dir: root.dir };
+    root.lang = languageCode;
+    root.dir = direction;
+    return () => {
+      root.lang = previous.lang;
+      root.dir = previous.dir;
+    };
+  }, [direction, languageCode]);
   const t = useCallback((key: string, params?: Record<string, string | number>) => {
     const imported = getNestedValue(activeTranslation?.translations, key);
-    const translated = imported?.trim() ? imported : getNestedValue(enTemplate.translations, key);
+    const english = getNestedValue(enTemplate.translations, key);
+    const arabic = baseLanguage === 'ar' ? getNestedValue(arTemplate.translations, key) : undefined;
+    let translated = imported?.trim() ? imported : undefined;
+    // Older Arabic imports were deep-filled with English defaults. Replace only
+    // values that still equal the English default; keep user-supplied wording.
+    if (baseLanguage === 'ar' && (!translated || translated === english)) {
+      translated = arabic?.trim() ? arabic : translated;
+    }
+    if (!translated) translated = english;
+    if (baseLanguage === 'ar' && translated && ARABIC_APP_NAME_KEYS[key]) {
+      translated = ARABIC_APP_NAME_FIXES[translated] ?? translated;
+    }
     return translated ? interpolate(translated, params) : key;
-  }, [activeTranslation]);
+  }, [activeTranslation, baseLanguage]);
   useEffect(() => { setTranslationFunction(t); }, [t]);
 
   const setActiveTranslation = useCallback((id: string | null): boolean => {
@@ -278,7 +326,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         // Replacing this one small pointer is atomic; until it succeeds the old bytes, face and selection remain intact.
         localStorage.setItem(CUSTOM_FONT_KEY, JSON.stringify(metadata));
         committed = true;
-        activateFont({ face, selection: metadata.id });
+        activateFont({ face, family: `'${face.family}', system-ui, -apple-system, sans-serif`, selection: metadata.id });
         cachedFont.current = candidate; selectionRef.current = metadata; setCustomFont(metadata); setStorageError(null);
       });
       toast({ title: t('settings.fontUploaded'), description: t('settings.fontUploadedDesc') });
@@ -315,7 +363,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   return (
     <TranslationContext.Provider value={{ t, getSalatName: (salat) => t(`salats.${salat.toLowerCase()}`), activeTranslation, setActiveTranslation, importedTranslations: state.translations, importTranslation, deleteTranslation, direction, mounted, uploadFont, removeFont, customFont, storageError }}>
-      {!mounted ? <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse">Loading...</div></div> : <div dir={direction}>{children}</div>}
+      {!mounted ? <div className="flex min-h-screen items-center justify-center"><div className="h-10 w-10 animate-pulse rounded-full bg-secondary" /></div> : <div dir={direction} lang={languageCode}>{children}</div>}
     </TranslationContext.Provider>
   );
 }

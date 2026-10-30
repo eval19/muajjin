@@ -106,14 +106,21 @@ const calculateDistanceToKaaba = (latitude: number, longitude: number) => {
   return earthRadiusKm * c;
 };
 
-const formatDistance = (distanceKm: number) => {
+const formatDistance = (distanceKm: number, unit: string) => {
   return distanceKm >= 1000
-    ? `${distanceKm.toFixed(0)} km`
-    : `${distanceKm.toFixed(1)} km`;
+    ? `${distanceKm.toFixed(0)} ${unit}`
+    : `${distanceKm.toFixed(1)} ${unit}`;
+};
+
+const ARABIC_CARDINALS: Record<'north' | 'south' | 'east' | 'west', string> = {
+  north: 'شمال',
+  south: 'جنوب',
+  east: 'شرق',
+  west: 'غرب',
 };
 
 const QiblaCompassPage: FC = () => {
-  const { t } = useTranslation();
+  const { t, activeTranslation } = useTranslation();
   const { settings } = useApp();
   const active = useForegroundActive();
   const [heading, setHeading] = useState<number | null>(null);
@@ -369,9 +376,13 @@ const QiblaCompassPage: FC = () => {
     }
   }, [active]);
 
+  const isArabic = (activeTranslation?.meta.languageCode ?? '')
+    .toLowerCase()
+    .replace(/_/g, '-')
+    .split('-')[0] === 'ar';
   const locationLabel = [settings.city, settings.country]
     .filter(Boolean)
-    .join(', ');
+    .join(isArabic ? '، ' : ', ');
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -401,16 +412,16 @@ const QiblaCompassPage: FC = () => {
                   <div className="absolute inset-3 rounded-full border border-dashed border-primary/20" />
                   <div className="absolute inset-7 rounded-full border border-border/70" />
                   <div className="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-semibold tracking-[0.3em] text-red-500">
-                    {t('qibla.north')}
+                    {isArabic ? ARABIC_CARDINALS.north : t('qibla.north')}
                   </div>
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-semibold tracking-[0.3em] text-muted-foreground">
-                    {t('qibla.south')}
+                    {isArabic ? ARABIC_CARDINALS.south : t('qibla.south')}
                   </div>
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.3em] text-muted-foreground">
-                    {t('qibla.west')}
+                    {isArabic ? ARABIC_CARDINALS.west : t('qibla.west')}
                   </div>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-[0.3em] text-muted-foreground">
-                    {t('qibla.east')}
+                    {isArabic ? ARABIC_CARDINALS.east : t('qibla.east')}
                   </div>
                 </div>
 
@@ -486,7 +497,7 @@ const QiblaCompassPage: FC = () => {
               <p className="text-2xl font-semibold">
                 {distanceToKaaba === null
                   ? '--'
-                  : formatDistance(distanceToKaaba)}
+                  : formatDistance(distanceToKaaba, isArabic ? 'كم' : 'km')}
               </p>
             </CardContent>
           </Card>

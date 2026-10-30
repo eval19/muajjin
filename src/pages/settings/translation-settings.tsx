@@ -54,7 +54,7 @@ const TranslationSettings: FC = () => {
               rel="noopener noreferrer"
               className="block text-sm text-primary hover:underline">
               {t('settings.importDescriptionWithLearnMore')}{' '}
-              <ArrowUpRight className="inline h-4 w-4" />
+              <ArrowUpRight className="inline h-4 w-4 rtl:-scale-x-100" />
             </a>
           }
           helperPosition="before"
@@ -90,12 +90,22 @@ const TranslationSettings: FC = () => {
                           {translation.meta.languageName}
                         </p>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t('settings.code')}: {translation.meta.languageCode} •
-                        {t('settings.direction')}:{' '}
-                        {translation.meta.direction.toUpperCase()} •
-                        {t('settings.version')}: {translation.meta.version}
-                      </p>
+                      <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+                        <span>
+                          {t('settings.code')}:{' '}
+                          <bdi>{translation.meta.languageCode}</bdi>
+                        </span>
+                        <span aria-hidden>•</span>
+                        <span>
+                          {t('settings.direction')}:{' '}
+                          <bdi>{translation.meta.direction.toUpperCase()}</bdi>
+                        </span>
+                        <span aria-hidden>•</span>
+                        <span>
+                          {t('settings.version')}:{' '}
+                          <bdi>{translation.meta.version}</bdi>
+                        </span>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {t('settings.imported')}:{' '}
                         {new Date(translation.importedAt).toLocaleDateString()}

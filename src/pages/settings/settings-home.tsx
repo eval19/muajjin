@@ -108,19 +108,19 @@ const SettingsHome: FC = () => {
             options={[
               {
                 value: 'light',
-                icon: <Sun className="mr-2 h-4 w-4" />,
+                icon: <Sun className="me-2 h-4 w-4" />,
                 label: t('settings.light'),
                 disabled: !mounted,
               },
               {
                 value: 'dark',
-                icon: <Moon className="mr-2 h-4 w-4" />,
+                icon: <Moon className="me-2 h-4 w-4" />,
                 label: t('settings.dark'),
                 disabled: !mounted,
               },
               {
                 value: 'system',
-                icon: <Monitor className="mr-2 h-4 w-4" />,
+                icon: <Monitor className="me-2 h-4 w-4" />,
                 label: t('settings.system'),
                 disabled: !mounted,
               },
@@ -143,7 +143,7 @@ const SettingsHome: FC = () => {
               </div>
 
               <span className="flex-1 font-semibold">{category.label}</span>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground rtl:rotate-180" />
             </button>
           </Card>
         );

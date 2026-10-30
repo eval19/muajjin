@@ -486,7 +486,7 @@ export function CountrySelect({
               aria-expanded={countryOpen}
               className="w-full justify-between">
               {selectedCountry || t('common.selectCountry')}
-              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <Search className="ms-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0" align="start">
@@ -510,7 +510,7 @@ export function CountrySelect({
                       }}>
                       <Check
                         className={cn(
-                          'mr-2 h-4 w-4',
+                          'me-2 h-4 w-4',
                           selectedCountry === country.name
                             ? 'opacity-100'
                             : 'opacity-0',
@@ -537,7 +537,7 @@ export function CountrySelect({
               className="w-full justify-between"
               disabled={!selectedCountry}>
               {selectedCity || t('common.selectCity')}
-              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <Search className="ms-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0" align="start">
@@ -560,7 +560,7 @@ export function CountrySelect({
                       }}>
                       <Check
                         className={cn(
-                          'mr-2 h-4 w-4',
+                          'me-2 h-4 w-4',
                           selectedCity === city ? 'opacity-100' : 'opacity-0',
                         )}
                       />

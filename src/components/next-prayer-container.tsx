@@ -38,10 +38,10 @@ export const NextPrayerContainer: FC<NextPrayerContainerProps> = ({
               </p>
               <h3 className="text-lg font-bold uppercase">{nextPrayer.name}</h3>
             </div>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground rtl:rotate-180" />
           </div>
           <div className="flex gap-4">
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-xs text-muted-foreground">
                 {t('salatTimes.start')}
               </p>
@@ -50,7 +50,7 @@ export const NextPrayerContainer: FC<NextPrayerContainerProps> = ({
               </p>
             </div>
             {nextPrayer.jamaah && (
-              <div className="text-right">
+              <div className="text-end">
                 <p className="text-xs text-muted-foreground">
                   {t('salatTimes.jamaah')}
                 </p>

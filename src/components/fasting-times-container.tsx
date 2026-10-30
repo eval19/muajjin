@@ -36,7 +36,7 @@ export const FastingTimesContainer: FC<FastingTimesContainerProps> = ({
           <MoonStar className="h-5 w-5 text-primary" />
           <h3 className="font-bold">{t('saum.title')}</h3>
         </div>
-        <div className="grid grid-cols-3 divide-x divide-border">
+        <div className="grid grid-cols-3 divide-x divide-border rtl:divide-x-reverse">
           <div className="px-2 text-center">
             <p className="text-xs text-muted-foreground">
               {t('saum.suhoorEnds')}

@@ -187,9 +187,9 @@ const UpcomingPrayerTimesPage: FC = () => {
                 </p>
               )}
               <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-2 border-b bg-muted/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <div className="text-left">{t('salatTimes.salat')}</div>
-                <div className="text-right">{t('salatTimes.start')}</div>
-                <div className="text-right">{t('salatTimes.end')}</div>
+                <div className="text-start">{t('salatTimes.salat')}</div>
+                <div className="text-end">{t('salatTimes.start')}</div>
+                <div className="text-end">{t('salatTimes.end')}</div>
               </div>
 
               <div className="divide-y divide-border">
@@ -197,11 +197,11 @@ const UpcomingPrayerTimesPage: FC = () => {
                   <div
                     key={prayer.id}
                     className="grid grid-cols-[1.1fr_1fr_1fr] items-center gap-2 px-4 py-2">
-                    <span className="text-left font-medium">{prayer.name}</span>
-                    <span className="text-right tabular-nums">
+                    <span className="text-start font-medium">{prayer.name}</span>
+                    <span className="whitespace-nowrap text-end tabular-nums">
                       {formatTime(prayer.start, settings.timeFormat, t)}
                     </span>
-                    <span className="text-right tabular-nums">
+                    <span className="whitespace-nowrap text-end tabular-nums">
                       {formatTime(prayer.end, settings.timeFormat, t)}
                     </span>
                   </div>

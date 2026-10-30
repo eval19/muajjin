@@ -49,12 +49,18 @@ export function ActiveLanguageSelect({
               বাংলা (Bangla)
             </div>
           </SelectItem>
+          <SelectItem value="ar">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              العربية (Arabic)
+            </div>
+          </SelectItem>
           {importedTranslations.map((translation) => (
             <SelectItem key={translation.id} value={translation.id}>
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 {translation.meta.languageName}
-                <span className="ml-1 text-xs text-muted-foreground">
+                <span className="ms-1 text-xs text-muted-foreground">
                   ({translation.meta.direction})
                 </span>
               </div>

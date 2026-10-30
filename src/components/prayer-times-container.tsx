@@ -27,7 +27,7 @@ export const PrayerTimesContainer: FC<PrayerTimesContainerProps> = ({
       <Card className="overflow-hidden">
         {/* Table Header */}
         <div className="grid grid-cols-4 gap-2 bg-muted/30 p-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <div className="pl-2 text-left">{t('salatTimes.salat')}</div>
+          <div className="text-start">{t('salatTimes.salat')}</div>
           <div className="text-center">{t('salatTimes.start')}</div>
           <div className="text-center">{t('salatTimes.jamaah')}</div>
           <div className="text-center">{t('salatTimes.end')}</div>
@@ -42,22 +42,22 @@ export const PrayerTimesContainer: FC<PrayerTimesContainerProps> = ({
               <div
                 key={salat.id}
                 className={`grid grid-cols-4 gap-2 p-3 ${
-                  isCurrent && 'border-l-4 border-l-primary bg-primary/5'
+                  isCurrent && 'border-s-4 border-s-primary bg-primary/5 ps-2'
                 }`}>
                 <p
-                  className={`text-left font-bold ${isCurrent && 'text-primary'}`}>
+                  className={`text-start font-bold ${isCurrent && 'text-primary'}`}>
                   {salat.name}
                 </p>
 
-                <p className={`text-center ${isCurrent && 'font-medium'}`}>
+                <p className={`whitespace-nowrap text-center ${isCurrent && 'font-medium'}`}>
                   {formatTime(salat.start, timeFormat, t)}
                 </p>
 
-                <p className="text-center font-semibold text-primary">
+                <p className="whitespace-nowrap text-center font-semibold text-primary">
                   {salat.jamaah ? formatTime(jamaahTime, timeFormat, t) : '—'}
                 </p>
 
-                <p className="text-center">
+                <p className="whitespace-nowrap text-center">
                   {salat.end ? formatTime(salat.end, timeFormat, t) : '—'}
                 </p>
               </div>

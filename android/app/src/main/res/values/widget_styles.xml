@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="WidgetText" parent="">
+    <style name="WidgetTextBase" parent="">
         <item name="android:fontFamily">sans-serif</item>
-        <item name="android:includeFontPadding">true</item>
+    </style>
+    <style name="WidgetText" parent="WidgetTextBase">
+        <item name="android:includeFontPadding">false</item>
         <item name="android:textColor">@color/w_text_secondary</item>
         <item name="android:textSize">@dimen/w_context_size</item>
         <item name="android:textStyle">normal</item>
@@ -41,6 +43,7 @@
         <item name="android:textStyle">bold</item>
         <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:paddingTop">@dimen/w_gap_label</item>
+        <item name="android:textDirection">ltr</item>
     </style>
     <style name="WidgetText.Lock" parent="WidgetText">
         <item name="android:textColor">#E6FFFFFF</item>

@@ -69,7 +69,7 @@ export function AppHeader({
               aria-label={t('common.back')}
               onClick={handleBack}
               className="size-9 rounded-full">
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
             </Button>
 
             {/* Page Title */}

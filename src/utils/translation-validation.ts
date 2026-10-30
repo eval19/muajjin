@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import arTemplate from '../i18n/template-ar.json';
 import enTemplate from '../i18n/template-en.json';
 import type { StoredTranslation, TranslationFile } from '../types/translation';
 
@@ -26,17 +27,21 @@ export function validateTranslation(value: unknown): TranslationFile {
   try { Intl.getCanonicalLocales(parsed.data.meta.languageCode.replace(/_/g, '-')); }
   catch { throw new Error('Invalid translation language code; use a locale such as en, bn or ar'); }
   const input = value as { translations: Record<string, unknown> };
+  const baseLanguage = parsed.data.meta.languageCode.toLowerCase().replace(/_/g, '-').split('-')[0];
+  const fill = baseLanguage === 'ar' ? arTemplate.translations : enTemplate.translations;
   let leaves = 0;
   let characters = 0;
-  const merge = (source: Record<string, unknown>, defaults: Record<string, unknown>, depth: number): Record<string, unknown> => {
+  const merge = (source: Record<string, unknown>, defaults: Record<string, unknown>, depth: number, fillSource: Record<string, unknown>): Record<string, unknown> => {
     if (depth > 8) throw new Error('Translation nesting is too deep');
     const result: Record<string, unknown> = {};
     for (const key of new Set([...Object.keys(defaults), ...Object.keys(source)])) {
       if (Object.prototype.hasOwnProperty.call(forbidden, key) || key.length > 128) throw new Error('Invalid translation property');
       if (++leaves > 2000) throw new Error('Translation contains too many values');
       const supplied = Object.prototype.hasOwnProperty.call(source, key);
-      const current = supplied ? source[key] : defaults[key];
+      const fillValue = Object.prototype.hasOwnProperty.call(fillSource, key) ? fillSource[key] : undefined;
+      const current = supplied ? source[key] : (fillValue ?? defaults[key]);
       const fallback = defaults[key];
+      const childFill = fillValue !== null && typeof fillValue === 'object' && !Array.isArray(fillValue) ? fillValue as Record<string, unknown> : {};
       if (typeof current === 'string') {
         if (fallback !== null && typeof fallback === 'object') throw new Error(`Translation section ${key} must be an object`);
         if (current.length > MAX_STRING_LENGTH) throw new Error(`Translation value ${key} is too long`);
@@ -46,15 +51,16 @@ export function validateTranslation(value: unknown): TranslationFile {
         if (typeof fallback === 'string' && actual.join(',') !== placeholders(fallback).join(',')) throw new Error(`Translation placeholders do not match for ${key}`);
         result[key] = current;
       } else if (current !== null && typeof current === 'object' && !Array.isArray(current) && typeof fallback !== 'string') {
-        result[key] = merge(current as Record<string, unknown>, fallback !== null && typeof fallback === 'object' ? fallback as Record<string, unknown> : {}, depth + 1);
+        result[key] = merge(current as Record<string, unknown>, fallback !== null && typeof fallback === 'object' ? fallback as Record<string, unknown> : {}, depth + 1, childFill);
       } else throw new Error(`Translation value ${key} must be a string or a translation section`);
     }
     return result;
   };
   // Inspect original own keys: schema parsing must not silently strip hostile property names.
-  const result = { meta: parsed.data.meta, translations: merge(input.translations, enTemplate.translations, 0) };
+  const result = { meta: parsed.data.meta, translations: merge(input.translations, enTemplate.translations, 0, fill as Record<string, unknown>) };
   if (new TextEncoder().encode(JSON.stringify(result)).byteLength > MAX_TRANSLATION_BYTES) throw new Error('Translation file is too large (maximum 1 MB)');
-  // Every known leaf is now a validated string with deep English defaults for older imports.
+  // Every known leaf is now a validated string. Arabic imports fill from the
+  // Arabic template; other languages fill from English.
   return result as unknown as TranslationFile;
 }
 
