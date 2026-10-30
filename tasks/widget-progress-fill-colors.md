@@ -1,7 +1,8 @@
 # Home-screen widget progress fill: 12-anchor OKLab progression
 
-Status: final palette frozen for the 2.9.6/296 prerelease (2026-10-30),
-native-render verified; publication evidence belongs in `tasks/evidence.md`.
+Status: published as the [2.9.6 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.6)
+(Android versionCode 296, 2026-10-30). Native-render and signed-artifact
+verification evidence is in `tasks/evidence.md`.
 The previous palette shipped in the
 [2.9.5 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.5)
 (Android versionCode 295); its release evidence is in `tasks/evidence.md`.

@@ -1,6 +1,6 @@
 # Muajjin implementation evidence
 
-## 2.9.6 widget colours — 2026-10-30 (release preparation)
+## 2.9.6 widget colours — 2026-10-30 (published prerelease)
 
 - Approved scope: commit/push `release/2.9.6` and annotated tag `v2.9.6`,
   version 2.9.6/296; use the existing signed GitHub workflow and hosted secrets,
@@ -20,6 +20,38 @@
   contrast is 1.33:1 light / 3.29:1 dark. No physical-device, launcher, Doze,
   alarm-delivery or live-refresh measurement is claimed. No calculation,
   layout, countdown, notification or scheduling logic changed.
+- Published: [v2.9.6 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.6),
+  release ID `429419825`, exact source
+  `9139b7b5a088202c110d4633441769fdb1f51968`. Annotated tag `v2.9.6` targets
+  that source; the later documentation-only evidence commit does not move it.
+- Hosted verification: [signed run 41115858394](https://github.com/eval19/muajjin/actions/runs/41115858394)
+  passed both distribution modes' lint, types, 300 Bun tests per mode and web
+  builds; native regressions/debug/instrumentation-APK assembly and controlled
+  signed release assembly passed. Instrumentation-APK assembly is not execution.
+  [Tag verification run 41115761213](https://github.com/eval19/muajjin/actions/runs/41115761213)
+  also passed; its unsigned APK was not published.
+- Artifact: `muajjin-2.9.6-296-github-release.apk`, 4,558,580 bytes, SHA-256
+  `5e79327c54bfc7aeebfaa0be0c3be58835f0a5904bd370159977e07b1746443b`.
+  Downloaded Actions archive digest matches GitHub. Local verification confirms
+  v2/v3 signatures for API 24–36 and the original release certificate
+  `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`,
+  16 KB alignment, package `org.muslimtechnician.muajjin`, version 2.9.6/296,
+  minSDK24/targetSDK36, GitHub mode and source epoch `1793388606`.
+- Every one of the 24 compiled theme anchors resolves to the exact approved
+  resource colour, including night-qualified accent aliases. The release
+  manifest excludes `WidgetTestActivity`; APK ZIP integrity passed.
+- Only the signed APK and its 103-byte `.sha256` are public release assets.
+  Uploaded asset digests, authenticated draft-download bytes and anonymous
+  canonical public-download bytes all match the independently verified local
+  files. Stable `/releases/latest` remains `v2.9.1`.
+- Final local APK/checksum are retained in `.tools/release-2.9.6-output/`.
+  Archive/metadata verification used memory, not leftover extraction files.
+  No signing material was downloaded, exported, exposed or changed; existing
+  credential-manager authentication and hosted signing secrets were reused.
+- Publication triggered the independent
+  [Pages run 41116840318](https://github.com/eval19/muajjin/actions/runs/41116840318).
+  Website deployment is not APK verification; the prior Pages hosting limitation
+  remains separately documented below. No Pages/account settings were changed.
 
 ## 2.9.5 widget progress palette — 2026-10-27 (published prerelease)
 
