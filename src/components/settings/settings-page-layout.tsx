@@ -22,23 +22,23 @@ export const SettingsPageLayout: FC<SettingsPageLayoutProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-[var(--app-bottom-space)]">
       <div className={contentClassName}>
         <div className="space-y-4">
           {showBackButton ? (
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label={t('common.back')}
                 onClick={() => navigate(-1)}
-                className="size-10 rounded-full">
+                className="size-10 shrink-0 rounded-full">
                 <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
               </Button>
-              <h1 className="flex-1 text-center text-2xl font-bold tracking-tight">
+              <h1 className="min-w-0 flex-1 break-words text-center text-2xl font-bold tracking-tight">
                 {title}
               </h1>
-              <div className="size-10" />
+              <div className="size-10 shrink-0" aria-hidden="true" />
             </div>
           ) : (
             <div className="space-y-1">

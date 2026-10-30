@@ -36,6 +36,7 @@
     <style name="WidgetText.Metadata" parent="WidgetText" />
     <style name="WidgetText.ScheduleName" parent="WidgetText">
         <item name="android:textSize">@dimen/w_schedule_name_size</item>
+        <item name="android:textAlignment">viewStart</item>
     </style>
     <style name="WidgetText.ScheduleTime" parent="WidgetText">
         <item name="android:textColor">@color/w_text_primary</item>
@@ -44,6 +45,7 @@
         <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:paddingTop">@dimen/w_gap_label</item>
         <item name="android:textDirection">ltr</item>
+        <item name="android:textAlignment">viewStart</item>
     </style>
     <style name="WidgetText.Lock" parent="WidgetText">
         <item name="android:textColor">#E6FFFFFF</item>

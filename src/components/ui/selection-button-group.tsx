@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
 
 interface SelectionOption<T extends string> {
@@ -31,10 +32,10 @@ export function SelectionButtonGroup<T extends string>({
           type="button"
           variant={value === option.value ? 'default' : 'outline'}
           onClick={() => onChange(option.value)}
-          className={buttonClassName}
+          className={cn('h-auto min-w-0 flex-wrap px-2', buttonClassName)}
           disabled={option.disabled}>
           {option.icon}
-          {option.label}
+          <span className="min-w-0 break-words">{option.label}</span>
         </Button>
       ))}
     </div>

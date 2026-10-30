@@ -111,15 +111,15 @@ const UpcomingPrayerTimesPage: FC = () => {
   }, [t, language, monthOffset, settings, singleDayOnly, startDateValue]);
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-[var(--app-bottom-space)]">
       <div className="mx-auto max-w-md space-y-4 px-5 py-6">
         <h1 className="text-2xl font-bold tracking-tight">
           {t('salatTimes.upcomingTitle')}
         </h1>
 
         <Card className="p-4">
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-0 flex-1 basis-44">
               <label htmlFor="upcoming-date" className="mb-1 block text-sm font-medium">
                 {t('salatTimes.datePickerLabel')}
               </label>
@@ -130,7 +130,7 @@ const UpcomingPrayerTimesPage: FC = () => {
                   value={startDateValue}
                   min={DATE_PICKER_MIN}
                   max={DATE_PICKER_MAX}
-                  className="h-11"
+                  className="h-11 min-w-0 max-w-full"
                   onChange={(e) => {
                     if (!e.target.value || !e.target.validity.valid) return;
                     setStartDateValue(e.target.value);
@@ -140,8 +140,8 @@ const UpcomingPrayerTimesPage: FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-xs font-medium text-muted-foreground">
+            <div className="flex min-w-0 flex-1 basis-20 flex-col items-center gap-1">
+              <p className="text-center text-xs font-medium text-muted-foreground">
                 {t('salatTimes.singleDayCompact')}
               </p>
               <Switch
@@ -176,9 +176,9 @@ const UpcomingPrayerTimesPage: FC = () => {
 
         <div className="space-y-3">
           {upcomingDays.map((day) => (
-            <Card key={day.dateKey} className="overflow-hidden">
+            <Card key={day.dateKey} className="overflow-x-auto">
               <div className="border-b bg-muted/30 px-4 py-2 text-sm font-semibold text-muted-foreground">
-                {day.dateLabel}
+                <bdi>{day.dateLabel}</bdi>
               </div>
 
               {day.unavailable && (
@@ -186,7 +186,7 @@ const UpcomingPrayerTimesPage: FC = () => {
                   {t('errors.prayerCalculationUnavailable')}
                 </p>
               )}
-              <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-2 border-b bg-muted/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="grid min-w-[18rem] grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2 border-b bg-muted/20 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <div className="text-start">{t('salatTimes.salat')}</div>
                 <div className="text-end">{t('salatTimes.start')}</div>
                 <div className="text-end">{t('salatTimes.end')}</div>
@@ -196,13 +196,13 @@ const UpcomingPrayerTimesPage: FC = () => {
                 {day.prayers.map((prayer) => (
                   <div
                     key={prayer.id}
-                    className="grid grid-cols-[1.1fr_1fr_1fr] items-center gap-2 px-4 py-2">
-                    <span className="text-start font-medium">{prayer.name}</span>
-                    <span className="whitespace-nowrap text-end tabular-nums">
-                      {formatTime(prayer.start, settings.timeFormat, t)}
+                    className="grid min-w-[18rem] grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 px-3 py-2">
+                    <span className="min-w-0 break-words text-start font-medium">{prayer.name}</span>
+                    <span className="text-end tabular-nums">
+                      <bdi dir="ltr">{formatTime(prayer.start, settings.timeFormat, t)}</bdi>
                     </span>
-                    <span className="whitespace-nowrap text-end tabular-nums">
-                      {formatTime(prayer.end, settings.timeFormat, t)}
+                    <span className="text-end tabular-nums">
+                      <bdi dir="ltr">{formatTime(prayer.end, settings.timeFormat, t)}</bdi>
                     </span>
                   </div>
                 ))}

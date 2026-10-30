@@ -224,6 +224,72 @@ public class WidgetPresentationInstrumentedTest {
 
 
 
+    @Test public void longArabicWideHeaderKeepsMeasuredStackingAndEveryPrayerCell() throws Exception {
+        target = instrumentation.getTargetContext();
+        assertTrue(target.getPackageName().endsWith(".debug"));
+        Locale originalLocale = Locale.getDefault();
+        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
+        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
+        prepareSchedule(Calendar.OCTOBER, 13);
+        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try {
+            instrumentation.runOnMainSync(() -> {
+                surface = new FrameLayout(activity);
+                activity.setContentView(surface);
+                try {
+                    Context context = configured("ar", 1f);
+                    PrayerWidgetHelper.WidgetTimelineState base = state(context, "ar", "midday");
+                    assertEquals("Fixture width must support the normal six-column schedule", 6,
+                        new WidgetLayout(context, base, 3, 720, 600).columns);
+                    JSONObject json = base.presentation.json();
+                    String current = "الصلاة الحالية حسب التوقيت المحلي";
+                    PrayerWidgetHelper.WidgetTimelineState snapshot = base;
+                    WidgetLayout measured = null;
+                    for (int count = 0; count < 32; count++) {
+                        json.getJSONObject("labels").put("now", current);
+                        snapshot = new PrayerWidgetHelper.WidgetTimelineState(context,
+                            NativePresentation.parse(json), base.timeline, base.now,
+                            new long[]{base.fajrTs, base.sunriseTs, base.dhuhrTs,
+                                base.asrTs, base.maghribTs, base.ishaTs}, base.numericLocale);
+                        measured = new WidgetLayout(context, snapshot, 3, 720, 600);
+                        if (measured.stacked) break;
+                        current += " المعتمد";
+                    }
+                    assertNotNull(measured);
+                    assertTrue("Long contextual Arabic must exercise a measured stacked header", measured.stacked);
+                    for (float height : new float[]{600, (float)Math.ceil(measured.minimumHeight)}) {
+                        Rendered rendered = render(new Profile(3, 720, height), context, snapshot);
+                        try {
+                            Rect primary = bounds(rendered.root,
+                                rendered.root.findViewById(R.id.widget_primary_group));
+                            Rect contextBounds = bounds(rendered.root,
+                                rendered.root.findViewById(R.id.widget_context_group));
+                            assertTrue("Inflated header contradicts the measured vertical composition: primary="
+                                + primary + " context=" + contextBounds, contextBounds.top >= primary.bottom);
+                            assertEquals("Stacked header must retain all six cells in the existing grid", 2,
+                                scheduleRowCount(rendered.root, CHIPS));
+                            verifySchedule(rendered, CHIPS, CHIP_NAMES, CHIP_TIMES);
+                            verifyTextGeometry(rendered.root, rendered.root);
+                        } finally {
+                            surface.removeView(rendered.host);
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Arabic stacked-header fixture failed", error);
+                }
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                surface.removeAllViews();
+                activity.finish();
+            });
+            Locale.setDefault(originalLocale);
+            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
+            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
+        }
+    }
+
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
         Calendar date = Calendar.getInstance(zone);
@@ -962,6 +1028,20 @@ public class WidgetPresentationInstrumentedTest {
             assertEquals("ID-specific clock weight", timeStyle, style(root.findViewById(times[i])));
             assertEquals(nameSize, ((TextView)root.findViewById(names[i])).getTextSize(), .01f);
             assertEquals(timeSize, ((TextView)root.findViewById(times[i])).getTextSize(), .01f);
+            for (int textId : new int[]{names[i], times[i]}) {
+                TextView text = root.findViewById(textId);
+                Layout lines = text.getLayout();
+                boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+                for (int line = 0; line < lines.getLineCount(); line++) {
+                    float edge = text.getCompoundPaddingLeft()
+                        + (rtl ? lines.getLineRight(line) : lines.getLineLeft(line));
+                    float expected = rtl ? text.getWidth() - text.getCompoundPaddingRight()
+                        : text.getCompoundPaddingLeft();
+                    assertTrue("Prayer name and clock must share the cell's logical start edge: "
+                        + resourceName(text) + " edge=" + edge + " expected=" + expected,
+                        Math.abs(edge - expected) <= 1);
+                }
+            }
             assertTrue("Active fill stretches into spare host height", cell.getHeight() <= px(rendered.context,
                 96 * rendered.context.getResources().getConfiguration().fontScale));
             Rect rect = bounds(root, cell);
@@ -991,6 +1071,10 @@ public class WidgetPresentationInstrumentedTest {
                         baseline(root, root.findViewById(times[j])) - baseline(root, root.findViewById(times[i]))) <= 1);
                     assertTrue("Unequal name baselines in one schedule row", Math.abs(
                         baseline(root, root.findViewById(names[j])) - baseline(root, root.findViewById(names[i]))) <= 1);
+                    boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+                    assertTrue("Prayer chronology must follow the rendered start edge: "
+                        + PRAYERS[j] + " / " + PRAYERS[i],
+                        rtl ? rect.right <= other.left : rect.left >= other.right);
                 }
             }
         }

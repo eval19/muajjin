@@ -24,10 +24,11 @@ export function CalculationMethodSelect({
   triggerClassName = 'bg-card',
   placeholder,
 }: CalculationMethodSelectProps) {
-  const { t } = useTranslation();
+  const { t, direction } = useTranslation();
 
   return (
     <Select
+      dir={direction}
       value={value?.toString()}
       onValueChange={(v) => onChange(parseInt(v))}>
       <SelectTrigger className={triggerClassName}>

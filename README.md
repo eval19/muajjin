@@ -368,6 +368,15 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.8 refines Arabic typography, RTL controls, responsive app screens and
+the existing seven Android widgets. Prayer names and clocks share consistent
+alignment, compact/stacked layouts retain their content, and clock day-period
+ordering is protected for Latin and Arabic-Indic digits. Widget numerals still
+follow the device; there is no forced-English-digit policy or separate Arabic
+widget. The progress palette and prayer calculations remain unchanged.
+Native debug-host rendering passed in both themes; real launcher/keyguard
+integration remains a device-verification limit, not a claimed pass.
+
 Version 2.9.7 completes Arabic localization for both the web application and
 the Android home-screen widgets. The web interface ships with a complete built-in
 Arabic translation, an IBM Plex Sans Arabic font family, logical RTL layout,
@@ -433,8 +442,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.7
-(Android versionCode 297) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.8
+(Android versionCode 298) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -459,7 +468,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.7-297-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.8-298-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

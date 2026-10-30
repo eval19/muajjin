@@ -34,13 +34,14 @@ export const NumberAdjustmentControl: FC<NumberAdjustmentControlProps> = ({
       <Input
         id={id}
         type="number"
+        dir="ltr"
         aria-label={label}
         value={value}
         onChange={(e) => {
           const next = parseInt(e.target.value, 10) || 0;
           if (Number.isSafeInteger(next)) onChange(next);
         }}
-        className="bg-card text-center"
+        className="min-w-0 bg-card text-center tabular-nums"
       />
       <Button
         variant="outline"

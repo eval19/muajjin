@@ -87,22 +87,22 @@ const SortableContainer: FC<SortableContainerProps> = ({
         !isVisible ? 'opacity-50' : 'bg-background'
       }`}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div
             aria-label={label}
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing"
+            className="shrink-0 cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}>
             <GripVertical size={18} className="text-muted-foreground" />
           </div>
-          <span className="text-sm font-medium">{label}</span>
+          <span className="min-w-0 break-words text-sm font-medium">{label}</span>
         </div>
         <Switch
           aria-label={label}
           checked={isVisible}
           onCheckedChange={() => onToggle(id)}
-          className="cursor-pointer"
+          className="shrink-0 cursor-pointer"
         />
       </div>
     </div>
@@ -275,8 +275,8 @@ const DisplaySettings: FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/50 px-3 py-2">
             <div className="flex min-w-0 items-center gap-2">
               <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="break-all text-sm text-muted-foreground">
-                {t('settings.currentFont')}: {currentFont.name}
+              <span className="min-w-0 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                {t('settings.currentFont')}: <bdi>{currentFont.name}</bdi>
                 {currentFont.type === 'builtin' && ` (${t('settings.builtin')})`}
                 {currentFont.type === 'system' && ` (${t('settings.systemFont')})`}
               </span>
@@ -355,12 +355,12 @@ const DisplaySettings: FC = () => {
                 {t('settings.widgetReliabilityUnavailable')}
               </p>
             )}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span className="text-sm font-medium">
                 {t('settings.widgetExactAlarms')}
               </span>
               <span
-                className={`text-sm ${
+                className={`text-sm [overflow-wrap:anywhere] ${
                   reliability &&
                   reliability.exactAlarmSupported !== false &&
                   !reliability.exactAlarmAllowed
@@ -386,7 +386,7 @@ const DisplaySettings: FC = () => {
                   {t('settings.widgetAllowExactAlarms')}
                 </Button>
               )}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span className="text-sm font-medium">
                 {t('settings.widgetBatteryOptimization')}
               </span>
@@ -410,19 +410,19 @@ const DisplaySettings: FC = () => {
               <p>
                 {t('settings.widgetNextUpdate')}:{' '}
                 {reliability && reliability.nextTransition > 0
-                  ? new Date(reliability.nextTransition).toLocaleTimeString(
+                  ? <bdi dir="ltr" className="tabular-nums">{new Date(reliability.nextTransition).toLocaleTimeString(
                       [],
                       { hour: '2-digit', minute: '2-digit' },
-                    )
+                    )}</bdi>
                   : t('settings.widgetNotScheduled')}
               </p>
               <p>
                 {t('settings.widgetLastRefresh')}:{' '}
                 {reliability && reliability.lastDispatch > 0
-                  ? new Date(reliability.lastDispatch).toLocaleTimeString([], {
+                  ? <bdi dir="ltr" className="tabular-nums">{new Date(reliability.lastDispatch).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
-                    })
+                    })}</bdi>
                   : t('settings.widgetNotRecorded')}
               </p>
             </div>

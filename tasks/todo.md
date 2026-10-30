@@ -2,6 +2,42 @@
 
 Checked items mean their named implementation and verification scope is delivered. They do not certify unmeasured physical-device performance or every OEM/launcher/accessibility configuration. Exact runtime outcomes, trusted release identity and remaining limits are in `tasks/evidence.md`.
 
+## 2.9.8 Arabic visual prerelease — 2026-10-31
+
+- [x] R298-01: Obtain exact-scope approval; verify destination, existing signing
+  workflow/access, unused branch/tag and stable-latest baseline.
+- [ ] R298-02: Prepare version 2.9.8/298, release documentation and the explicit
+  source allowlist; commit/tag/push without numeral-policy changes.
+- [ ] R298-03: Pass hosted quality/signing gates and independently verify the
+  downloaded signed APK's identity, original signer, alignment and checksum.
+- [ ] R298-04: Publish only APK/checksum as a prerelease; verify public asset
+  bytes, prior-release preservation and stable/latest v2.9.1.
+
+
+## Arabic visual finish — 2026-10-31
+
+- [x] A01: Audit app/native presentation and obtain approval for visual changes,
+  temporary evidence and isolated browser/emulator verification.
+- [x] A02: Refine shared Arabic typography, selects, switches and overlays.
+  Acceptance: readable labels, correct RTL interaction geometry, contained
+  wrapping; verify rendered controls and lint/typecheck. Dependency: A01.
+- [x] A03: Refine dashboard clock/date/table presentation.
+  Acceptance: all values retained and isolated, aligned narrow layouts; verify
+  Arabic 320/360/393px and English/Bengali. Dependency: A02.
+- [x] A04: Refine onboarding/settings presentation and numeric fields.
+  Acceptance: readable options/metadata, consistent headers, no obscured content;
+  verify routes, popups and keyboard interaction. Dependency: A02.
+- [x] A05: Refine calendar, Qibla and Qaza presentation.
+  Acceptance: square compass, readable calendar, bounded five-digit counter;
+  verify narrow screens and enlarged text without changing behavior.
+  Dependency: A02.
+- [x] A06: Refine the existing seven language-following widgets.
+  Acceptance: correct clock runs/composition, balanced baselines/progress and
+  preserved data; verify native unit tests and rendered instrumentation.
+  Dependency: A01.
+- [x] A07: Complete integrated visual checks, both web build modes, regression
+  gates and exact evidence/limits. Dependencies: A03–A06.
+
 ## 2.9.3 transition reliability
 
 - [x] W03: Add exact-alarm/battery status and links, force transition/fallback re-arms, a non-wakeup post-target fallback, and next/last diagnostics. Local web gates, 37 native tests, and signed workflow `40124978266` passed. Published 2.9.3/293 as a prerelease; physical MIUI transition/exact-permission/fallback/force-stop validation remains the test goal.

@@ -171,14 +171,14 @@ export const UpdateChecker: FC = () => {
   return (
     <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogContent
-        className="w-[90%] rounded-2xl"
+        className="max-h-[calc(100dvh-2rem)] w-[90%] overflow-y-auto rounded-2xl [overflow-wrap:anywhere]"
         onOpenAutoFocus={(event) => event.preventDefault()}>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('update.availableTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
             {t('update.availableDescription', {
-              latestVersion: releaseInfo.latestVersion,
-              currentVersion,
+              latestVersion: `\u2068${releaseInfo.latestVersion}\u2069`,
+              currentVersion: `\u2068${currentVersion}\u2069`,
             })}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -193,7 +193,7 @@ export const UpdateChecker: FC = () => {
             disabled={!releaseInfo.downloadUrl && !releaseInfo.releaseUrl}
             className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0">
             {t('update.download', {
-              latestVersion: releaseInfo.latestVersion,
+              latestVersion: `\u2068${releaseInfo.latestVersion}\u2069`,
             })}
           </AlertDialogAction>
         </AlertDialogFooter>

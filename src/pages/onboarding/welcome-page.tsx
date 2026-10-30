@@ -66,11 +66,11 @@ export default function WelcomePage() {
       {/* Features Grid */}
       <Card className="shadow-lg">
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-4">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="space-y-2 text-center">
+                <div key={index} className="min-w-0 space-y-2 break-words text-center">
                   <div
                     className={`mx-auto h-12 w-12 rounded-xl ${feature.iconBg} flex items-center justify-center`}>
                     <Icon className={`h-6 w-6 ${feature.iconColor}`} />

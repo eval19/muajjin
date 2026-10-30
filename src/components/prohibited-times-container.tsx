@@ -1,7 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from '@/contexts/translation-context';
 import type { ProhibitedTime } from '@/types';
-import { formatTime, isWithinWindow, prayerBoundaries } from '@/utils/time-utils';
+import {
+  formatTime,
+  isWithinWindow,
+  prayerBoundaries,
+} from '@/utils/time-utils';
 import { useBoundaryClock } from '@/hooks/use-visible-clock';
 import { AlertTriangle, ArrowRight, Sun, Sunrise, Sunset } from 'lucide-react';
 import { useMemo } from 'react';
@@ -43,7 +47,10 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
         </div>
         <div className="space-y-2">
           {prohibitedTimes.map((display) => {
-            const current = timeline.find((candidate) => candidate.id === display.id && isWithinWindow(candidate, now));
+            const current = timeline.find(
+              (candidate) =>
+                candidate.id === display.id && isWithinWindow(candidate, now),
+            );
             const time = current ?? display;
             const isCurrent = current !== undefined;
             const TimeIcon = getTimeIcon(time.id);
@@ -51,15 +58,15 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
               <div
                 key={time.id}
                 className={[
-                  'flex items-center justify-between rounded-lg border p-3 transition-colors',
+                  'flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border p-3 transition-colors',
                   isCurrent
                     ? 'animate-pulse border-red-500/60 bg-red-500/10'
                     : 'border-border bg-muted/20',
                 ].join(' ')}>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <TimeIcon
                     className={[
-                      'h-4 w-4',
+                      'h-4 w-4 shrink-0',
                       isCurrent ? 'text-red-500' : 'text-orange-500',
                     ].join(' ')}
                   />
@@ -71,13 +78,17 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
                     {time.name}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-sm font-bold">
-                  <bdi dir="ltr">{formatTime(time.start, timeFormat, t)}</bdi>
+                <span className="ms-auto inline-flex items-center gap-1.5 text-sm font-bold">
+                  <bdi dir="ltr" className="whitespace-nowrap tabular-nums">
+                    {formatTime(time.start, timeFormat, t)}
+                  </bdi>
                   <ArrowRight
                     aria-hidden="true"
-                    className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground rtl:rotate-180"
                   />
-                  <bdi dir="ltr">{formatTime(time.end, timeFormat, t)}</bdi>
+                  <bdi dir="ltr" className="whitespace-nowrap tabular-nums">
+                    {formatTime(time.end, timeFormat, t)}
+                  </bdi>
                 </span>
               </div>
             );

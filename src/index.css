@@ -58,6 +58,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 162 47% 40%;
 
+    --app-bottom-space: calc(4rem + env(safe-area-inset-bottom, 0px));
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
@@ -130,10 +131,6 @@
     direction: rtl;
   }
 
-  [dir='rtl'] .flex {
-    text-align: right;
-  }
-
   [dir='rtl'] .text-left {
     text-align: right;
   }
@@ -183,14 +180,28 @@
   }
 
   /* Letter-spacing breaks Arabic cursive joins and makes labels look uneven. */
-  [dir='rtl'] [class*='tracking-'] {
+  :lang(ar) [class*='tracking-'] {
     letter-spacing: 0;
   }
 
-  /* Arabic 12px labels sit low and need a little more leading than Latin. */
-  [dir='rtl'] .text-xs {
+  /* Keep Arabic marks clear of adjacent lines without enlarging every label. */
+  :lang(ar) .text-xs {
     font-size: 0.8125rem;
-    line-height: 1.45;
+    line-height: 1.6;
+  }
+}
+
+@layer base {
+  :lang(ar) body {
+    line-height: 1.65;
+  }
+
+  :lang(ar) :is(h1, h2, h3) {
+    line-height: 1.5;
+  }
+
+  :lang(ar) .text-sm {
+    line-height: 1.65;
   }
 }
 
@@ -228,7 +239,9 @@ html[dir='rtl'] #root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

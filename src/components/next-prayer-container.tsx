@@ -30,23 +30,27 @@ export const NextPrayerContainer: FC<NextPrayerContainerProps> = ({
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
+          <div className="flex min-w-[6rem] flex-1 items-center gap-1">
+            <div className="min-w-0 text-start">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 {t('salatTimes.next')}
               </p>
-              <h3 className="text-lg font-bold uppercase">{nextPrayer.name}</h3>
+              <h3 className="break-words text-lg font-bold uppercase">
+                {nextPrayer.name}
+              </h3>
             </div>
             <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground rtl:rotate-180" />
           </div>
-          <div className="flex gap-4">
+          <div className="ms-auto flex flex-wrap gap-x-3 gap-y-2">
             <div className="text-end">
               <p className="text-xs text-muted-foreground">
                 {t('salatTimes.start')}
               </p>
               <p className="text-lg font-bold">
-                {formatTime(nextPrayer.start, timeFormat, t)}
+                <bdi dir="ltr" className="tabular-nums">
+                  {formatTime(nextPrayer.start, timeFormat, t)}
+                </bdi>
               </p>
             </div>
             {nextPrayer.jamaah && (
@@ -55,7 +59,9 @@ export const NextPrayerContainer: FC<NextPrayerContainerProps> = ({
                   {t('salatTimes.jamaah')}
                 </p>
                 <p className="text-lg font-bold text-primary">
-                  {formatTime(jamaahTime, timeFormat, t)}
+                  <bdi dir="ltr" className="tabular-nums">
+                    {formatTime(jamaahTime, timeFormat, t)}
+                  </bdi>
                 </p>
               </div>
             )}

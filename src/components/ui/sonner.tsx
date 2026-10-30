@@ -1,14 +1,17 @@
 import { useTheme } from 'next-themes';
 import { Toaster as Sonner } from 'sonner';
+import { useTranslation } from '@/contexts/translation-context';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = 'system' } = useTheme();
+  const { direction } = useTranslation();
 
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
+      dir={direction}
       className="toaster group"
       toastOptions={{
         classNames: {

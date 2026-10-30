@@ -52,7 +52,7 @@ final class WidgetLayout {
             countdownSample=countdownHourSample=countdownMinuteSample="—";
         }
         chooseScale();
-        if (variant == 3 && columns == 3 && height > 0 && minimumHeight > height
+        if (variant == 3 && !stacked && columns == 3 && height > 0 && minimumHeight > height
                 && canWrapSixClocks()) {
             columns = 6;
             wrapClocks = true;
@@ -226,7 +226,7 @@ final class WidgetLayout {
         float contextAllocation = width <= 0 ? -1 : Math.max(0, stacked ? available : available - heroWidth() - 8);
         contextBlockHeight = textHeight(state.footerText, contextSize(), false, contextAllocation) + 4
             + textHeight(state.contextLine2, contextSize(), false, contextAllocation);
-        columns = variant == 3 && state.valid && width > 0 && sixColumnsFit() ? 6 : 3;
+        columns = variant == 3 && !stacked && state.valid && width > 0 && sixColumnsFit() ? 6 : 3;
         minimumHeight = requiredHeight();
     }
 

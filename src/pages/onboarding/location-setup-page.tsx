@@ -62,7 +62,7 @@ export default function LocationSetupPage() {
               containerClassName="space-y-2"
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
               {/* Latitude */}
               <LabeledInputField
                 id="latitude"
@@ -75,7 +75,7 @@ export default function LocationSetupPage() {
                 min={-90}
                 max={90}
                 required
-                containerClassName="space-y-2"
+                containerClassName="min-w-0 space-y-2"
               />
 
               {/* Longitude */}
@@ -90,7 +90,7 @@ export default function LocationSetupPage() {
                 min={-180}
                 max={180}
                 required
-                containerClassName="space-y-2"
+                containerClassName="min-w-0 space-y-2"
               />
             </div>
 

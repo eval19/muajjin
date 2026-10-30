@@ -1,5 +1,68 @@
 # Muajjin implementation plan
 
+## 2.9.8 Arabic visual prerelease — 2026-10-31
+
+Approved: include this session's tracked Arabic visual fixes/regressions,
+version 2.9.8/298 and existing release documentation; commit/push a new
+`release/2.9.8` branch and annotated `v2.9.8` tag; run the unchanged hosted
+quality/signing workflow with existing secrets; verify the original signer,
+artifact identity/checksum/alignment and public downloads; publish only the
+signed APK/checksum as a prerelease without changing stable/latest v2.9.1.
+This approval supersedes the earlier no-commit/no-publication boundary only for
+this release. Keep device-dependent numerals, existing providers, calculations
+and scheduling unchanged. Exclude all unrelated untracked files and screenshot
+folders. No local packages, keys, device changes or GitHub settings changes.
+
+Sequence: explicit source allowlist → version/release identity checks →
+commit/tag/push → hosted gates and signed artifact → draft asset verification →
+publish prerelease → public download/latest verification. Retain final APK and
+checksum in `.tools/release-2.9.8-output/`; remove temporary helpers/downloads.
+Failed artifact verification blocks publication. Prior releases stay intact.
+The known emulator keyguard-provider enumeration limitation remains disclosed.
+
+
+## Arabic visual finish — 2026-10-31
+
+Approved scope: visual-only refinement of the existing Arabic app and seven
+language-following Android widgets. Preserve the palette, translations, all
+displayed information, other languages, calculation/storage/scheduling behavior,
+provider identities and fixed widget footprints. No dependencies, commits,
+signing, publication or personal-device/system-setting changes.
+
+### Design contract and execution
+
+1. Capture Arabic baseline on a fresh synthetic localhost origin and native-only
+   debug host. Preserve the existing Edge attachment and emulator. Temporary
+   helpers, captures and isolated emulator artifacts belong to
+   `.tools/qa-arabic-finish/`; reuse installed toolchains.
+2. Refine shared typography/controls first: Arabic leading, logical alignment,
+   RTL select/switch behavior, contained wrapping and safe-area bottom spacing.
+3. Refine dashboard, onboarding/settings, calendar, Qibla and Qaza presentation.
+   Isolate clock/numeric runs without changing formatter output or digit policy;
+   never mirror geographic compass geometry or conceal data to obtain fit.
+4. Refine existing native widget resources and measured composition. Verify the
+   reported progress-line appearance before changing its inherited RTL behavior.
+   Measurement and actual inflated composition must agree.
+5. Verify Arabic at 320/360/393px, both themes and enlarged text; compare English
+   and Bengali. Exercise dropdowns, switches, navigation, numeric controls and
+   language switching. Inspect all seven native variants, RTL order, baselines,
+   glyph bounds and progress geometry. Run lint/types/domain tests, both web
+   builds, native unit tests and targeted instrumentation.
+
+Risks: shared-control regressions and responsive widget cutovers. Mitigation:
+before/after rendered checks, other-language comparisons and existing native
+fit assertions without relaxed tolerances. Rollback is file-level reversal of
+this task's uncommitted edits; preserve all pre-existing work. Record actual
+results and platform limits in `tasks/evidence.md`.
+
+Execution completed locally: app controls/screens and widget alignment/composition
+refined; original formatter/digit policy preserved with widget-only bidi controls.
+Web gates and native visual/numeral gates pass. The additional provider metadata
+query did not enumerate keyguard-only widgets on the emulator; do not treat native
+host captures as launcher/keyguard acceptance. Exact evidence and runtime limits
+are recorded in `tasks/evidence.md`; no release or commit was made.
+
+
 ## 2.9.0 / 2.9.1 widget work — 2026-10-24
 
 - 2.9.0 shipped the seven-widget visual overhaul (build 290, source `3fe8ab4`). The 291 replacement (source `de1440a`) added staged progress-bar colors, device-numeral formatting, locale-change reconciliation, and presentation regressions.

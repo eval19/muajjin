@@ -22,7 +22,7 @@ export function HijriAdjustmentSelector({
     <div className="space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-center gap-2 text-sm font-semibold">
-          {showIcon ? <Moon className="h-4 w-4 text-primary" /> : null}
+          {showIcon ? <Moon className="h-4 w-4 shrink-0 text-primary" /> : null}
           <Label>{t('settings.hijriAdjustment')}</Label>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -37,7 +37,9 @@ export function HijriAdjustmentSelector({
             variant={value === option ? 'default' : 'outline'}
             onClick={() => onChange(option)}
             className="min-w-[60px] flex-1">
-            {option > 0 ? `+${option}` : option}
+            <bdi dir="ltr" className="tabular-nums">
+              {option > 0 ? `+${option}` : option}
+            </bdi>
           </Button>
         ))}
       </div>

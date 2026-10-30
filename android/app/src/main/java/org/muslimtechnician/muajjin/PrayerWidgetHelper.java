@@ -80,7 +80,7 @@ public final class PrayerWidgetHelper {
             progressStage=WidgetProgress.at(valid,startTimestamp,targetTimestamp,now);
             activePrayerId=valid?timeline.currentId:"";nextPrayerId=valid?timeline.nextId:"";
             nextName=valid?presentation.label(nextPrayerId):presentation.label("recovery");
-            nextTime=presentation.clock(clock,targetTimestamp);
+            nextTime=formatWidgetClock(clock,targetTimestamp);
             // Keep the clock as an independent LTR run when it is embedded in an
             // Arabic sentence; otherwise bidi reordering can move the AM/PM word.
             boolean rtl="rtl".equals(presentation.direction);
@@ -92,12 +92,12 @@ public final class PrayerWidgetHelper {
             contextLine2=valid?nextName+" "+presentation.label("at")+" "+embeddedTime:"";
             summaryText=valid?nextName+" · "+embeddedTime:nextName;
             lockTime=valid?presentation.label("at")+" "+embeddedTime:"";
-            currentStartTime=valid&&!activePrayerId.isEmpty()?presentation.clock(clock,startTimestamp):"";
+            currentStartTime=valid&&!activePrayerId.isEmpty()?formatWidgetClock(clock,startTimestamp):"";
             fajrTs=valid?localEvents[0]:0;sunriseTs=valid?localEvents[1]:0;dhuhrTs=valid?localEvents[2]:0;
             asrTs=valid?localEvents[3]:0;maghribTs=valid?localEvents[4]:0;ishaTs=valid?localEvents[5]:0;
-            fajrStr=presentation.clock(clock,fajrTs);sunriseStr=presentation.clock(clock,sunriseTs);
-            dhuhrStr=presentation.clock(clock,dhuhrTs);asrStr=presentation.clock(clock,asrTs);
-            maghribStr=presentation.clock(clock,maghribTs);ishaStr=presentation.clock(clock,ishaTs);
+            fajrStr=formatWidgetClock(clock,fajrTs);sunriseStr=formatWidgetClock(clock,sunriseTs);
+            dhuhrStr=formatWidgetClock(clock,dhuhrTs);asrStr=formatWidgetClock(clock,asrTs);
+            maghribStr=formatWidgetClock(clock,maghribTs);ishaStr=formatWidgetClock(clock,ishaTs);
             String hijri="";
             try {
                 Calendar date=Calendar.getInstance(TimeZone.getDefault());date.setTimeInMillis(now);
@@ -109,6 +109,14 @@ public final class PrayerWidgetHelper {
                     sunsetToday&&presentation.hijriDateChangeAtMaghrib,now,maghribTs),numericLocale);
             } catch(IllegalArgumentException error) { Log.w("MuajjinWidget","Hijri date outside supported range",error); }
             hijriText=hijri;
+        }
+        private String formatWidgetClock(java.text.SimpleDateFormat formatter,long timestamp) {
+            String text=presentation.clock(formatter,timestamp);
+            if(!"rtl".equals(presentation.direction)) return text;
+            int separator=text.indexOf(' ');
+            // Arabic-Indic digits are weak bidi characters. A strong LTR boundary
+            // keeps the translated day period after the numeric clock in every field.
+            return separator<0?text:text.substring(0,separator)+"\u200E"+text.substring(separator);
         }
         public String chipClock(String id) {
             switch(id) {

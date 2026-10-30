@@ -25,43 +25,52 @@ export function ActiveLanguageSelect({
   sectionClassName = 'space-y-3',
   labelClassName = 'text-sm font-medium',
 }: ActiveLanguageSelectProps) {
-  const { t } = useTranslation();
+  const { t, direction } = useTranslation();
 
   return (
     <div className={sectionClassName}>
       <Label className={labelClassName}>
         {t('settings.selectActiveLanguage')}
       </Label>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select dir={direction} value={value} onValueChange={onValueChange}>
         <SelectTrigger>
           <SelectValue placeholder={t('settings.selectLanguageOption')} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="en">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              {t('settings.englishDefault')}
+            <div className="flex min-w-0 items-center gap-2">
+              <Globe className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                {t('settings.englishDefault')}
+              </span>
             </div>
           </SelectItem>
           <SelectItem value="bn">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              বাংলা (Bangla)
+            <div className="flex min-w-0 items-center gap-2">
+              <Globe className="h-4 w-4 shrink-0" />
+              <bdi dir="ltr" className="min-w-0 [overflow-wrap:anywhere]">
+                বাংলা (Bangla)
+              </bdi>
             </div>
           </SelectItem>
           <SelectItem value="ar">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              العربية (Arabic)
+            <div className="flex min-w-0 items-center gap-2">
+              <Globe className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                <bdi>العربية</bdi> <bdi dir="ltr">(Arabic)</bdi>
+              </span>
             </div>
           </SelectItem>
           {importedTranslations.map((translation) => (
             <SelectItem key={translation.id} value={translation.id}>
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {translation.meta.languageName}
-                <span className="ms-1 text-xs text-muted-foreground">
-                  ({translation.meta.direction})
+              <div className="flex min-w-0 items-center gap-2">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  <bdi dir={translation.meta.direction}>{translation.meta.languageName}</bdi>
+                  {' '}
+                  <bdi dir="ltr" className="text-xs text-muted-foreground">
+                    ({translation.meta.direction})
+                  </bdi>
                 </span>
               </div>
             </SelectItem>

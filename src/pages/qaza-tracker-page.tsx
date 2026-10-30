@@ -13,8 +13,8 @@ const QazaTrackerPage: FC = () => {
   const tracker = useQazaTracker();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-md space-y-6 px-5 py-6 pb-20">
+    <div className="min-h-screen bg-background pb-[var(--app-bottom-space)]">
+      <div className="mx-auto max-w-md space-y-6 px-5 py-6">
         <h1 className="text-2xl font-bold tracking-tight">{t('qaza.title')}</h1>
 
         <div className="space-y-2">

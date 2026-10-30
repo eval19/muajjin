@@ -38,6 +38,7 @@ export function LabeledInputField({
       <Input
         id={id}
         type={type}
+        dir={type === 'number' && value !== '' ? 'ltr' : undefined}
         step={step}
         min={min}
         max={max}
@@ -45,7 +46,7 @@ export function LabeledInputField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={cn(inputClassName)}
+        className={cn(type === 'number' && 'tabular-nums', inputClassName)}
       />
     </div>
   );

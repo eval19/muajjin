@@ -385,17 +385,17 @@ const QiblaCompassPage: FC = () => {
     .join(isArabic ? '، ' : ', ');
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-[var(--app-bottom-space)]">
       <div className="mx-auto max-w-md space-y-6 px-5 py-6">
         <h1 className="text-2xl font-bold tracking-tight">
           {t('qibla.title')}
         </h1>
 
         <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card">
-          <CardContent className="space-y-6 p-6">
+          <CardContent className="space-y-6 p-4 sm:p-6">
             <div className="space-y-2 text-center">
               <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <Compass className="h-3.5 w-3.5" />
+                <Compass className="h-3.5 w-3.5 shrink-0" />
                 {t('qibla.badge')}
               </div>
               {/* <CardTitle className="text-2xl">{t('qibla.title')}</CardTitle> */}
@@ -403,7 +403,7 @@ const QiblaCompassPage: FC = () => {
             </div>
 
             <div className="flex justify-center">
-              <div className="relative h-72 w-72 rounded-full border border-border bg-card shadow-sm">
+              <div className="relative aspect-square w-full max-w-72 shrink-0 rounded-full border border-border bg-card shadow-sm">
                 <div
                   className="absolute inset-0 transition-transform duration-150 ease-linear will-change-transform"
                   style={{
@@ -430,7 +430,7 @@ const QiblaCompassPage: FC = () => {
                   style={{
                     transform: `rotate(${qiblaMarkerRotation}deg)`,
                   }}>
-                  <div className="absolute left-1/2 top-8 h-24 w-1 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_20px_rgba(0,0,0,0.12)]" />
+                  <div className="absolute left-1/2 top-[11.111%] h-1/3 w-1 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_20px_rgba(0,0,0,0.12)]" />
                   <div className="absolute left-1/2 top-4 h-0 w-0 -translate-x-1/2 border-x-[14px] border-b-[22px] border-x-transparent border-b-primary" />
                 </div>
 
@@ -475,29 +475,29 @@ const QiblaCompassPage: FC = () => {
           </CardContent>
         </Card>
 
-        <div className="flex gap-4">
-          <Card className="flex-1">
-            <CardContent className="space-y-2 p-5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-4">
+          <Card className="min-w-0">
+            <CardContent className="space-y-2 p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Navigation className="h-4 w-4" />
-                <span className="text-sm">{t('qibla.qiblaBearing')}</span>
+                <Navigation className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words text-sm">{t('qibla.qiblaBearing')}</span>
               </div>
-              <p className="text-2xl font-semibold">
-                {qiblaBearing === null ? '--' : `${Math.round(qiblaBearing)}°`}
+              <p className="text-2xl font-semibold tabular-nums">
+                <bdi dir="ltr">{qiblaBearing === null ? '--' : `${Math.round(qiblaBearing)}°`}</bdi>
               </p>
             </CardContent>
           </Card>
 
-          <Card className="flex-1">
-            <CardContent className="space-y-2 p-5">
+          <Card className="min-w-0">
+            <CardContent className="space-y-2 p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <LocateFixed className="h-4 w-4" />
-                <span className="text-sm">{t('qibla.distance')}</span>
+                <LocateFixed className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words text-sm">{t('qibla.distance')}</span>
               </div>
-              <p className="text-2xl font-semibold">
-                {distanceToKaaba === null
+              <p className="break-words text-2xl font-semibold tabular-nums">
+                <bdi dir="ltr">{distanceToKaaba === null
                   ? '--'
-                  : formatDistance(distanceToKaaba, isArabic ? 'كم' : 'km')}
+                  : formatDistance(distanceToKaaba, isArabic ? 'كم' : 'km')}</bdi>
               </p>
             </CardContent>
           </Card>
@@ -507,15 +507,15 @@ const QiblaCompassPage: FC = () => {
           <CardContent className="space-y-4 p-5">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
+                <MapPin className="h-4 w-4 shrink-0" />
                 {t('qibla.yourLocation')}
               </div>
-              <p className="font-medium">
+              <p className="break-words font-medium">
                 {locationLabel || t('qibla.locationUnavailable')}
               </p>
               <p className="text-sm text-muted-foreground">
                 {coordinates
-                  ? `${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)}`
+                  ? <bdi dir="ltr" className="tabular-nums">{`${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)}`}</bdi>
                   : t('qibla.locationHelp')}
               </p>
             </div>

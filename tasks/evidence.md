@@ -1,5 +1,87 @@
 # Muajjin implementation evidence
 
+## 2.9.8 Arabic visual prerelease — 2026-10-31 (preparing)
+
+- User explicitly approved version 2.9.8/298, the session's tracked visual fixes,
+  release documentation, new branch/tag, hosted signing with existing secrets,
+  and verified GitHub prerelease publication. Device-dependent numerals remain.
+- Read-only GitHub checks: repository `eval19/muajjin`, push access available,
+  release workflow active, prior v2.9.7 remains a prerelease, stable/latest is
+  v2.9.1. Remote `release/2.9.8` and `v2.9.8` were absent.
+- Exclude unrelated `bakery_raw.json`, prayer-comparison CSV/Markdown and
+  `widget-colour-screenshots/`; never upload credentials or local signing data.
+- Existing verified visual/runtime evidence below applies to the included
+  implementation. The keyguard-provider enumeration limitation is retained,
+  not hidden by a claim of complete launcher/lock-screen acceptance.
+
+
+## Arabic visual finish — 2026-10-31 (local source, not published)
+
+- Approval: visual-only app and existing seven-widget refinements, temporary
+  screenshots/builds and an isolated read-only instance of the existing API 36
+  AVD. No dependencies, commits, signing, publication, personal-device changes,
+  host settings, calculation/storage/scheduling changes or new widget identities.
+- App: Arabic-specific leading, logical control alignment, wrapping text buttons,
+  correctly directed Select roots/items and switch thumbs; isolated numeric/clock
+  runs; responsive dashboard tables, calendar, square compass and Qaza controls;
+  contained settings/import/font metadata and overlays; shared safe-area bottom
+  space. Existing translations, font selection and custom-font ownership remain.
+  At enlarged type, dense tables scroll locally rather than clipping values.
+- Widgets: names and clocks now share the cell's logical start edge independently
+  of clock paragraph direction. Both Square footer resources use LTR clock runs;
+  stacked Square clocks retain the Arabic right edge. Widget-only clock strings
+  insert an invisible LTR boundary before the translated day period so Arabic-Indic
+  digits cannot move it before the numeric clock. The underlying formatter,
+  digits, values and notification formatting remain unchanged. Stacked Wide
+  measurement now selects the existing matching six-cell/two-row resource.
+- Failing-before native proof: the new long-header case measured vertical content
+  but inflated a horizontal header; Square footer paragraph direction was -1
+  instead of +1. Actual RTL schedule clock edges were 44px versus the required
+  101px. The next run exposed Arabic-Indic day-period reversal; its numeric
+  selection occupied x18–40 while the period occupied x0–15. These assertions
+  pass after the corresponding presentation fixes without relaxed tolerances.
+- Web gates: pinned Bun 1.2.2 `bun run validate` passed zero-warning ESLint,
+  both TypeScript projects, **301 tests / 793 expectations / zero failures**, and
+  standard plus GitHub builds. Existing source-epoch, Capacitor script,
+  Browserslist-age and large-chunk warnings remain unsuppressed.
+- Browser proof: Microsoft Edge 156 identity and visible, non-minimized,
+  non-cloaked Default-desktop window verified. A new task-owned tab/origin on
+  localhost:18083 used only synthetic settings. Inspected before/after images:
+  key routes at 320/360px; all 13 main/settings/404 routes at 393px dark; three
+  onboarding routes at 320px. Checked 20px root typography on seven high-risk
+  routes, desktop framed layout at 768/1024/1440px, 12h/24h/system clocks,
+  Jama'ah absent/present, a long Arabic city, Qaza 99999 editing/focus restoration,
+  live RTL dropdowns/switches, navigation-sheet keyboard access, and real
+  Arabic/English/Bengali selection. Final sampled states had no horizontal page
+  overflow, measured text-width overflow or unhandled window errors.
+- Native proof: existing JDK21/SDK36 and checked-in Gradle wrapper, offline;
+  **52 unit tests, zero failures/errors/skips**, debug/test-APK assembly.
+  On disposable emulator-5584, `WidgetPresentationInstrumentedTest` and
+  `WidgetNumeralInstrumentedTest` pass **9 tests in light and 9 in dark**;
+  the presentation matrix covers **278 cases per theme**. Inspected actual
+  inflated native images for all seven Arabic variants in both themes. Existing
+  pixel checks retain RTL progress direction, palette, reset and theme behavior.
+- Limits: native images are from the native debug host, not an OEM launcher or
+  real keyguard. Matrix enlarged-font cases also enlarge host bounds; browser
+  text stress is root typography, not physical Android accessibility testing.
+  Uploaded custom-font decoding, TalkBack, actual location permission states,
+  GitHub update-dialog runtime and on-device WebView language-to-widget switching
+  were not exercised in this pass. Existing handoff/domain regressions passed.
+- Additional check, not a pass: `WidgetProviderInfoInstrumentedTest` failed to
+  enumerate `PrayerLockSmallProvider` via its installed-provider query on this
+  emulator. Provider declarations and that test were not changed or suppressed.
+  All seven native layouts rendered successfully; no launcher/keyguard metadata
+  acceptance is inferred from those images. Existing progress-palette minimum
+  sampled contrast remains 1.33:1 light / 3.29:1 dark.
+
+
+- Cleanup verified: synthetic localhost storage returned to empty; owned tab
+  closed and original Edge attachment restored. The task preview and disposable
+  emulator stopped; original preview/Edge listeners and emulator-5582 remain.
+  `.tools/qa-arabic-finish/`, generated `dist/` and the newly created 2.9.7 debug
+  APK were removed. Existing native build trees, working tool/dependency caches,
+  original AVD and prior release artifacts were not purged.
+
 ## 2.9.7 Arabic localization — 2026-10-30 (published prerelease)
 
 - Approved scope: commit/push `release/2.9.7` and annotated tag `v2.9.7`,

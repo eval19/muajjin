@@ -108,19 +108,19 @@ const SettingsHome: FC = () => {
             options={[
               {
                 value: 'light',
-                icon: <Sun className="me-2 h-4 w-4" />,
+                icon: <Sun className="me-2 h-4 w-4 shrink-0" />,
                 label: t('settings.light'),
                 disabled: !mounted,
               },
               {
                 value: 'dark',
-                icon: <Moon className="me-2 h-4 w-4" />,
+                icon: <Moon className="me-2 h-4 w-4 shrink-0" />,
                 label: t('settings.dark'),
                 disabled: !mounted,
               },
               {
                 value: 'system',
-                icon: <Monitor className="me-2 h-4 w-4" />,
+                icon: <Monitor className="me-2 h-4 w-4 shrink-0" />,
                 label: t('settings.system'),
                 disabled: !mounted,
               },
@@ -138,12 +138,12 @@ const SettingsHome: FC = () => {
               className="flex w-full items-center gap-3 p-3 text-start transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               onClick={() => navigate(category.route)}>
               <div
-                className={`h-10 w-10 rounded-xl ${category.bgColor} flex items-center justify-center`}>
+                className={`h-10 w-10 shrink-0 rounded-xl ${category.bgColor} flex items-center justify-center`}>
                 <Icon className={`h-5 w-5 ${category.color}`} />
               </div>
 
-              <span className="flex-1 font-semibold">{category.label}</span>
-              <ChevronRight className="h-5 w-5 text-muted-foreground rtl:rotate-180" />
+              <span className="min-w-0 flex-1 break-words font-semibold">{category.label}</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground rtl:rotate-180" />
             </button>
           </Card>
         );

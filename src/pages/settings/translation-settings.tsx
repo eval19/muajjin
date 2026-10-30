@@ -82,12 +82,12 @@ const TranslationSettings: FC = () => {
             {importedTranslationsList.map((translation) => (
               <Card key={translation.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">
-                          {translation.meta.languageName}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                      <div className="flex items-start gap-2">
+                        <FileText className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <p className="min-w-0 font-medium">
+                          <bdi>{translation.meta.languageName}</bdi>
                         </p>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
@@ -108,7 +108,7 @@ const TranslationSettings: FC = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {t('settings.imported')}:{' '}
-                        {new Date(translation.importedAt).toLocaleDateString()}
+                        <bdi>{new Date(translation.importedAt).toLocaleDateString()}</bdi>
                       </p>
                     </div>
                     <Button
@@ -121,7 +121,7 @@ const TranslationSettings: FC = () => {
                           translation.meta.languageName,
                         )
                       }
-                      className="h-8 w-8 text-destructive">
+                      className="h-8 w-8 shrink-0 text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

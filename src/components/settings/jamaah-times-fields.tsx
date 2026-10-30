@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { UserSettings } from '@/types';
 import type { FC } from 'react';
 
@@ -41,9 +42,10 @@ export const JamaahTimesFields: FC<JamaahTimesFieldsProps> = ({
           <Input
             id={`jamaah-${prayer}`}
             type="time"
+            dir="ltr"
             value={values[prayer] || ''}
             onChange={(e) => onChange(prayer, e.target.value)}
-            className={inputClassName}
+            className={cn('tabular-nums', inputClassName)}
           />
         </div>
       ))}

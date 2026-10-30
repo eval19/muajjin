@@ -4,7 +4,9 @@ import { useTranslation } from '@/contexts/translation-context';
 import { useBoundaryClock } from '@/hooks/use-visible-clock';
 import { formatPrayerClock } from '@/services/prayer-times-local';
 import {
-  formatGregorianDateShort, formatTime, nextLocalMidnight,
+  formatGregorianDateShort,
+  formatTime,
+  nextLocalMidnight,
 } from '@/utils/time-utils';
 import { calculateHijriDate } from '@/utils/hijri-utils';
 import { MapPin } from 'lucide-react';
@@ -30,20 +32,29 @@ export const DateTimeContainer: FC<DateTimeContainerProps> = ({
   timeFormat = 'system',
 }) => {
   const { t, activeTranslation } = useTranslation();
-  const boundaries = useMemo(() => [
-    nextLocalMidnight(date), maghribTimestamp,
-  ].filter((value): value is number => Number.isFinite(value)), [date, maghribTimestamp]);
+  const boundaries = useMemo(
+    () =>
+      [nextLocalMidnight(date), maghribTimestamp].filter(
+        (value): value is number => Number.isFinite(value),
+      ),
+    [date, maghribTimestamp],
+  );
   // The visible clock has no seconds; update at minute and date boundaries only.
   const now = useBoundaryClock(boundaries, 60_000);
   const currentTime = formatTime(formatPrayerClock(now), timeFormat, t);
   const year = now.getFullYear();
   const month = now.getMonth();
   const day = now.getDate();
-  const afterMaghrib = hijriDateChangeAtMaghrib &&
-    maghribTimestamp !== undefined && now.getTime() >= maghribTimestamp;
+  const afterMaghrib =
+    hijriDateChangeAtMaghrib &&
+    maghribTimestamp !== undefined &&
+    now.getTime() >= maghribTimestamp;
   const hijri = useMemo(() => {
     try {
-      return calculateHijriDate(new Date(year, month, day), hijriAdjustment + (afterMaghrib ? 1 : 0));
+      return calculateHijriDate(
+        new Date(year, month, day),
+        hijriAdjustment + (afterMaghrib ? 1 : 0),
+      );
     } catch {
       return null;
     }
@@ -53,24 +64,32 @@ export const DateTimeContainer: FC<DateTimeContainerProps> = ({
   return (
     <div className="space-y-3 text-center">
       {/* Large Clock Time */}
-      <div className="text-5xl font-bold tracking-tighter text-primary">
-        {currentTime}
+      <div className="text-5xl font-bold leading-normal tracking-tighter text-primary">
+        <bdi dir="ltr" className="tabular-nums">
+          {currentTime}
+        </bdi>
       </div>
 
       {/* Date Row */}
-      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        <span>{formatGregorianDateShort(now, activeTranslation?.meta.languageCode ?? 'en')}</span>
-        <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-        <span>{hijri
-          ? `${hijri.day} ${monthLabel} ${hijri.year}`
-          : t('errors.hijriDateUnavailable')}</span>
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <span>
+          {formatGregorianDateShort(
+            now,
+            activeTranslation?.meta.languageCode ?? 'en',
+          )}
+        </span>
+        <span>
+          {hijri
+            ? `${hijri.day} ${monthLabel} ${hijri.year}`
+            : t('errors.hijriDateUnavailable')}
+        </span>
       </div>
 
       {/* Location Badge */}
       {location && (
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-          <MapPin className="h-3 w-3" />
-          {location.city}
+        <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <bdi className="min-w-0 break-words">{location.city}</bdi>
         </div>
       )}
     </div>

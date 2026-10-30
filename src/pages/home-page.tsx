@@ -4,7 +4,7 @@ import { BottomNav } from '@/components/bottom-nav';
 
 const HomePage: FC = () => {
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-[var(--app-bottom-space)]">
       <Outlet />
       <BottomNav />
     </div>
