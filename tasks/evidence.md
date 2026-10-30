@@ -1,5 +1,44 @@
 # Muajjin implementation evidence
 
+## 2.9.7 Arabic localization — 2026-10-30 (published prerelease)
+
+- Approved scope: commit/push `release/2.9.7` and annotated tag `v2.9.7`,
+  version 2.9.7/297; use the existing signed GitHub workflow and hosted secrets,
+  verify the artifact, and publish a prerelease with only the signed APK/checksum.
+  Preserve prior releases and stable/latest `v2.9.1`; exclude unrelated untracked
+  files and screenshot folders from commits and uploads.
+- Implementation: complete 346-key built-in Arabic translation (`src/i18n/template-ar.json`),
+  bundled IBM Plex Sans Arabic (Regular, SemiBold, Bold) in `public/fonts/` (web) and
+  `android/app/src/main/res/font/` (native, API 26+), logical RTL spacing, mirrored
+  dividers and progress bars, direction-aware icons, bidi-isolated clock values,
+  automatic Arabic repair for imported translations, and in-place language switching
+  across the existing seven widget identities without duplicate providers.
+- Local verification: 301 web tests passed; TypeScript and ESLint zero warnings;
+  5 native instrumentation tests (278 cases) on API 36 passed with zero defects;
+  desktop Edge checks verified Arabic home, settings, translations, display,
+  onboarding, Qibla, and prayer calendar.
+- Published: [v2.9.7 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.7),
+  release ID `429506960`, exact source `1fefe705cbee9a60645100fc4bbb82940317bf22`.
+  Annotated tag `v2.9.7` targets that source; the documentation evidence commit
+  does not move it.
+- Hosted verification: [signed run 41130467925](https://github.com/eval19/muajjin/actions/runs/41130467925)
+  passed both distribution modes' lint, types, 300 Bun tests per mode and web
+  builds; native regressions/debug/instrumentation-APK assembly and controlled
+  signed release assembly passed.
+- Artifact: `muajjin-2.9.7-297-github-release.apk`, 5,091,658 bytes, SHA-256
+  `698fbb225f28d8b0bebdc9a4c4b6e0ba7ac7b9b7afb64dbbce8e14852b8ee528`.
+  Downloaded Actions archive digest matches GitHub. Local verification confirms
+  v2/v3 signatures for API 24–36 and the original release certificate
+  `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`,
+  16 KB alignment, package `org.muslimtechnician.muajjin`, version 2.9.7/297,
+  minSDK24/targetSDK36, GitHub mode and source epoch `1793395274`.
+  Release resource dump confirms `font/ibm_plex_sans_arabic` retention through R8.
+- Only the signed APK and its 103-byte `.sha256` are public release assets.
+  Uploaded asset digests, authenticated draft-download bytes and anonymous
+  canonical public-download bytes all match the independently verified local files.
+  Stable `/releases/latest` remains `v2.9.1`.
+- Final local APK/checksum are retained in `.tools/release-2.9.7-output/`.
+
 ## 2.9.6 widget colours — 2026-10-30 (published prerelease)
 
 - Approved scope: commit/push `release/2.9.6` and annotated tag `v2.9.6`,
