@@ -1,5 +1,23 @@
 # Implementation task checklist
 
+## 2.9.81 widget balance prerelease — 2026-10-31
+
+- [ ] R299-01: Version 2.9.81/299, explicit source allowlist, branch/tag/push.
+- [ ] R299-02: Hosted signed build, independent APK verification.
+- [ ] R299-03: Publish APK/checksum prerelease; verify public downloads and that
+  stable/latest remains v2.9.1.
+
+## Widget balance and two text sizes — 2026-10-31
+
+- [x] W-01: Audit the pictured imbalance and the existing typography/presentation
+  ownership; propose the composition and one-step scale.
+- [x] W-02: Rebalance Strip and align the remaining composite rows without
+  removing any value, cell or provider.
+- [x] W-03: Add one durable Normal/Larger setting through settings, presentation
+  payload, native parse/serialize and the renderer; default Normal.
+- [x] W-04: Prove both sizes at identical host bounds, Strip centring, native
+  storage round-trip and presentation-only sync; inspect captured renders.
+
 Checked items mean their named implementation and verification scope is delivered. They do not certify unmeasured physical-device performance or every OEM/launcher/accessibility configuration. Exact runtime outcomes, trusted release identity and remaining limits are in `tasks/evidence.md`.
 
 ## 2.9.8 Arabic visual prerelease — 2026-10-31

@@ -19,7 +19,13 @@ final class WidgetLayout {
     final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     final Paint.FontMetricsInt metrics = new Paint.FontMetricsInt();
     private final Typeface regularTypeface, boldTypeface;
-    boolean compact, stacked, metadataStacked, wrapClocks, summaryOnly;
+    /** Exactly two widget type scales; Normal (1f) preserves the existing resources. */
+    static final float LARGE_TEXT_SCALE = 1.2f;
+    /** A six-cell single row is dense; keep complete names at the cost of less padding. */
+    private static final float SIX_COLUMN_INSET = 1f;
+    boolean compact, tight, stacked, metadataStacked, wrapClocks, summaryOnly;
+    private boolean largeText;
+    private float textScale = 1f;
     int columns = 3;
     float minimumHeight;
     float nameLineHeight, clockLineHeight, labelLineHeight, contextLineHeight;
@@ -67,11 +73,26 @@ final class WidgetLayout {
     private void chooseScale() {
         // Keyguard widgets are fixed one-row surfaces; their regular type scale
         // cannot absorb a custom font's line height. Use the compact scale that
-        // the 2x1/4x1 hosts were designed around.
+        // the 2x1/4x1 hosts were designed around. Keyguard hosts also keep the
+        // Normal scale: a larger three-line stack cannot fit without dropping a
+        // value, so Larger applies to the five home-screen variants.
+        largeText = state.presentation.widgetLargeText && variant <= 4;
+        textScale = 1f;
         compact = variant == 5 || variant == 6;
+        tight = compact;
         chooseComposition();
         if (!compact && ((height > 0 && minimumHeight > height) || !fitsWidth())) {
             compact = true;
+            tight = true;
+            chooseComposition();
+        }
+        if (!largeText) return;
+        // Enlarge the profile Normal already resolved, so compaction can never
+        // make Larger text smaller than Normal. Only spacing may then tighten.
+        textScale = LARGE_TEXT_SCALE;
+        chooseComposition();
+        if (!tight && height > 0 && minimumHeight > height) {
+            tight = true;
             chooseComposition();
         }
     }
@@ -86,7 +107,7 @@ final class WidgetLayout {
     }
 
     float textSize(int regular, int small) {
-        return context.getResources().getDimension(compact ? small : regular);
+        return context.getResources().getDimension(compact ? small : regular) * textScale;
     }
 
     float labelSize() { return state.valid ? textSize(R.dimen.w_label_size, R.dimen.w_label_size_compact) : contextSize(); }
@@ -101,15 +122,21 @@ final class WidgetLayout {
         return textSize(R.dimen.w_countdown_size, R.dimen.w_countdown_size_compact);
     }
 
-    float horizontalInset() { return variant == 0 || compact ? 12 : 16; }
-    float verticalInset() { return variant == 0 || compact ? 8 : 16; }
-    float cellHorizontalInset() { return compact ? compactCellInset : 8; }
-    float cellVerticalInset() { return compact ? 6 : 8; }
-    float cellLabelGap() { return compact ? 2 : 4; }
-    float progressGap() { return variant == 0 || variant == 2 || compact ? 8 : 12; }
-    float scheduleGap() { return compact ? 8 : 16; }
+    float horizontalInset() { return variant == 0 || tight ? 12 : 16; }
+    float verticalInset() { return variant == 0 || tight ? 8 : 16; }
+    float cellHorizontalInset() {
+        if (columns == 6) return sixColumnInset();
+        return tight ? compactCellInset : 8;
+    }
+    private float sixColumnInset() {
+        return Math.min(tight ? compactCellInset : 8f, SIX_COLUMN_INSET);
+    }
+    float cellVerticalInset() { return tight ? 6 : 8; }
+    float cellLabelGap() { return tight ? 2 : 4; }
+    float progressGap() { return variant == 0 || variant == 2 || tight ? 8 : 12; }
+    float scheduleGap() { return tight ? 8 : 16; }
     float columnGap() { return dimension(R.dimen.w_gap_cells); }
-    float rowGap() { return compact ? 6 : 8; }
+    float rowGap() { return tight ? 6 : 8; }
     float contentWidth() { return width > 0 ? Math.max(0, width - 2 * horizontalInset()) : 0; }
 
     private void font(float size, boolean bold) {
@@ -213,7 +240,7 @@ final class WidgetLayout {
                 metadataStacked = stacked || metadata > available;
             }
         }
-        if ((variant == 3 || variant == 4) && compact && width > 0) {
+        if ((variant == 3 || variant == 4) && tight && width > 0) {
             int fittingInset = (cellWidthPixels(3) - scheduleTextPixels) / 2;
             compactCellInset = Math.max(px(1), Math.min(px(4), fittingInset))
                 / context.getResources().getDisplayMetrics().density;
@@ -256,7 +283,7 @@ final class WidgetLayout {
 
     private boolean canWrapSixClocks() {
         if (width <= 0) return false;
-        int cellWidth = cellWidthPixels(6) - 2 * px(cellHorizontalInset()) - 1;
+        int cellWidth = cellWidthPixels(6) - 2 * px(sixColumnInset()) - 1;
         if (cellWidth <= 0) return false;
         float density = context.getResources().getDisplayMetrics().density;
         for (String id : PRAYERS) {
@@ -275,7 +302,7 @@ final class WidgetLayout {
     float cellHeight() {
         float text = nameLineHeight + cellLabelGap()
             + clockLineHeight * (wrapClocks ? 2 : 1) + 2 * cellVerticalInset();
-        return Math.max(compact ? 48 : 64, text);
+        return Math.max(tight ? 48 : 64, text);
     }
 
     private float tableMetadataHeight() {

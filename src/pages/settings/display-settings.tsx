@@ -29,6 +29,7 @@ import type { ChangeEvent, FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { DEFAULT_CONTAINER_ORDER } from '@/constants/default-settings';
+import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
 import {
   openBatteryOptimizationSettings,
@@ -113,6 +114,7 @@ const DisplaySettings: FC = () => {
   const navigate = useNavigate();
   const { t, uploadFont, removeFont, customFont, activeTranslation } =
     useTranslation();
+  const { settings, updateSettings } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [containerOrder, setContainerOrder] = useLocalStorage<string[]>(
     'muajjin-container-order',
@@ -344,6 +346,31 @@ const DisplaySettings: FC = () => {
           </SortableContext>
         </DndContext>
       </SettingsSection>
+
+      {nativeAndroid && (
+        <SettingsSection
+          title={t('settings.widgetTextSize')}
+          description={t('settings.widgetTextSizeDesc')}>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+            <div className="min-w-0">
+              <p className="font-medium">{t('settings.widgetLargerText')}</p>
+              <p className="text-sm text-muted-foreground">
+                {settings.widgetLargeText
+                  ? t('settings.widgetLargerTextOn')
+                  : t('settings.widgetLargerTextOff')}
+              </p>
+            </div>
+            <Switch
+              aria-label={t('settings.widgetLargerText')}
+              checked={settings.widgetLargeText}
+              onCheckedChange={(checked) =>
+                updateSettings({ widgetLargeText: checked })
+              }
+              className="shrink-0 cursor-pointer"
+            />
+          </div>
+        </SettingsSection>
+      )}
 
       {nativeAndroid && (
         <SettingsSection

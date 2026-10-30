@@ -290,6 +290,145 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
+    /** Normal is the shipped scale; Larger is one fixed step and never shrinks below Normal. */
+    @Test public void normalAndLargerKeepTypeAndEveryVariantAtTheSameBounds() throws Exception {
+        target = instrumentation.getTargetContext();
+        assertTrue(target.getPackageName().endsWith(".debug"));
+        Locale originalLocale = Locale.getDefault();
+        prepareSchedule(Calendar.OCTOBER, 13);
+        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try {
+            instrumentation.runOnMainSync(() -> {
+                surface = new FrameLayout(activity);
+                activity.setContentView(surface);
+                try {
+                    for (String language : new String[]{"en", "ar"}) {
+                        Context context = configured(language, 1f);
+                        PrayerWidgetHelper.WidgetTimelineState normal = state(context, language, "midday");
+                        PrayerWidgetHelper.WidgetTimelineState larger = state(context, language, "midday", true);
+                        assertFalse("Normal is the existing type scale", normal.presentation.widgetLargeText);
+                        assertTrue("Larger uses the approved second scale", larger.presentation.widgetLargeText);
+                        for (Profile profile : NORMAL) {
+                            Rendered base = render(profile, context, normal);
+                            Rendered big = null;
+                            try {
+                                big = render(profile, context, larger);
+                                assertTrue("Larger must keep every displayed value: " + profile.name(),
+                                    texts(big.root).containsAll(texts(base.root)));
+                                // Keyguard hosts stay Normal: their fixed one-row stack
+                                // cannot hold a larger three-line composition.
+                                float expectedScale = profile.variant <= 4 ? WidgetLayout.LARGE_TEXT_SCALE : 1f;
+                                boolean compared = false;
+                                for (TextView small : textViews(base.root)) {
+                                    TextView large = big.root.findViewById(small.getId());
+                                    if (large == null || small.getTextSize() <= 0 || !small.getText().toString().equals(large.getText().toString())) continue;
+                                    assertTrue("Larger text must never shrink: " + profile.name() + " " + resourceName(small),
+                                        large.getTextSize() >= small.getTextSize() - .01f);
+                                    assertEquals("Approved text scale for " + profile.name() + " " + resourceName(small),
+                                        small.getTextSize() * expectedScale, large.getTextSize(),
+                                        WidgetLayout.LARGE_TEXT_SCALE);
+                                    compared = true;
+                                }
+                                assertTrue("Larger fixture must exercise real text: " + profile.name(), compared);
+                                verifyTextGeometry(big.root, big.root);
+                            } catch (Exception error) {
+                                throw new AssertionError("Two-size fixture failed for " + profile.name(), error);
+                            } finally {
+                                if (big != null) surface.removeView(big.host);
+                                surface.removeView(base.host);
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Normal/Larger matrix failed", error);
+                }
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                surface.removeAllViews();
+                activity.finish();
+            });
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    /** The 2x1 hero pairs its label and countdown on one axis instead of hugging one edge. */
+    @Test public void stripHeroCentresItsLabelAndCountdownInBothDirections() throws Exception {
+        target = instrumentation.getTargetContext();
+        assertTrue(target.getPackageName().endsWith(".debug"));
+        prepareSchedule(Calendar.OCTOBER, 13);
+        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try {
+            instrumentation.runOnMainSync(() -> {
+                surface = new FrameLayout(activity);
+                activity.setContentView(surface);
+                try {
+                    for (String language : new String[]{"en", "ar"}) {
+                        Context context = configured(language, 1f);
+                        for (String fixture : new String[]{"midday", "warm"}) {
+                            for (boolean large : new boolean[]{false, true}) {
+                                PrayerWidgetHelper.WidgetTimelineState state = state(context, language, fixture, large);
+                                Rendered rendered = render(new Profile(0, 160, 96), context, state);
+                                try {
+                                    TextView label = rendered.root.findViewById(state.isWarm
+                                        ? R.id.tv_strip_label_warm : R.id.tv_strip_label);
+                                    TextView countdown = rendered.root.findViewById(R.id.tv_strip_countdown);
+                                    assertTrue("Strip hero text must be visible", label.getVisibility() == View.VISIBLE);
+                                    Layout layout = label.getLayout();
+                                    float labelCentre = label.getCompoundPaddingLeft()
+                                        + (layout.getLineLeft(0) + layout.getLineRight(0)) / 2f;
+                                    assertEquals("Strip label shares the card centre axis: " + language + "/" + fixture,
+                                        label.getWidth() / 2f, labelCentre, 1.5f);
+                                    Rect card = bounds(rendered.root, rendered.root);
+                                    Rect clock = bounds(rendered.root, countdown);
+                                    assertEquals("Strip countdown shares the card centre axis: " + language + "/" + fixture,
+                                        card.centerX(), clock.centerX(), 2f);
+                                } finally {
+                                    surface.removeView(rendered.host);
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Strip hero balance failed", error);
+                }
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                surface.removeAllViews();
+                activity.finish();
+            });
+        }
+    }
+
+    private PrayerWidgetHelper.WidgetTimelineState state(Context context, String language, String fixture, boolean large) throws Exception {
+        PrayerWidgetHelper.WidgetTimelineState base = state(context, language, fixture);
+        if (!large) return base;
+        JSONObject json = base.presentation.json();
+        json.put("widgetLargeText", true);
+        long[] localEvents = schedule.localEvents(base.now, zone, base.timeline.day);
+        return new PrayerWidgetHelper.WidgetTimelineState(context, NativePresentation.parse(json),
+            base.timeline, base.now, localEvents, base.numericLocale);
+    }
+
+    private static List<TextView> textViews(View view) {
+        List<TextView> found = new ArrayList<>();
+        if (view instanceof TextView) found.add((TextView)view);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup)view;
+            for (int i = 0; i < group.getChildCount(); i++) found.addAll(textViews(group.getChildAt(i)));
+        }
+        return found;
+    }
+
+    private static List<String> texts(View view) {
+        List<String> found = new ArrayList<>();
+        for (TextView text : textViews(view)) if (text.getText().length() > 0) found.add(text.getText().toString());
+        return found;
+    }
+
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
         Calendar date = Calendar.getInstance(zone);

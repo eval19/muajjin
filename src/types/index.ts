@@ -29,6 +29,8 @@ export interface UserSettings {
   country?: string;
   manualLocation: boolean;
   timeFormat: 'system' | '12h' | '24h';
+  // Exactly two widget type scales: false = Normal, true = Larger.
+  widgetLargeText: boolean;
 }
 
 export interface ProhibitedTime {

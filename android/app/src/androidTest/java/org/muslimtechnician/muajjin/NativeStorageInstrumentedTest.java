@@ -126,6 +126,39 @@ public class NativeStorageInstrumentedTest {
         }
     }
 
+    @Test public void widgetTextSizeDefaultsToNormalAndSurvivesStorage() throws Exception {
+        Context context = debugContext();
+        String name = "native-storage-text-size-" + UUID.randomUUID();
+        SharedPreferences prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE);
+        try {
+            assertFalse("Legacy presentations keep the Normal scale",
+                NativePresentation.defaults("QA text size").widgetLargeText);
+            PrayerSchedule.Calculation config = new PrayerSchedule.Calculation(21.3891, 39.8579, 1, 0);
+            PrayerSchedule schedule = PrayerSchedule.renew(referenceDate().getTimeInMillis(),
+                referenceDate().getTimeZone(), config);
+            long[] events = NativePrayerCalculator.calculate(referenceDate(), config.latitude,
+                config.longitude, config.method, config.madhab);
+            for (boolean large : new boolean[]{false, true, false}) {
+                JSONObject json = NativePresentation.defaults("QA text size").json();
+                json.put("widgetLargeText", large);
+                NativeScheduleStore.savePresentation(prefs, NativePresentation.parse(json), "text-" + large);
+                NativePresentation restored = NativeScheduleStore.loadPresentation(prefs);
+                assertEquals("Widget text size must survive native storage", large, restored.widgetLargeText);
+                PrayerWidgetHelper.WidgetTimelineState state = new PrayerWidgetHelper.WidgetTimelineState(
+                    context, restored, PrayerTimeline.at(schedule, referenceDate().getTimeInMillis(),
+                    referenceDate().getTimeZone()), referenceDate().getTimeInMillis(), events);
+                assertTrue(state.valid);
+            }
+            JSONObject malformed = NativePresentation.defaults("QA text size").json();
+            malformed.put("widgetLargeText", "true");
+            assertFalse("A non-boolean value resets only the text-size preference",
+                NativePresentation.parse(malformed).widgetLargeText);
+            assertEquals("QA text size", NativePresentation.parse(malformed).locationName);
+        } finally {
+            context.deleteSharedPreferences(name);
+        }
+    }
+
     @Test public void unsupportedHijriShiftDoesNotDiscardOtherPresentationOrPrayerData() throws Exception {
         Context context = debugContext();
         String name = "native-storage-test-" + UUID.randomUUID();

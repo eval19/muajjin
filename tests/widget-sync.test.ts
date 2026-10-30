@@ -134,6 +134,27 @@ describe('native schedule delivery', () => {
     expect(first.schedule.days[0].previousIsha).toBeLessThan(first.schedule.days[0].fajr);
   });
 
+  test('widget text size changes presentation only, never the calculated schedule', async () => {
+    const schedules: PrayerSchedulePayload[] = [];
+    const display: WidgetPresentation[] = [];
+    const sync = createWidgetSync({
+      updateSchedule: async (payload) => { schedules.push(payload); return { success: true }; },
+      updatePresentation: async (payload) => { display.push(payload.presentation); return { success: true }; },
+    }, () => true, now);
+    expect(buildWidgetPresentation(DEFAULT_SETTINGS, translate, 'en', 'ltr').widgetLargeText).toBe(false);
+    await sync({ settings, presentation });
+    const larger = buildWidgetPresentation({ ...settings, widgetLargeText: true }, translate, 'en', 'ltr');
+    expect(larger.widgetLargeText).toBe(true);
+    await sync({ settings: { ...settings, widgetLargeText: true }, presentation: larger });
+    expect(display[display.length - 1].widgetLargeText).toBe(true);
+    await sync({
+      settings: { ...settings, widgetLargeText: false },
+      presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr'),
+    });
+    expect(display[display.length - 1].widgetLargeText).toBe(false);
+    expect(schedules).toHaveLength(1);
+  });
+
   test('a damaged coordinate cannot reuse an acknowledged default-location schedule', async () => {
     const sync = createWidgetSync({
       updateSchedule: async () => ({ success: true }),

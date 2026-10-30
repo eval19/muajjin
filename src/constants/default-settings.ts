@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 
   // Display
   timeFormat: 'system', // Auto-detect from system settings
+  widgetLargeText: false, // Normal widget type scale
 };
 
 /**
@@ -72,4 +73,5 @@ export const FALLBACK_SETTINGS: UserSettings = {
   country: 'Saudi Arabia',
   latitude: 21.3891,
   longitude: 39.8579,
+  widgetLargeText: false,
 };

@@ -79,6 +79,8 @@ export function normalizeAppSettings(value: unknown, legacyOnboardingComplete = 
     country: validOr(textSchema, source.country, DEFAULT_SETTINGS.country!),
     manualLocation: validOr(z.boolean(), source.manualLocation, DEFAULT_SETTINGS.manualLocation),
     timeFormat: validOr(z.enum(['system', '12h', '24h']), source.timeFormat, DEFAULT_SETTINGS.timeFormat),
+    // A malformed value resets only this preference; all valid siblings survive.
+    widgetLargeText: validOr(z.boolean(), source.widgetLargeText, DEFAULT_SETTINGS.widgetLargeText),
     onboardingComplete,
     homeSections,
   };

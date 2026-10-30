@@ -21,19 +21,20 @@
             style="@style/WidgetText.Label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="start" />
+            android:gravity="center" />
         <TextView
             android:id="@+id/tv_strip_label_warm"
             style="@style/WidgetText.LabelWarm"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="start"
+            android:gravity="center"
             android:visibility="gone" />
         <Chronometer
             android:id="@+id/tv_strip_countdown"
             style="@style/WidgetText.CountdownSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:layout_marginTop="@dimen/w_gap_label" />
     </LinearLayout>
     <include layout="@layout/widget_progress" />

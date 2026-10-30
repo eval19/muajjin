@@ -1,5 +1,65 @@
 # Muajjin implementation evidence
 
+## 2.9.81 widget balance prerelease — 2026-10-31 (preparing)
+
+- User requested a prerelease named 2.9.81 containing the widget balance and the
+  Normal/Larger text setting. Version 2.9.81, Android versionCode 299 (next after
+  298), same package and signing identity; stable/latest must stay v2.9.1.
+- The 2×1 keeps the centred composition that the earlier imbalance prompted; the
+  user declined further composition changes for the smallest widget in this pass.
+- Existing evidence for the implementation is recorded in the widget section
+  below: 302 web tests, 52 JVM unit tests, 16 instrumentation tests including the
+  278-case matrix, and inspected Normal/Larger renders.
+
+## Widget balance and two text sizes — 2026-10-31 (local source, not published)
+
+- Approval: rebalance all seven existing widgets and add exactly one Normal/Larger
+  text toggle, with builds and disposable-emulator verification. No new providers,
+  dependencies, versions, commits or publication; numerals unchanged.
+- Composition: Strip's label and countdown now share the card's centre axis
+  instead of hugging one edge; square/banner/lock-medium rows use explicit
+  non-baseline composite alignment; the Wide/Table header and grid keep their
+  existing matched tracks. No value, cell, column or provider was removed.
+- Two sizes: one durable `widgetLargeText` setting (default Normal), carried in
+  the existing presentation payload, so it changes only the presentation revision
+  — no prayer recalculation, alarms or timers. Native renders Normal from the
+  shipped resources and Larger as exactly 1.2× of the *resolved* profile, so the
+  compact fallback can never shrink Larger below Normal; only spacing tightens.
+  A six-cell single row uses 1dp cell padding to keep complete names. The two
+  keyguard-only variants stay Normal: their fixed one-row stack cannot hold a
+  larger three-line composition without dropping a value.
+- Failing-before proof: with Larger enabled, the English Wide at 360×220 first
+  downgraded to the Banner and dropped the daily grid; after the dense six-column
+  escape it renders all six prayers at a measured 190dp of 220dp. An attempted
+  tighter vertical tier fitted the two-row grid but clipped a clock line box
+  (required 22dp, available 19dp), so it was reverted rather than shipping a
+  squeezed grid.
+- Native regressions: `WidgetPresentationInstrumentedTest` passed 278 matrix
+  cases plus new same-bounds Normal/Larger and Strip-centre cases, all with no
+  clipped glyphs; `WidgetNumeralInstrumentedTest` and `NativeStorageInstrumentedTest`
+  (including the new default/round-trip/non-boolean-recovery case) passed.
+  Combined run: **16 instrumentation tests, 0 failures**; **52 JVM unit tests,
+  0 failures**.
+- Arabic renders at 190×100 and 380×220/320 were captured from the real native
+  host for Normal and Larger and inspected: centred Strip, balanced banner,
+  square and table, and a complete six-cell Wide row with wrapped clocks.
+- Web: zero-warning lint, both TypeScript projects, the domain suite (301 tests
+  before the added payload regression) and both builds. The new synchronizer case
+  proves the flag changes presentation only and delivers one physical schedule.
+- Cross-locale check (2026-10-31): rendered the real widget with Arabic words on
+  an English device and English words on an `ar-EG` device. Words and direction
+  follow the app language; digits and the numeric day-period ordering follow the
+  device. The web app, by contrast, always composes Latin digits itself
+  (`formatTime` builds `${hours12}:${minutes}`), so on an Arabic device an English
+  app still shows `1:51 AM`. App and widget therefore disagree on numerals; no
+  change was made because the device-numeral policy is still an open user
+  decision.
+- Limits: host captures are the native debug host, not an OEM launcher; the
+  settings switch itself was not tapped on a device in this pass. All four new
+  display-settings keys resolve in the English, Bengali and Arabic templates, and
+  the settings page references no missing key. Very small hosts, large system font
+  scales and long imported labels remain bounded by the fixed footprints.
+
 ## 2.9.8 Arabic visual prerelease — 2026-10-31 (published prerelease)
 
 - User explicitly approved version 2.9.8/298, the session's tracked visual fixes,

@@ -19,16 +19,18 @@ public final class NativePresentation {
     public final String language,direction,timeFormat,locationName;
     public final long hijriAdjustment;
     public final boolean hijriDateChangeAtMaghrib;
+    /** Widget-only two-state type scale; Normal (false) preserves existing sizes. */
+    public final boolean widgetLargeText;
     private final Map<String,String> labels;
     private final String[] months;
-    private NativePresentation(String language,String direction,String timeFormat,String location,long adjustment,boolean rollover,Map<String,String> labels,String[] months) {
+    private NativePresentation(String language,String direction,String timeFormat,String location,long adjustment,boolean rollover,boolean widgetLargeText,Map<String,String> labels,String[] months) {
         this.language=language;this.direction=direction;this.timeFormat=timeFormat;this.locationName=location;
-        this.hijriAdjustment=adjustment;this.hijriDateChangeAtMaghrib=rollover;
+        this.hijriAdjustment=adjustment;this.hijriDateChangeAtMaghrib=rollover;this.widgetLargeText=widgetLargeText;
         this.labels=Collections.unmodifiableMap(new LinkedHashMap<>(labels));this.months=months.clone();
     }
     public static NativePresentation defaults(String location) {
         Map<String,String> labels=new LinkedHashMap<>();for(int i=0;i<KEYS.length;i++) labels.put(KEYS[i],ENGLISH[i]);
-        return new NativePresentation("en","ltr","system",location,0,true,labels,new String[]{"Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"});
+        return new NativePresentation("en","ltr","system",location,0,true,false,labels,new String[]{"Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"});
     }
     public static NativePresentation parse(JSONObject json) throws JSONException {
         if(NativeScheduleStore.integer(json,"schema")!=2) throw new IllegalArgumentException("Unsupported presentation schema");
@@ -49,7 +51,10 @@ public final class NativePresentation {
             throw new IllegalArgumentException("Missing remaining-time placeholders");
         JSONArray array=json.getJSONArray("months");if(array.length()!=12) throw new IllegalArgumentException("Exactly 12 Hijri months required");
         String[] months=new String[12];for(int i=0;i<12;i++) {Object value=array.get(i);if(!(value instanceof String)||((String)value).trim().isEmpty()||((String)value).length()>8192) throw new IllegalArgumentException("Invalid Hijri month");months[i]=(String)value;}
-        return new NativePresentation(language,direction,format,location,adjustment,(Boolean)rollover,labels,months);
+        // Field-local recovery: an older or malformed value resets only this
+        // preference instead of discarding the surrounding presentation.
+        boolean widgetLargeText=Boolean.TRUE.equals(json.opt("widgetLargeText"));
+        return new NativePresentation(language,direction,format,location,adjustment,(Boolean)rollover,widgetLargeText,labels,months);
     }
     static String text(JSONObject json,String key,int max) throws JSONException {return text(json,key,max,false);}
     static String text(JSONObject json,String key,int max,boolean empty) throws JSONException {
@@ -79,6 +84,7 @@ public final class NativePresentation {
     public JSONObject json() throws JSONException {
         JSONObject json=new JSONObject();json.put("schema",2);json.put("language",language);json.put("direction",direction);json.put("timeFormat",timeFormat);json.put("locationName",locationName);
         json.put("hijriAdjustment",hijriAdjustment);json.put("hijriDateChangeAtMaghrib",hijriDateChangeAtMaghrib);
+        json.put("widgetLargeText",widgetLargeText);
         json.put("labels",new JSONObject(labels));json.put("months",new JSONArray(months));return json;
     }
 }

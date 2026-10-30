@@ -103,6 +103,29 @@ widget host; these two providers remain keyguard-only, not universally supported
 home widgets. Their white text and restrained shadow remain wallpaper-dependent.
 Picker artwork uses a sample backdrop; the live keyguard views remain transparent.
 
+### Widget text size
+
+**Settings → Display → Widget text size** offers exactly two scales on Android.
+**Normal** keeps the shipped widget typography; **Larger widget text** multiplies
+that resolved profile by 1.2 for every role — prayer names, countdowns, clocks,
+context lines and schedule cells. The setting is stored with the app settings and
+sent in the existing presentation payload, so changing it updates widgets without
+recalculating prayer times or changing alarms. Notifications keep their own text.
+
+Larger text never falls back to a *smaller* profile than Normal: the Normal
+profile is chosen from the host bounds first, then enlarged, and only spacing
+tightens if room is short. All values, cells and columns are retained; existing
+stacked/compact compositions are reused rather than hiding information. A six-cell
+single row keeps every prayer complete by using 1dp cell padding and, where a
+clock must wrap, two lines. The two keyguard-only variants (Lock Small, Lock
+Medium) stay at Normal: their fixed one-row host cannot hold a larger three-line
+stack without dropping a value. A fixed footprint can still be too small for
+very large system font scales, long imported labels or the smallest one-row
+hosts — choose a larger widget variant rather than resizing. The Arabic hero
+layouts pair the label and countdown on one centred axis (Strip) or across
+matched leading/trailing tracks (Banner, Wide, Table, Lock Medium) so the content
+fills the card without an empty side.
+
 The 288dp daily-widget content width was selected after native Bengali 12-hour
 noon measurements at two densities: the full clock needs a 286dp three-column
 budget with 4dp cell side padding. The provider's 250dp minimum width is the
@@ -368,6 +391,18 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.81 balances the existing seven widgets and adds one widget text-size
+setting. The 2×1 strip puts its prayer label and countdown on the card's centre
+axis instead of hugging one edge, and the wider variants keep matched
+leading/trailing tracks and a six-cell row that preserves every prayer name.
+Settings → Display → **Widget text size** offers exactly two scales: Normal keeps
+the shipped typography while Larger multiplies the resolved profile by 1.2
+without recalculating prayer times, changing alarms, or touching notifications. The
+two keyguard-only variants stay Normal because their fixed one-row host cannot
+hold a larger three-line stack. Arabic numerals still follow the device; the app
+itself keeps Latin digits, so the two differ when the app and device languages
+differ — that policy is unchanged by this release.
+
 Version 2.9.8 refines Arabic typography, RTL controls, responsive app screens and
 the existing seven Android widgets. Prayer names and clocks share consistent
 alignment, compact/stacked layouts retain their content, and clock day-period
@@ -442,8 +477,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.8
-(Android versionCode 298) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.81
+(Android versionCode 299) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -468,7 +503,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.8-298-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.81-299-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

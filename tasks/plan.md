@@ -1,5 +1,36 @@
 # Muajjin implementation plan
 
+## 2.9.81 widget balance prerelease — 2026-10-31
+
+Requested: publish a GitHub prerelease named 2.9.81 with the current uncommitted
+widget work. Same governed path as 2.9.8: explicit file allowlist, version
+2.9.81 / versionCode 299, new `release/2.9.81` branch and annotated `v2.9.81`
+tag, unchanged hosted quality/signing workflow with existing secrets, artifact
+verification against the original certificate, then publish only the signed APK
+and checksum. Stable/latest stays v2.9.1. Unrelated untracked files stay excluded.
+No numeral-policy change; the 2×1 keeps the centred composition the user did not
+choose to alter.
+
+## Widget balance and two text sizes — 2026-10-31
+
+Approved: rebalance the seven existing widgets and add one Normal/Larger text
+setting (no slider, no third size). Preserve providers, palette, calculations,
+numerals and every displayed value; build and verify on a disposable emulator;
+no version bump or publication.
+
+Decisions: one durable boolean rides the existing presentation payload, so the
+setting costs a presentation revision only. Larger multiplies the *resolved*
+Normal profile by 1.2 so compaction cannot shrink it; the two keyguard-only
+variants stay Normal because their fixed one-row stack cannot hold a larger
+three-line composition. Strip is centred; wider widgets keep matched leading and
+trailing tracks. A six-cell single row uses 1dp cell padding with wrapped clocks
+rather than hiding a prayer.
+
+Outcome: 16 instrumentation tests (278-case matrix plus two-size and centring
+cases) and 52 JVM unit tests pass; Normal/Larger Arabic captures inspected. The
+settings switch was not tapped on a device; that remains a disclosed verification
+limit alongside launcher/keyguard coverage.
+
 ## 2.9.8 Arabic visual prerelease — 2026-10-31
 
 Approved: include this session's tracked Arabic visual fixes/regressions,

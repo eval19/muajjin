@@ -24,6 +24,7 @@ export interface WidgetPresentation {
   locationName: string;
   hijriAdjustment: number;
   hijriDateChangeAtMaghrib: boolean;
+  widgetLargeText: boolean;
   labels: Record<string, string>;
   months: string[];
 }
@@ -120,6 +121,7 @@ export function buildWidgetPresentation(
     schema: 2, language, direction, timeFormat: settings.timeFormat,
     locationName: settings.city ?? '', hijriAdjustment: settings.hijriAdjustment,
     hijriDateChangeAtMaghrib: settings.hijriDateChangeAtMaghrib, labels, months,
+    widgetLargeText: settings.widgetLargeText,
   };
 }
 
