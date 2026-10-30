@@ -353,6 +353,21 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.6 refines the Android 12+ home-screen widget progress colours with
+the approved emerald → lime → yellow → orange → orange-red → red progression.
+Both themes use identical timing: accent green holds through 4/11, yellow is
+at 7/11, orange at 9/11, orange-red at 10/11, and red at the target.
+Theme-specific tones differ, but the green-to-yellow transition is balanced
+across three segments rather than concentrated in its last segment.
+Only progress-fill colours and their duration within the existing timeline
+change; calculations, countdowns, labels, track, layout, notifications and
+refresh scheduling are unchanged. Android 7–11 retains its legacy palette.
+All 52 native unit tests and three targeted API 36 rendering tests passed;
+native anchor and halfway captures were inspected in both themes. This is
+not physical-device, launcher, Doze or alarm-delivery verification.
+Minimum sampled fill/track contrast remains 1.33:1 light / 3.29:1 dark;
+the approved palette is preserved without claiming an accessibility pass.
+
 Version 2.9.5 revises the twelve-anchor home-screen widget progress palette.
 The first 1/11 matches the current-prayer text green: `#0B6E5B` light and
 `#5FD3B5` dark. OKLab blending reaches yellow (`#EAB308` light / `#FACC15` dark)
@@ -394,8 +409,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.5
-(Android versionCode 295) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.6
+(Android versionCode 296) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -420,7 +435,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.5-295-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.6-296-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires

@@ -5,8 +5,8 @@ package org.muslimtechnician.muajjin;
  *
  * <p>The approved palettes hold twelve opaque anchors at {@code index/11} of the
  * live interval, so there are eleven equal segments, not twelve time buckets.
- * Index 0 and 1 intentionally repeat the app green: the first 1/11 of an
- * interval never changes. Sampling is stateless and allocation-free; the
+ * Indices 0 through 4 intentionally repeat each theme's app green: the first
+ * 4/11 of an interval never changes. Sampling is stateless and allocation-free; the
  * prepared {@link Palette} owns its input and its OKLab coordinates.
  *
  * <p>Conversion follows Björn Ottosson's OKLab description

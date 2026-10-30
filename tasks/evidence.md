@@ -1,5 +1,26 @@
 # Muajjin implementation evidence
 
+## 2.9.6 widget colours — 2026-10-30 (release preparation)
+
+- Approved scope: commit/push `release/2.9.6` and annotated tag `v2.9.6`,
+  version 2.9.6/296; use the existing signed GitHub workflow and hosted secrets,
+  verify the artifact, and publish a prerelease with only the signed APK/checksum.
+  Preserve prior releases and stable/latest `v2.9.1`; exclude unrelated untracked
+  files and local screenshot folders from commits and uploads.
+- Final palette and shared timing are frozen exactly as documented in
+  `tasks/widget-progress-fill-colors.md`: accent green through 4/11, yellow
+  at 7/11, orange at 9/11, orange-red at 10/11, and red at the target.
+  Balanced green/lime bridges replace the concentrated green-to-yellow change.
+- Local verification of this palette: 52 native unit tests and three targeted
+  API 36 native-rendering tests passed. Captured anchor colours match resources;
+  halfway pixels match independent references within one channel, without
+  increasing tolerance. Matching theme fill extents and transition captures
+  were inspected; previous screenshots remain local.
+- Contrast limitation is retained and disclosed: minimum sampled fill/track
+  contrast is 1.33:1 light / 3.29:1 dark. No physical-device, launcher, Doze,
+  alarm-delivery or live-refresh measurement is claimed. No calculation,
+  layout, countdown, notification or scheduling logic changed.
+
 ## 2.9.5 widget progress palette — 2026-10-27 (published prerelease)
 
 - Release approval: prepare/push `release/2.9.5` and tag `v2.9.5`, version 2.9.5/295; build/sign with the existing GitHub workflow/secrets; verify and publish a prerelease containing only the signed APK and checksum. Prior releases and stable-latest selection stay unchanged; unrelated untracked files are excluded.
