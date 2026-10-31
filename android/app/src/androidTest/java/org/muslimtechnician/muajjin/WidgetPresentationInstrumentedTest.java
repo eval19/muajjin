@@ -353,8 +353,8 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    /** The 2x1 hero pairs its label and countdown on one axis instead of hugging one edge. */
-    @Test public void stripHeroCentresItsLabelAndCountdownInBothDirections() throws Exception {
+    /** The 2x1 hero follows the reading edge: left in English, right in Arabic. */
+    @Test public void stripHeroFollowsTheReadingEdgeInBothDirections() throws Exception {
         target = instrumentation.getTargetContext();
         assertTrue(target.getPackageName().endsWith(".debug"));
         prepareSchedule(Calendar.OCTOBER, 13);
@@ -367,6 +367,7 @@ public class WidgetPresentationInstrumentedTest {
                 try {
                     for (String language : new String[]{"en", "ar"}) {
                         Context context = configured(language, 1f);
+                        boolean rtl = "ar".equals(language);
                         for (String fixture : new String[]{"midday", "warm"}) {
                             for (boolean large : new boolean[]{false, true}) {
                                 PrayerWidgetHelper.WidgetTimelineState state = state(context, language, fixture, large);
@@ -375,16 +376,23 @@ public class WidgetPresentationInstrumentedTest {
                                     TextView label = rendered.root.findViewById(state.isWarm
                                         ? R.id.tv_strip_label_warm : R.id.tv_strip_label);
                                     TextView countdown = rendered.root.findViewById(R.id.tv_strip_countdown);
-                                    assertTrue("Strip hero text must be visible", label.getVisibility() == View.VISIBLE);
+                                    assertEquals("Strip direction must follow the app language",
+                                        rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR,
+                                        rendered.root.getLayoutDirection());
                                     Layout layout = label.getLayout();
-                                    float labelCentre = label.getCompoundPaddingLeft()
-                                        + (layout.getLineLeft(0) + layout.getLineRight(0)) / 2f;
-                                    assertEquals("Strip label shares the card centre axis: " + language + "/" + fixture,
-                                        label.getWidth() / 2f, labelCentre, 1.5f);
+                                    float startEdge = label.getCompoundPaddingLeft()
+                                        + (rtl ? layout.getLineRight(0) : layout.getLineLeft(0));
+                                    float expected = rtl ? label.getWidth() - label.getCompoundPaddingRight()
+                                        : label.getCompoundPaddingLeft();
+                                    assertEquals("Strip label sits on the reading edge: " + language + "/" + fixture,
+                                        expected, startEdge, 1.5f);
                                     Rect card = bounds(rendered.root, rendered.root);
                                     Rect clock = bounds(rendered.root, countdown);
-                                    assertEquals("Strip countdown shares the card centre axis: " + language + "/" + fixture,
-                                        card.centerX(), clock.centerX(), 2f);
+                                    int inset = px(context, 12);
+                                    assertEquals("Strip countdown shares the label's reading edge: "
+                                        + language + "/" + fixture,
+                                        rtl ? card.right - inset : card.left + inset,
+                                        rtl ? clock.right : clock.left, 2f);
                                 } finally {
                                     surface.removeView(rendered.host);
                                 }
@@ -392,7 +400,7 @@ public class WidgetPresentationInstrumentedTest {
                         }
                     }
                 } catch (Exception error) {
-                    throw new AssertionError("Strip hero balance failed", error);
+                    throw new AssertionError("Strip edge-alignment fixture failed", error);
                 }
             });
         } finally {

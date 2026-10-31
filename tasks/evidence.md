@@ -33,7 +33,16 @@
   below: 302 web tests, 52 JVM unit tests, 16 instrumentation tests including the
   278-case matrix, and inspected Normal/Larger renders.
 
-## Widget balance and two text sizes — 2026-10-31 (local source, not published)
+## Widget balance and two text sizes — 2026-10-31 (local source, shipped in 2.9.81 for type scale)
+
+- Post-2.9.81 correction (unreleased): the user rejected the centred 2×1 hero and
+  asked for reading-edge alignment — left in English, right in Arabic. The strip
+  label and countdown are back to `gravity="start"` (start resolves to the right
+  edge under RTL), and the regression now asserts that both sit on the reading
+  edge with a left/right progress bar per direction. Verified on the disposable
+  emulator: 2 instrumentation tests passed and the native renders show "Asr in"
+  flush left and "العصر بعد" flush right. 2.9.81 remains published with the
+  centred composition; this change needs a follow-up version.
 
 - Approval: rebalance all seven existing widgets and add exactly one Normal/Larger
   text toggle, with builds and disposable-emulator verification. No new providers,

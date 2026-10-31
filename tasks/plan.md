@@ -1,5 +1,13 @@
 # Muajjin implementation plan
 
+## 2.9.82 reading-edge prerelease — 2026-10-31
+
+Requested: ship the reading-edge correction for the 2×1 widget as a prerelease.
+Same governed path as 2.9.81 — explicit allowlist, version 2.9.82 / versionCode
+300, new `release/2.9.82` branch and annotated `v2.9.82` tag, unchanged hosted
+quality/signing workflow, artifact verification against the original certificate,
+publish only the signed APK and checksum, stable/latest stays v2.9.1.
+
 ## 2.9.81 widget balance prerelease — 2026-10-31
 
 Requested: publish a GitHub prerelease named 2.9.81 with the current uncommitted
