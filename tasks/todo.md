@@ -2,9 +2,9 @@
 
 ## 2.9.81 widget balance prerelease — 2026-10-31
 
-- [ ] R299-01: Version 2.9.81/299, explicit source allowlist, branch/tag/push.
-- [ ] R299-02: Hosted signed build, independent APK verification.
-- [ ] R299-03: Publish APK/checksum prerelease; verify public downloads and that
+- [x] R299-01: Version 2.9.81/299, explicit source allowlist, branch/tag/push.
+- [x] R299-02: Hosted signed build, independent APK verification.
+- [x] R299-03: Publish APK/checksum prerelease; verify public downloads and that
   stable/latest remains v2.9.1.
 
 ## Widget balance and two text sizes — 2026-10-31

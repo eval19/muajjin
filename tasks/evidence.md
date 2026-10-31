@@ -1,12 +1,34 @@
 # Muajjin implementation evidence
 
-## 2.9.81 widget balance prerelease — 2026-10-31 (preparing)
+## 2.9.81 widget balance prerelease — 2026-10-31 (published prerelease)
 
 - User requested a prerelease named 2.9.81 containing the widget balance and the
   Normal/Larger text setting. Version 2.9.81, Android versionCode 299 (next after
   298), same package and signing identity; stable/latest must stay v2.9.1.
 - The 2×1 keeps the centred composition that the earlier imbalance prompted; the
   user declined further composition changes for the smallest widget in this pass.
+- Source: 23 explicitly allowlisted files committed as
+  `b20c5f56502ac59cb4e1caa282186eee0cf762f7`; annotated `v2.9.81` targets that
+  source. Local versioned smoke: identity resolves to 2.9.81/299 and Bun 1.2.2
+  reports 302 tests / 798 expectations / zero failures.
+- Hosted [signed run 41147661624](https://github.com/eval19/muajjin/actions/runs/41147661624)
+  passed both web modes, native unit/debug/test-APK assembly and controlled
+  signed release assembly from that source, epoch 1793404770.
+- Downloaded Actions artifact `13021373300`; archive SHA-256
+  `99f3d5c09f3f2e722ba6c5b85b99c000919f5c5b19a504b1c406f9763dce23e9` matches
+  GitHub's digest.
+- Signed APK: `muajjin-2.9.81-299-github-release.apk`, 5,095,754 bytes, SHA-256
+  `99b982da1e7c1f39e85d4b3560ac27a8d907894414cd88db7ae92e33584d1a08`.
+  Verified: v2/v3 signatures for API 24–36, original certificate
+  `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`, 16 KB
+  alignment, ZIP integrity, package `org.muslimtechnician.muajjin`, version
+  2.9.81/299, GitHub mode, matching epoch, debug widget host absent.
+- Published [v2.9.81 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.81),
+  release ID `429603877`, with only the signed APK and its 105-byte `.sha256`.
+  Authenticated and anonymous canonical downloads match the verified bytes.
+  Stable/latest remains v2.9.1; v2.9.8 and earlier releases keep their IDs/assets.
+- Final APK/checksum retained in `.tools/release-2.9.81-output/`; watcher,
+  verifier, build metadata and Actions result JSON removed.
 - Existing evidence for the implementation is recorded in the widget section
   below: 302 web tests, 52 JVM unit tests, 16 instrumentation tests including the
   278-case matrix, and inspected Normal/Larger renders.

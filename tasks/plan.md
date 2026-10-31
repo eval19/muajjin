@@ -11,6 +11,11 @@ and checksum. Stable/latest stays v2.9.1. Unrelated untracked files stay exclude
 No numeral-policy change; the 2×1 keeps the centred composition the user did not
 choose to alter.
 
+Completed: source/tag `b20c5f56502ac59cb4e1caa282186eee0cf762f7`, signed run
+`41147661624`, prerelease `429603877`. Original signer, 2.9.81/299 identity,
+alignment, artifact/public download checksums and unchanged stable v2.9.1
+verified. Final APK/checksum retained; temporary watcher/verifier removed.
+
 ## Widget balance and two text sizes — 2026-10-31
 
 Approved: rebalance the seven existing widgets and add one Normal/Larger text
