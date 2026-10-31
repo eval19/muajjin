@@ -332,7 +332,7 @@ public class WidgetPresentationInstrumentedTest {
                                 }
                                 assertTrue("Larger fixture must exercise real text: " + profile.name(), compared);
                                 verifyTextGeometry(big.root, big.root);
-                            } catch (Exception error) {
+                            } catch (Throwable error) {
                                 throw new AssertionError("Two-size fixture failed for " + profile.name(), error);
                             } finally {
                                 if (big != null) surface.removeView(big.host);
@@ -340,7 +340,7 @@ public class WidgetPresentationInstrumentedTest {
                             }
                         }
                     }
-                } catch (Exception error) {
+                } catch (Throwable error) {
                     throw new AssertionError("Normal/Larger matrix failed", error);
                 }
             });
@@ -371,7 +371,8 @@ public class WidgetPresentationInstrumentedTest {
                         for (String fixture : new String[]{"midday", "warm"}) {
                             for (boolean large : new boolean[]{false, true}) {
                                 PrayerWidgetHelper.WidgetTimelineState state = state(context, language, fixture, large);
-                                Rendered rendered = render(new Profile(0, 160, 96), context, state);
+                                // A host tall enough to keep the label at both text sizes.
+                                Rendered rendered = render(new Profile(0, 190, 110), context, state);
                                 try {
                                     TextView label = rendered.root.findViewById(state.isWarm
                                         ? R.id.tv_strip_label_warm : R.id.tv_strip_label);
@@ -435,6 +436,77 @@ public class WidgetPresentationInstrumentedTest {
         List<String> found = new ArrayList<>();
         for (TextView text : textViews(view)) if (text.getText().length() > 0) found.add(text.getText().toString());
         return found;
+    }
+
+    /** A short 2x1 host must still draw its progress line at both text sizes. */
+    @Test public void stripKeepsItsProgressLineWhenTheHostIsShort() throws Exception {
+        target = instrumentation.getTargetContext();
+        assertTrue(target.getPackageName().endsWith(".debug"));
+        prepareSchedule(Calendar.OCTOBER, 13);
+        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try {
+            instrumentation.runOnMainSync(() -> {
+                surface = new FrameLayout(activity);
+                activity.setContentView(surface);
+                try {
+                    for (String language : new String[]{"en", "ar"}) {
+                        Context context = configured(language, 1f);
+                        for (boolean large : new boolean[]{false, true}) {
+                            PrayerWidgetHelper.WidgetTimelineState state = state(context, language, "midday", large);
+                            for (float height : new float[]{96, 72}) {
+                                for (float width : new float[]{190, 160}) {
+                                    Profile profile = new Profile(0, width, height);
+                                    Rendered rendered = render(profile, context, state);
+                                    try {
+                                        View bar = rendered.root.findViewById(R.id.pb_widget_progress_green);
+                                        assertNotNull(bar);
+                                        int[] barPos = new int[2], rootPos = new int[2];
+                                        bar.getLocationInWindow(barPos);
+                                        rendered.root.getLocationInWindow(rootPos);
+                                        int bottom = barPos[1] - rootPos[1] + bar.getHeight();
+                                        String tag = language + (large ? "-larger" : "-normal")
+                                            + "-" + Math.round(width) + "x" + Math.round(height);
+                                        assertTrue("Progress bar must be visible: " + tag,
+                                            bar.getVisibility() == View.VISIBLE && bar.getHeight() > 0);
+                                        assertTrue("Progress bar must stay inside the widget: " + tag
+                                            + " bottom=" + bottom + " root=" + rendered.root.getHeight(),
+                                            bottom <= rendered.root.getHeight());
+                                        Bitmap shot = Bitmap.createBitmap(rendered.host.getWidth(),
+                                            rendered.host.getHeight(), Bitmap.Config.ARGB_8888);
+                                        rendered.host.draw(new Canvas(shot));
+                                        int best = 0;
+                                        for (int y = Math.max(7, (int) (shot.getHeight() * 0.62f));
+                                             y < shot.getHeight() - 2; y++) {
+                                            int count = 0;
+                                            for (int x = 0; x < shot.getWidth(); x++) {
+                                                int c = shot.getPixel(x, y), b0 = shot.getPixel(x, y - 6);
+                                                int diff = Math.abs(((c >> 16) & 0xff) - ((b0 >> 16) & 0xff))
+                                                    + Math.abs(((c >> 8) & 0xff) - ((b0 >> 8) & 0xff))
+                                                    + Math.abs((c & 0xff) - (b0 & 0xff));
+                                                if (diff > 9) count++;
+                                            }
+                                            best = Math.max(best, count);
+                                        }
+                                        assertTrue("Progress line must be drawn: " + tag + " band=" + best
+                                            + " of " + shot.getWidth(), best > shot.getWidth() * 3 / 4);
+                                    } finally {
+                                        surface.removeView(rendered.host);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Short-host progress fixture failed", error);
+                }
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                surface.removeAllViews();
+                activity.finish();
+            });
+        }
     }
 
     private void prepareSchedule(int month,int dayOfMonth) {

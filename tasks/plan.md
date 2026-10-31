@@ -1,5 +1,13 @@
 # Muajjin implementation plan
 
+## 2.9.83 progress-line prerelease — 2026-10-31
+
+Requested: ship the 2×1 progress-line fix as a prerelease. Same governed path —
+explicit allowlist, version 2.9.83 / versionCode 301, new `release/2.9.83` branch
+and annotated `v2.9.83` tag, unchanged hosted signing workflow, artifact
+verification against the original certificate, publish only APK + checksum,
+stable/latest stays v2.9.1.
+
 ## 2.9.82 reading-edge prerelease — 2026-10-31
 
 Requested: ship the reading-edge correction for the 2×1 widget as a prerelease.

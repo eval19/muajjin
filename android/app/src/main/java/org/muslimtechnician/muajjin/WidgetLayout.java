@@ -23,7 +23,7 @@ final class WidgetLayout {
     static final float LARGE_TEXT_SCALE = 1.2f;
     /** A six-cell single row is dense; keep complete names at the cost of less padding. */
     private static final float SIX_COLUMN_INSET = 1f;
-    boolean compact, tight, stacked, metadataStacked, wrapClocks, summaryOnly;
+    boolean compact, tight, stacked, metadataStacked, wrapClocks, summaryOnly, dropLabel;
     private boolean largeText;
     private float textScale = 1f;
     int columns = 3;
@@ -94,6 +94,11 @@ final class WidgetLayout {
         if (!tight && height > 0 && minimumHeight > height) {
             tight = true;
             chooseComposition();
+        }
+        if (variant == 0 && !compact && height > 0) {
+            // Keep the promised Larger scale: only spacing may tighten here.
+            float hero = height - 2 * verticalInset() - progressGap() - 4;
+            if (countdownMinHeight() > hero) tight = true;
         }
     }
 
@@ -184,10 +189,36 @@ final class WidgetLayout {
         float cached=compact?compactCountdownHeight:regularCountdownHeight;
         if(cached>0) return cached;
         float size=countdownSize();
-        float height=Math.max(textHeight(countdownSample,size,true),
-            Math.max(textHeight(countdownHourSample,size,true),textHeight(countdownMinuteSample,size,true)));
+        // Arabic and Latin fallbacks report different line boxes; reserve the taller.
+        float height=0;
+        for (java.util.Locale locale : new java.util.Locale[]{state.presentation.locale(), state.numericLocale}) {
+            paint.setTextLocale(locale);
+            height=Math.max(height, Math.max(textHeight(countdownSample,size,true),
+                Math.max(textHeight(countdownHourSample,size,true),textHeight(countdownMinuteSample,size,true))));
+        }
         if(compact) compactCountdownHeight=height;else regularCountdownHeight=height;
         return height;
+    }
+
+    /** Complete glyph box; font metrics alone under-report fallback digit descenders. */
+    float countdownGlyphHeight() {
+        float size = countdownSize();
+        font(size, true);
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        float height = 0;
+        for (java.util.Locale locale : new java.util.Locale[]{state.presentation.locale(), state.numericLocale}) {
+            paint.setTextLocale(locale);
+            for (String sample : new String[]{countdownSample, countdownHourSample, countdownMinuteSample}) {
+                paint.getTextBounds(sample, 0, sample.length(), bounds);
+                height = Math.max(height, bounds.height() / context.getResources().getDisplayMetrics().density + 2);
+            }
+        }
+        return height;
+    }
+
+    /** Height reserved for the timer: the larger of layout and glyph boxes. */
+    float countdownMinHeight() {
+        return Math.max(countdownHeight(), countdownGlyphHeight());
     }
 
     private float heroWidth() {
@@ -255,6 +286,13 @@ final class WidgetLayout {
             + textHeight(state.contextLine2, contextSize(), false, contextAllocation);
         columns = variant == 3 && !stacked && state.valid && width > 0 && sixColumnsFit() ? 6 : 3;
         minimumHeight = requiredHeight();
+        if (variant == 0 && height > 0 && state.valid) {
+            // The 2x1 keeps its countdown and progress line. The prayer label is
+            // the only element that may give way when the host is too short.
+            float hero = height - 2 * verticalInset() - progressGap() - 4;
+            // Reserve a conservative timer line box so the label never squeezes it.
+            dropLabel = labelLineHeight + 4 + countdownSize() * 1.6f > hero + 1;
+        }
     }
 
     private int cellWidthPixels(int count) {
