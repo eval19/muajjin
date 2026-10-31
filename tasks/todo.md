@@ -2,9 +2,9 @@
 
 ## 2.9.82 reading-edge prerelease — 2026-10-31
 
-- [ ] R300-01: Version 2.9.82/300, allowlist, branch/tag/push.
-- [ ] R300-02: Hosted signed build; verify signer, identity, alignment, checksum.
-- [ ] R300-03: Publish and verify public APK/checksum; latest stays v2.9.1.
+- [x] R300-01: Version 2.9.82/300, allowlist, branch/tag/push.
+- [x] R300-02: Hosted signed build; verify signer, identity, alignment, checksum.
+- [x] R300-03: Publish and verify public APK/checksum; latest stays v2.9.1.
 
 ## 2.9.81 widget balance prerelease — 2026-10-31
 

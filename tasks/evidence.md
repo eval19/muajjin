@@ -1,5 +1,32 @@
 # Muajjin implementation evidence
 
+## 2.9.82 reading-edge prerelease — 2026-10-31 (published prerelease)
+
+- Requested follow-up to 2.9.81: the user rejected the centred 2×1 hero and asked
+  for reading-edge alignment. Source `2058557d85246ef80dcd7682cf8303ca9a702a53`
+  (8 allowlisted files), annotated `v2.9.82`, version 2.9.82 / versionCode 300.
+  The strip uses `gravity="start"` (left in LTR, right in RTL) and the regression
+  `stripHeroFollowsTheReadingEdgeInBothDirections` asserts both edges at Normal
+  and Larger; it passed on the disposable emulator together with the capture probe.
+- Local versioned smoke: identity resolves to 2.9.82/300; Bun 1.2.2 reports
+  **302 tests / 798 expectations / zero failures**.
+- Hosted [signed run 41148840434](https://github.com/eval19/muajjin/actions/runs/41148840434)
+  passed both web modes, native unit/debug/test-APK assembly and controlled
+  signed release assembly, epoch 1793405508.
+- Downloaded Actions artifact `13022556081`; archive SHA-256
+  `08e93db902249f18a8a85b0747f00dcb645c5cc9be35b2cec4cad1f1114dc6b8` matches GitHub.
+- Signed APK `muajjin-2.9.82-300-github-release.apk`, 5,095,754 bytes, SHA-256
+  `1d3128da58d0ee799f67dbeff5a31b1e5fb42555cdeda0599b458898f8562db5`; verified
+  v2/v3 for API 24–36, original certificate, 16 KB alignment, ZIP integrity,
+  package `org.muslimtechnician.muajjin`, 2.9.82/300, GitHub mode, matching epoch,
+  debug host absent.
+- Published [v2.9.82 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.82),
+  release ID `429609717`, with only the signed APK and its 105-byte `.sha256`;
+  anonymous canonical downloads match. Stable/latest remains v2.9.1 and the
+  v2.9.81 release is unchanged.
+- Final APK/checksum retained in `.tools/release-2.9.82-output/`; watcher,
+  verifier, build metadata and Actions result JSON removed.
+
 ## 2.9.81 widget balance prerelease — 2026-10-31 (published prerelease)
 
 - User requested a prerelease named 2.9.81 containing the widget balance and the

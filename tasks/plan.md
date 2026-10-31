@@ -8,6 +8,10 @@ Same governed path as 2.9.81 — explicit allowlist, version 2.9.82 / versionCod
 quality/signing workflow, artifact verification against the original certificate,
 publish only the signed APK and checksum, stable/latest stays v2.9.1.
 
+Completed: source/tag `2058557d85246ef80dcd7682cf8303ca9a702a53`, signed run
+`41148840434`, prerelease `429609717`. Original signer, 2.9.82/300 identity,
+alignment, artifact/public checksums verified; stable/latest v2.9.1 unchanged.
+
 ## 2.9.81 widget balance prerelease — 2026-10-31
 
 Requested: publish a GitHub prerelease named 2.9.81 with the current uncommitted
