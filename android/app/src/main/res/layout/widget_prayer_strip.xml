@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_strip_root"
     android:layout_width="match_parent"
@@ -14,10 +14,10 @@
     <LinearLayout
         android:id="@+id/widget_primary_group"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
         android:gravity="center_vertical|start"
-        android:orientation="vertical">
+        android:layout_marginBottom="8dp">
         <TextView
             android:id="@+id/tv_strip_label"
             style="@style/WidgetText.Label"
@@ -36,7 +36,11 @@
             style="@style/WidgetText.CountdownSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/w_gap_label" />
+            android:layout_marginTop="2dp" />
     </LinearLayout>
-    <include layout="@layout/widget_progress" />
-</LinearLayout>
+    <include
+        layout="@layout/widget_progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom" />
+</FrameLayout>

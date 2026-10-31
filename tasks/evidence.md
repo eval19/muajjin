@@ -1,5 +1,21 @@
 # Muajjin implementation evidence
 
+## 2.9.83 correction — pinned strip line (unreleased)
+
+- The user reported 2.9.83 as worse: its `dropLabel` heuristic hid the prayer label
+  on their host, which is not acceptable. That heuristic, the locale-widened
+  countdown measurement, `countdownGlyphHeight`/`countdownMinHeight` and the
+  compact override were all removed.
+- Corrected approach: `widget_prayer_strip.xml` is a FrameLayout whose hero
+  reserves the bar row by an 8dp bottom margin, with the progress include pinned
+  with `layout_gravity="bottom"`. The bar therefore cannot be clipped regardless of
+  text size. Strip gaps tightened: label→timer 2dp, progress gap 4dp.
+- Verified on the disposable API 36 host at 190×100 in English and Arabic, Normal
+  and Larger: label visible in all four cases (labelH 19/23 dp), bar present
+  (4 dp, bottom 8 dp). Full native suite: 17 tests, 278-case matrix, 0 failures.
+- 2.9.83 remains published with the label-hiding behaviour; this correction needs a
+  follow-up version.
+
 ## 2.9.83 progress-line prerelease — 2026-10-31 (published prerelease)
 
 - Requested fix: with Larger widget text the 2×1 lost its progress line. Root

@@ -1,5 +1,13 @@
 # Muajjin implementation plan
 
+## 2.9.84 pinned-line correction — 2026-10-31
+
+Requested: ship the corrected strip (label kept, bar pinned) after 2.9.83 hid the
+label. Same governed path — explicit allowlist, version 2.9.84 / versionCode 302,
+new `release/2.9.84` branch and annotated `v2.9.84` tag, unchanged hosted signing
+workflow, artifact verification against the original certificate, publish only
+APK + checksum, stable/latest stays v2.9.1.
+
 ## 2.9.83 progress-line prerelease — 2026-10-31
 
 Requested: ship the 2×1 progress-line fix as a prerelease. Same governed path —

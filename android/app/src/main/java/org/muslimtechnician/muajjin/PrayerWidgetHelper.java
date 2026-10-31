@@ -251,9 +251,8 @@ public final class PrayerWidgetHelper {
             if (widthDp > 0) labelWidth = Math.min(labelWidth, layout.contentWidth());
             views.setInt(label, "setMinWidth", layout.px(labelWidth));
             if (variant < 4) {
-                boolean showLabel = !layout.dropLabel;
-                views.setViewVisibility(LABELS[variant], showLabel && !state.isWarm ? View.VISIBLE : View.GONE);
-                views.setViewVisibility(WARM_LABELS[variant], showLabel && state.isWarm ? View.VISIBLE : View.GONE);
+                views.setViewVisibility(LABELS[variant], state.isWarm ? View.GONE : View.VISIBLE);
+                views.setViewVisibility(WARM_LABELS[variant], state.isWarm ? View.VISIBLE : View.GONE);
                 setSize(views, state.isWarm ? LABELS[variant] : WARM_LABELS[variant], layout.labelSize());
             }
         }
@@ -261,7 +260,7 @@ public final class PrayerWidgetHelper {
         views.setViewVisibility(COUNTDOWNS[variant], state.valid ? View.VISIBLE : View.GONE);
         setSize(views, COUNTDOWNS[variant], layout.countdownSize());
         views.setInt(COUNTDOWNS[variant], "setMinWidth", layout.px(layout.countdownWidth()));
-        views.setInt(COUNTDOWNS[variant], "setMinHeight", layout.px(layout.countdownMinHeight()));
+        views.setInt(COUNTDOWNS[variant], "setMinHeight", layout.px(layout.countdownHeight()));
         if (variant < 5) {
             views.setViewPadding(R.id.widget_progress_container, 0, layout.px(layout.progressGap()), 0, 0);
             if (Build.VERSION.SDK_INT >= 31) {

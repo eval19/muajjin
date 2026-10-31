@@ -124,9 +124,9 @@ very large system font scales, long imported labels or the smallest one-row
 hosts — choose a larger widget variant rather than resizing. The Arabic hero
 layouts keep the label and countdown on the reading edge — left in a left-to-right
 language, right in Arabic — and the wider variants pair that hero with matched
-opposite tracks so the card fills without an empty side. In the 2×1 the timer owns
-the vertical weight, so its progress line always renders; when a short host cannot
-hold label, timer and line together, the label is the part that yields.
+opposite tracks so the card fills without an empty side. In the 2×1 the progress
+bar is pinned to the card's bottom edge, so the line renders at both text sizes
+while the prayer label and countdown keep their space above it.
 
 The 288dp daily-widget content width was selected after native Bengali 12-hour
 noon measurements at two densities: the full clock needs a 286dp three-column
@@ -393,6 +393,11 @@ not a source archive, Actions ZIP, or `*-unsigned.apk`. Updates to an existing
 installation must retain its signing identity; upstream APK compatibility is
 not established by this workflow.
 
+Version 2.9.84 corrects 2.9.83: the 2×1 keeps its prayer label, countdown and
+progress line together at both text sizes. The bar is pinned to the card's bottom
+so it can no longer be clipped, and the label no longer disappears when Larger
+text is enabled.
+
 Version 2.9.83 keeps the 2×1 progress line when Larger widget text is enabled. The
 timer previously pushed the bar out of the card on short hosts, so the line
 vanished; the timer now owns the vertical weight and the prayer label yields when
@@ -490,8 +495,8 @@ owned cleanup. Invalid native schedules recover without fabricated times,
 and an unsupported Hijri adjustment does not discard other widget settings.
 Exact exercised checks and device limitations are in `tasks/evidence.md`.
 
-The release workflow supports **explicit manual signing**. Version 2.9.83
-(Android versionCode 301) keeps `org.muslimtechnician.muajjin`; it does not
+The release workflow supports **explicit manual signing**. Version 2.9.84
+(Android versionCode 302) keeps `org.muslimtechnician.muajjin`; it does not
 change the minimum Android version (7.0/API 24) or lower the target SDK.
 Android 15/16 can reject an unsigned APK before the app ever launches.
 
@@ -516,7 +521,7 @@ After the source changes are committed and pushed:
 1. Open **Actions → Build release APK → Run workflow**.
 2. Select the trusted source commit/tag in `ref`; enable **sign_release**.
 3. Download the successful run's artifact
-   `muajjin-2.9.83-301-github-release.apk`, extract the Actions ZIP, and install
+   `muajjin-2.9.84-302-github-release.apk`, extract the Actions ZIP, and install
    the **`.apk` inside it**, not the ZIP.
 
 The signed path checks alignment, verifies the APK for API 24–36, requires
