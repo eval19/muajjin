@@ -1,5 +1,37 @@
 # Muajjin implementation evidence
 
+## 2.9.83 progress-line prerelease — 2026-10-31 (published prerelease)
+
+- Requested fix: with Larger widget text the 2×1 lost its progress line. Root
+  cause: label + enlarged timer + bar exceeded the host height, so the last child
+  (the bar) was clipped. Source
+  `e7dbd380332605e39d2ad266fc60d83487c5b5ff` (9 allowlisted files), annotated
+  `v2.9.83`, version 2.9.83 / versionCode 301.
+- Fix: the strip hero takes the vertical weight so the bar keeps its row; when the
+  host is too short for label + timer + line, `WidgetLayout.dropLabel` hides the
+  label and the helper honours it. Larger stays exactly 1.2× of the resolved
+  profile (no compact override). New regression
+  `stripKeepsItsProgressLineWhenTheHostIsShort` asserts the bar stays inside the
+  widget and that a near-full-width line is drawn at 190/160×96 and ×72 dp in both
+  languages and both sizes; the edge-alignment case now uses a 190×110 host so it
+  exercises alignment with the label present.
+- Reproduction: with the pre-fix layout the same probe failed at 160×72
+  (`band=69` of 160), and the two-size matrix clipped `tv_strip_countdown`
+  (required 47, available 41); both pass after the fix. Verified native suite:
+  **17 instrumentation tests**, 278-case matrix, 0 failures; 302 web tests.
+- Hosted [signed run 41152268947](https://github.com/eval19/muajjin/actions/runs/41152268947)
+  passed both web modes, native unit/debug/test-APK assembly and controlled
+  signed release assembly, epoch 1793407776. Artifact `13023298744`, archive
+  SHA-256 `026fcc9535138f9b4b8618608d6e7d35b68188741a9a52797db45ad74a483649`.
+- Signed APK `muajjin-2.9.83-301-github-release.apk`, 5,095,754 bytes, SHA-256
+  `7485b14921d24f944bc6baff4409a53d07de34c4eeec59d8860bbf177e193a89`; verified
+  v2/v3 for API 24–36, original certificate, 16 KB alignment, package
+  `org.muslimtechnician.muajjin`, 2.9.83/301, GitHub mode, matching epoch.
+- Published [v2.9.83 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.83),
+  release ID `429626906`; anonymous canonical downloads match. Latest stays
+  v2.9.1; earlier releases unchanged. Final APK/checksum retained in
+  `.tools/release-2.9.83-output/`.
+
 ## 2.9.82 reading-edge prerelease — 2026-10-31 (published prerelease)
 
 - Requested follow-up to 2.9.81: the user rejected the centred 2×1 hero and asked

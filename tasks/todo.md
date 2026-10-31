@@ -2,9 +2,9 @@
 
 ## 2.9.83 progress-line prerelease — 2026-10-31
 
-- [ ] R301-01: Version 2.9.83/301, allowlist, branch/tag/push.
-- [ ] R301-02: Hosted signed build; verify signer, identity, alignment, checksum.
-- [ ] R301-03: Publish and verify public APK/checksum; latest stays v2.9.1.
+- [x] R301-01: Version 2.9.83/301, allowlist, branch/tag/push.
+- [x] R301-02: Hosted signed build; verify signer, identity, alignment, checksum.
+- [x] R301-03: Publish and verify public APK/checksum; latest stays v2.9.1.
 
 ## 2.9.82 reading-edge prerelease — 2026-10-31
 
