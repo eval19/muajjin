@@ -2,9 +2,9 @@
 
 ## 2.9.84 pinned-line correction — 2026-10-31
 
-- [ ] R302-01: Version 2.9.84/302, allowlist, branch/tag/push.
-- [ ] R302-02: Hosted signed build; verify signer, identity, alignment, checksum.
-- [ ] R302-03: Publish and verify public APK/checksum; latest stays v2.9.1.
+- [x] R302-01: Version 2.9.84/302, allowlist, branch/tag/push.
+- [x] R302-02: Hosted signed build; verify signer, identity, alignment, checksum.
+- [x] R302-03: Publish and verify public APK/checksum; latest stays v2.9.1.
 
 ## 2.9.83 progress-line prerelease — 2026-10-31
 

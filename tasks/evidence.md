@@ -1,5 +1,31 @@
 # Muajjin implementation evidence
 
+## 2.9.84 pinned-line correction — 2026-10-31 (published prerelease)
+
+- Corrects 2.9.83, whose `dropLabel` heuristic hid the prayer label (reported by
+  the user as worse). That heuristic, the locale-widened countdown measurement,
+  `countdownGlyphHeight`/`countdownMinHeight` and the strip compact override were
+  removed.
+- Corrected design: `widget_prayer_strip.xml` is a FrameLayout; the hero reserves
+  the bar row with an 8dp bottom margin and the progress include is pinned with
+  `layout_gravity="bottom"`, so the line cannot be clipped at any text size. Strip
+  gaps: label→timer 2dp, progress gap 4dp.
+- Rendered on the disposable API 36 host at 190×100, English and Arabic, Normal and
+  Larger: label visible in all four (19/23 dp), bar 4 dp at an 8 dp bottom inset.
+  Full native suite: 17 tests, 278-case matrix, 0 failures; 302 web tests.
+- Source `82a309f89edf777b32476445121f5273dbc46d57` (9 allowlisted files),
+  annotated `v2.9.84`, version 2.9.84 / versionCode 302. Hosted
+  [signed run 41153920608](https://github.com/eval19/muajjin/actions/runs/41153920608)
+  passed all gates, epoch 1793408947; artifact `13024896085`, archive SHA-256
+  `40cba4dadd91f73f40791440caab195e435bc49addd441f14012cdb1727e751a`.
+- Signed APK `muajjin-2.9.84-302-github-release.apk`, 5,095,754 bytes, SHA-256
+  `94b7de95647679b20515cda0a2519d6edbdad744c38ca85115b419f09ae94a2d`; v2/v3 for
+  API 24–36, original certificate, 16 KB alignment, package
+  `org.muslimtechnician.muajjin`, 2.9.84/302, GitHub mode, matching epoch.
+- Published [v2.9.84 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.84),
+  release ID `429635717`; anonymous downloads match. Latest stays v2.9.1; earlier
+  releases unchanged. Final APK/checksum in `.tools/release-2.9.84-output/`.
+
 ## 2.9.83 correction — pinned strip line (unreleased)
 
 - The user reported 2.9.83 as worse: its `dropLabel` heuristic hid the prayer label
