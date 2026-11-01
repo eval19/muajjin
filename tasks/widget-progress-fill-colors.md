@@ -9,43 +9,45 @@ The previous palette shipped in the
 The runtime progression first shipped in 2.9.4 (Android versionCode 294).
 Original implementation prepared: 2026-10-25; baseline `8fa8296`.
 
-## Current source refinement (unreleased)
+## Current source refinement (2.9.86)
 
-The light API 31+ progress palette now targets at least 3:1 fill/track contrast.
-The track remains `#D5DDD9`; dark colors, legacy API 24–30 stages, interval
-fractions, green hold and red endpoint are unchanged. The lighter yellow is
-intentionally replaced by deeper gold; there is no runtime contrast clamp.
+The light API 31+ ramp holds the app green through index 8 and then switches to
+burnt orange for the last three anchors. The dark theme keeps four bright stages:
+mint, yellow, orange, red. The track remains `#D5DDD9` light and `#34403A` dark;
+legacy API 24–30 stages and interval fractions are unchanged, and there is no
+runtime contrast clamp.
 
-| Anchor | Current light color |
-|---:|---|
-| 0–4 | `#0B6E5B` |
-| 5 | `#388850` |
-| 6 | `#628332` |
-| 7 | `#947512` |
-| 8 | `#A56E16` |
-| 9 | `#B46519` |
-| 10 | `#CD5128` |
-| 11 | `#DC3D3D` |
+| Anchor | Light | Dark |
+|---:|---|---|
+| 0–4 | `#0B6E5B` | `#5FD3B5` |
+| 5 | `#0B6E5B` | `#5FD3B5` |
+| 6 | `#0B6E5B` | `#FACC15` |
+| 7 | `#0B6E5B` | `#FACC15` |
+| 8 | `#0B6E5B` | `#FFA644` |
+| 9 | `#C2410C` | `#FFA644` |
+| 10 | `#C2410C` | `#F87171` |
+| 11 | `#C2410C` | `#F87171` |
 
-Anchor 8 remains the rounded OKLab midpoint of anchors 7 and 9. Independent
-source-level sampling at 110,001 evenly spaced fractions found a minimum
-light fill/track ratio of 3.119:1; the unchanged dark minimum was 3.294:1.
-These numerical checks are not native visual proof. JVM and native-resource
-regressions enforce at least 3:1 across 11,001 sampled fractions.
+Measured minima over 11,001 sampled fractions: light **3.74:1**, dark **3.91:1**
+(previous light palette was 3.12:1). A bright yellow is impossible on the light
+track — `#FACC15` measures 1.11:1 — which is why the light theme carries two
+stages and the dark theme carries four.
 
 Countdown fit measurements are cached by regular/compact profile and the two
 supported text scales, including Full Table summary re-entry. Native pixels
 remain pixels at the RemoteViews boundary; no text-size unit changes.
 Strip fit math now mirrors its existing 2dp hero gap and retains the 8dp
-bottom reservation in recovery; its FrameLayout/XML geometry is unchanged.
-Schedule cells inherit their unchanged zero minimum height from `WidgetCell`
-rather than 18 duplicate XML overrides. The three unreferenced legacy drawables
-`widget_background`, `widget_badge_background` and `widget_status_badge` are
-removed; live widget backgrounds and geometry are unchanged by that cleanup.
+bottom reservation in recovery; the primary group is bottom-aligned so the
+label and countdown stay attached to the pinned bar instead of floating with
+dead space above it. Schedule cells inherit their unchanged zero minimum height
+from `WidgetCell` rather than 18 duplicate XML overrides. The three unreferenced
+legacy drawables `widget_background`, `widget_badge_background` and
+`widget_status_badge` are removed; live widget backgrounds and geometry are
+unchanged by that cleanup.
 
-The release and rendering evidence below belongs to the earlier released
-palette, not this refinement. Record current build and native-render outcomes
-separately; do not reuse historical pass claims.
+The release and rendering evidence below belongs to earlier released palettes.
+Record current build and native-render outcomes separately; do not reuse
+historical pass claims.
 
 ## Historical 2.9.6 contract (superseded light anchors)
 

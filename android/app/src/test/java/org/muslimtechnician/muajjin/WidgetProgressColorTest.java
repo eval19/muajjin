@@ -15,22 +15,22 @@ public class WidgetProgressColorTest {
     private static final long DURATION = SEGMENT * 11;
 
     private static final int[] LIGHT = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF388850,
-        0xFF628332, 0xFF947512, 0xFFA56E16, 0xFFB46519, 0xFFCD5128, 0xFFDC3D3D
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFFC2410C, 0xFFC2410C, 0xFFC2410C
     };
     private static final int[] DARK = {
-        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF98D993,
-        0xFFCAD46A, 0xFFF0CC4B, 0xFFF8B74B, 0xFFFFA24A, 0xFFFF7845, 0xFFF15C52
+        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5,
+        0xFFFACC15, 0xFFFACC15, 0xFFFFA644, 0xFFFFA644, 0xFFF87171, 0xFFF87171
     };
 
     /** Independent double-precision OKLab midpoints (segment, t = 0.5). */
     private static final int[] LIGHT_MID = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF257B56, 0xFF508642,
-        0xFF7D7D25, 0xFF9D7214, 0xFFAD6A18, 0xFFC15C21, 0xFFD54833, 0
+        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF816140, 0xFFC2410C, 0xFFC2410C, 0
     };
     private static final int[] DARK_MID = {
-        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF7ED6A5, 0xFFB2D780,
-        0xFFDED05C, 0xFFF4C24B, 0xFFFCAD4B, 0xFFFF8E48, 0xFFF86A4C, 0
+        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFFB9D280,
+        0xFFFACC15, 0xFFFDB934, 0xFFFFA644, 0xFFFC8D5F, 0xFFF87171, 0
     };
 
     private static final WidgetProgressColor.Palette LIGHT_PALETTE =
@@ -53,8 +53,8 @@ public class WidgetProgressColorTest {
             assertEquals("light anchor " + i, LIGHT[i], light(START + i * SEGMENT));
             assertEquals("dark anchor " + i, DARK[i], dark(START + i * SEGMENT));
         }
-        assertEquals("The approved dark endpoint is exact", 0xFFF15C52, dark(START + DURATION));
-        assertEquals("The approved light endpoint is exact", 0xFFDC3D3D, light(START + DURATION));
+        assertEquals("The approved dark endpoint is exact", 0xFFF87171, dark(START + DURATION));
+        assertEquals("The approved light endpoint is exact", 0xFFC2410C, light(START + DURATION));
         assertEquals(0xFF, dark(START) >>> 24);
     }
 
@@ -66,32 +66,35 @@ public class WidgetProgressColorTest {
         }
     }
 
-    @Test public void lightGreenHoldDelaysYellowWithoutDelayingOrange() {
-        for (long now : new long[]{START + 2 * SEGMENT, START + 4 * SEGMENT - 1,
-                START + 4 * SEGMENT}) {
-            assertEquals("Light emerald must hold through 4/11 of the interval",
+    @Test public void lightGreenHoldRunsToNineOfElevenThenOrange() {
+        for (long now : new long[]{START, START + 4 * SEGMENT, START + 8 * SEGMENT - 1,
+                START + 8 * SEGMENT}) {
+            assertEquals("Light emerald must hold through 8/11 of the interval",
                 0xFF0B6E5B, light(now));
         }
-        assertTrue("Light green must begin transitioning after its extended hold",
-            light(START + 4 * SEGMENT + SEGMENT / 2) != 0xFF0B6E5B);
-        assertEquals("Light gold remains at 7/11", 0xFF947512,
-            light(START + 7 * SEGMENT));
-        assertEquals("Orange must remain at 9/11", 0xFFB46519,
+        assertTrue("Light green must begin transitioning after its hold",
+            light(START + 8 * SEGMENT + SEGMENT / 2) != 0xFF0B6E5B);
+        assertEquals("Burnt orange must be exact at 9/11", 0xFFC2410C,
             light(START + 9 * SEGMENT));
+        assertEquals("Burnt orange must hold to the end", 0xFFC2410C,
+            light(START + DURATION));
     }
 
     @Test public void darkGreenHoldMatchesTheLightThemeCheckpoints() {
-        for (long now : new long[]{START + 2 * SEGMENT, START + 4 * SEGMENT - 1,
-                START + 4 * SEGMENT}) {
-            assertEquals("Dark emerald must hold through the same 4/11 boundary",
+        for (long now : new long[]{START, START + 2 * SEGMENT, START + 5 * SEGMENT}) {
+            assertEquals("Dark emerald must hold through 5/11",
                 0xFF5FD3B5, dark(now));
         }
-        assertTrue("Both themes must leave their green hold after 4/11",
-            dark(START + 4 * SEGMENT + SEGMENT / 2) != 0xFF5FD3B5);
-        assertEquals("Dark yellow must match light yellow at 7/11", 0xFFF0CC4B,
-            dark(START + 7 * SEGMENT));
-        assertEquals("Dark orange must remain at 9/11", 0xFFFFA24A,
-            dark(START + 9 * SEGMENT));
+        assertTrue("Dark must leave its green hold after 5/11",
+            dark(START + 5 * SEGMENT + SEGMENT / 2) != 0xFF5FD3B5);
+        assertEquals("Dark yellow at 6/11", 0xFFFACC15,
+            dark(START + 6 * SEGMENT));
+        assertEquals("Dark orange at 8/11", 0xFFFFA644,
+            dark(START + 8 * SEGMENT));
+        assertEquals("Dark red at 10/11", 0xFFF87171,
+            dark(START + 10 * SEGMENT));
+        assertEquals("Dark red holds to the end", 0xFFF87171,
+            dark(START + DURATION));
     }
 
     @Test public void interiorSamplesMatchIndependentOklabReferences() {
@@ -217,8 +220,8 @@ public class WidgetProgressColorTest {
 
         int light = light(START + 6 * SEGMENT);
         int dark = dark(START + 6 * SEGMENT);
-        assertEquals(0xFF628332, light);
-        assertEquals(0xFFCAD46A, dark);
+        assertEquals(0xFF0B6E5B, light);
+        assertEquals(0xFFFACC15, dark);
         assertTrue("Concurrent theme samples contaminated each other", light != dark);
     }
 

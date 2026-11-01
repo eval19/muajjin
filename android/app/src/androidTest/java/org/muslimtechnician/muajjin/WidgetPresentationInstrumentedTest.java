@@ -91,21 +91,21 @@ public class WidgetPresentationInstrumentedTest {
     };
     /** Approved anchors, independent of the production helper. */
     private static final int[] LIGHT_PALETTE = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF388850,
-        0xFF628332, 0xFF947512, 0xFFA56E16, 0xFFB46519, 0xFFCD5128, 0xFFDC3D3D
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFFC2410C, 0xFFC2410C, 0xFFC2410C
     };
     private static final int[] DARK_PALETTE = {
-        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF98D993,
-        0xFFCAD46A, 0xFFF0CC4B, 0xFFF8B74B, 0xFFFFA24A, 0xFFFF7845, 0xFFF15C52
+        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5,
+        0xFFFACC15, 0xFFFACC15, 0xFFFFA644, 0xFFFFA644, 0xFFF87171, 0xFFF87171
     };
     /** Independently computed OKLab midpoints; index is the segment. */
     private static final int[] LIGHT_INTERIOR = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF257B56, 0xFF508642,
-        0xFF7D7D25, 0xFF9D7214, 0xFFAD6A18, 0xFFC15C21, 0xFFD54833, 0
+        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF816140, 0xFFC2410C, 0xFFC2410C, 0
     };
     private static final int[] DARK_INTERIOR = {
-        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF7ED6A5, 0xFFB2D780,
-        0xFFDED05C, 0xFFF4C24B, 0xFFFCAD4B, 0xFFFF8E48, 0xFFF86A4C, 0
+        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFFB9D280,
+        0xFFFACC15, 0xFFFDB934, 0xFFFFA644, 0xFFFC8D5F, 0xFFF87171, 0
     };
 
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -1322,8 +1322,8 @@ public class WidgetPresentationInstrumentedTest {
                     Rendered lightRender = renderRemote(remote, light, state);
                     Rendered darkRender = renderRemote(remote, dark, state);
                     // The same elapsed fraction selects each host's own palette.
-                    int lightExpected = 0xFF628332;
-                    int darkExpected = 0xFFCAD46A;
+                    int lightExpected = 0xFF0B6E5B;
+                    int darkExpected = 0xFFFACC15;
                     assertProgressFill(lightRender, lightExpected, 0);
                     assertProgressFill(darkRender, darkExpected, 0);
                     assertEquals("Host theme must not change elapsed fill",
