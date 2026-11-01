@@ -1,6 +1,6 @@
 # Muajjin implementation evidence
 
-## 2.9.85 widget correctness, contrast and host coverage — 2026-11-01 (prepared; publication pending)
+## 2.9.85 widget correctness, contrast and host coverage — 2026-11-01 (published prerelease)
 
 - Countdown fit measurements are cached per regular/compact profile and both
   supported text scales, so Full Table summary re-entry never reuses an
@@ -30,9 +30,19 @@
   `87ad4600d014589b8babe717300b3f6e3f1ec68f75038e6db71b904a916a6f3b`; `aapt2`
   reports package `org.muslimtechnician.muajjin`, 2.9.85/303, target 36. Unsigned,
   therefore not installable; signed builds require CI signing secrets.
-- Publication pending: the tag push triggers the release-apk workflow (unsigned
-  verification artifact unless dispatched with `sign_release=true`). GitHub
-  prerelease has not been created; `gh` is not installed locally.
+- Tag push gate [run 41258332333](https://github.com/eval19/muajjin/actions/runs/41258332333)
+  passed (unsigned verification artifact), then signed
+  [run 41258717633](https://github.com/eval19/muajjin/actions/runs/41258717633) passed
+  resolve, both web modes, native quality and release, epoch 1793494071.
+- Signed APK `muajjin-2.9.85-303-github-release.apk`, 5,095,754 bytes, SHA-256
+  `740e8b178665fd8bd582bf401dade93c3ae9e3d49de53454c28f40b2696a741b`; v2/v3
+  schemes, original certificate
+  `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`, package
+  `org.muslimtechnician.muajjin`, 2.9.85/303, GitHub mode, matching epoch.
+- Published [v2.9.85 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.85),
+  release ID `430284101`, artifact ID `13064645883`; GitHub asset digest
+  `sha256:740e8b17…` and an anonymous re-download both match the uploaded bytes.
+  Latest stable remains v2.9.1; earlier releases unchanged.
 
 ## 2.9.84 pinned-line correction — 2026-10-31 (published prerelease)
 
