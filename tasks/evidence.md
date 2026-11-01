@@ -1,5 +1,39 @@
 # Muajjin implementation evidence
 
+## 2.9.85 widget correctness, contrast and host coverage — 2026-11-01 (prepared; publication pending)
+
+- Countdown fit measurements are cached per regular/compact profile and both
+  supported text scales, so Full Table summary re-entry never reuses an
+  undersized Normal value. `chooseScale()` now re-evaluates width after applying
+  `LARGE_TEXT_SCALE` (reviewers' approved deviation), so a host that can hold
+  compact Larger text stays in its composition instead of falling back.
+- Strip fit math mirrors its existing 2dp hero gap and keeps the 8dp recovery
+  bottom reservation; `widget_prayer_strip.xml` is unchanged.
+- Light API 31+ progress anchors 5–10 deepened to reach 3:1 fill/track contrast:
+  native sampled minimum **3.12:1** (was 1.33:1), dark unchanged at **3.29:1**.
+  Track, dark colors, legacy API 24–30 stages, green hold and red endpoint
+  unchanged; no runtime clamp.
+- 18 duplicate `minHeight="0dp"` cell attributes removed (owner: `WidgetCell`);
+  `widget_background`, `widget_badge_background`, `widget_status_badge` deleted
+  after a clean reference scan.
+- Verification: JVM unit suite green; presentation suite **12/12** in light and
+  dark with captures; numerals **3/3**; new launcher host-box sweep (7 providers,
+  host padding 0/8/16 dp, font scale 1.0/1.3/2.0) produced identical decisions at
+  160/320/420/560 dpi and gates every Normal-font box ≥88 dp tall.
+- Recorded limitation (not fixed): at 2.0× system font, Strip, Banner and both
+  keyguard variants report overflow in their standard boxes and have no simpler
+  fallback; Square/Wide fall back to Strip/Banner.
+- Source `13d3f7a0a028c305f5e32a8d2d9eee5417233146`, annotated `v2.9.85`,
+  branch `release/2.9.85`, version 2.9.85 / versionCode 303.
+- Local unsigned artifact `muajjin-2.9.85-303-nongithub-release-unsigned.apk`,
+  5,041,781 bytes, SHA-256
+  `87ad4600d014589b8babe717300b3f6e3f1ec68f75038e6db71b904a916a6f3b`; `aapt2`
+  reports package `org.muslimtechnician.muajjin`, 2.9.85/303, target 36. Unsigned,
+  therefore not installable; signed builds require CI signing secrets.
+- Publication pending: the tag push triggers the release-apk workflow (unsigned
+  verification artifact unless dispatched with `sign_release=true`). GitHub
+  prerelease has not been created; `gh` is not installed locally.
+
 ## 2.9.84 pinned-line correction — 2026-10-31 (published prerelease)
 
 - Corrects 2.9.83, whose `dropLabel` heuristic hid the prayer label (reported by
