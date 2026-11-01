@@ -1,5 +1,31 @@
 # Muajjin implementation evidence
 
+## 2.9.86 countdown palette and strip spacing — 2026-11-01 (published prerelease)
+
+- Light API 31+ fill holds `#0B6E5B` through anchor 8, then one burnt-orange
+  stage `#C2410C` for anchors 9–11. Dark keeps four stages: `#5FD3B5` (0–5),
+  `#FACC15` (6–7), `#FFA644` (8–9), `#F87171` (10–11).
+- Measured minima over 11,001 sampled fractions: light **3.74:1**, dark
+  **3.91:1** (was 3.12 / 3.29). A bright yellow is impossible on the light
+  track (`#FACC15` = 1.11:1), so the themes carry different stage counts.
+- Strip primary group is bottom-aligned above the pinned bar, removing the dead
+  space between the countdown and the bar on hosts taller than 2x1.
+- Unchanged: tracks, surfaces, typography, geometry, countdown timing, provider
+  metadata and the legacy API 24–30 drawables.
+- Verification: JVM suite green; 12/12 presentation tests in light and dark with
+  captures; 3/3 numeral tests; host-box sweep identical at 160/320/420/560 dpi.
+- Source `5b72ee0`, annotated `v2.9.86`, version 2.9.86 / versionCode 304; signed
+  [run 41264148631](https://github.com/eval19/muajjin/actions/runs/41264148631)
+  passed; artifact `13066122627`.
+- Signed APK `muajjin-2.9.86-304-github-release.apk`, 5,095,754 bytes, SHA-256
+  `ad7749098e59dd8dc082cf3599871053e5e8015e58aaa22361ef4eb93559f06c`; v2/v3,
+  original certificate
+  `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`, GitHub
+  mode, epoch 1793499071.
+- Published [v2.9.86 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.86),
+  release ID `430312707`; asset digest and an anonymous re-download match.
+  Latest stable remains v2.9.1.
+
 ## 2.9.85 widget correctness, contrast and host coverage — 2026-11-01 (published prerelease)
 
 - Countdown fit measurements are cached per regular/compact profile and both
