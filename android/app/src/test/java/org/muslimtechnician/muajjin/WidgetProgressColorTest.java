@@ -15,8 +15,8 @@ public class WidgetProgressColorTest {
     private static final long DURATION = SEGMENT * 11;
 
     private static final int[] LIGHT = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF3E9558,
-        0xFF8AB648, 0xFFE8B923, 0xFFEEA224, 0xFFF28A25, 0xFFEB5E2F, 0xFFDC3D3D
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF388850,
+        0xFF628332, 0xFF947512, 0xFFA56E16, 0xFFB46519, 0xFFCD5128, 0xFFDC3D3D
     };
     private static final int[] DARK = {
         0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF98D993,
@@ -25,8 +25,8 @@ public class WidgetProgressColorTest {
 
     /** Independent double-precision OKLab midpoints (segment, t = 0.5). */
     private static final int[] LIGHT_MID = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF28815A, 0xFF67A652,
-        0xFFBCB83A, 0xFFEBAE24, 0xFFF09625, 0xFFEF752B, 0xFFE44E37, 0
+        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF257B56, 0xFF508642,
+        0xFF7D7D25, 0xFF9D7214, 0xFFAD6A18, 0xFFC15C21, 0xFFD54833, 0
     };
     private static final int[] DARK_MID = {
         0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF7ED6A5, 0xFFB2D780,
@@ -74,9 +74,9 @@ public class WidgetProgressColorTest {
         }
         assertTrue("Light green must begin transitioning after its extended hold",
             light(START + 4 * SEGMENT + SEGMENT / 2) != 0xFF0B6E5B);
-        assertEquals("Light yellow moves to 7/11", 0xFFE8B923,
+        assertEquals("Light gold remains at 7/11", 0xFF947512,
             light(START + 7 * SEGMENT));
-        assertEquals("Orange must remain at 9/11", 0xFFF28A25,
+        assertEquals("Orange must remain at 9/11", 0xFFB46519,
             light(START + 9 * SEGMENT));
     }
 
@@ -217,9 +217,37 @@ public class WidgetProgressColorTest {
 
         int light = light(START + 6 * SEGMENT);
         int dark = dark(START + 6 * SEGMENT);
-        assertEquals(0xFF8AB648, light);
+        assertEquals(0xFF628332, light);
         assertEquals(0xFFCAD46A, dark);
         assertTrue("Concurrent theme samples contaminated each other", light != dark);
+    }
+
+    @Test public void bothPalettesKeepThreeToOneTrackContrastAcrossTheInterval() {
+        for (int theme = 0; theme < 2; theme++) {
+            WidgetProgressColor.Palette palette = theme == 0 ? LIGHT_PALETTE : DARK_PALETTE;
+            int track = theme == 0 ? 0xFFD5DDD9 : 0xFF34403A;
+            double minimum = Double.POSITIVE_INFINITY;
+            for (int step = 0; step <= 11000; step++) {
+                int fill = WidgetProgressColor.sample(palette, 0L, 11000L, step);
+                double a = relativeLuminance(fill), b = relativeLuminance(track);
+                double ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+                minimum = Math.min(minimum, ratio);
+            }
+            assertTrue("Theme " + theme + " minimum fill/track contrast was " + minimum,
+                minimum >= 3.0);
+        }
+    }
+
+    private static double relativeLuminance(int color) {
+        return 0.2126 * linearChannel(color >> 16)
+            + 0.7152 * linearChannel(color >> 8)
+            + 0.0722 * linearChannel(color);
+    }
+
+    private static double linearChannel(int raw) {
+        double value = (raw & 0xFF) / 255.0;
+        return value <= 0.04045 ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
     }
 
     private static void assertLab(int argb, double lightness, double a, double b) {

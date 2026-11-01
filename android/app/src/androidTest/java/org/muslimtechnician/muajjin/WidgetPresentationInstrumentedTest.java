@@ -16,6 +16,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextDirectionHeuristics;
+import android.text.TextPaint;
+import android.text.format.DateUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Chronometer;
@@ -79,10 +83,16 @@ public class WidgetPresentationInstrumentedTest {
         new Profile(3, 360, 220), new Profile(4, 360, 320),
         new Profile(5, 180, 96), new Profile(6, 360, 96)
     };
+    /** Declared provider minimums: the smallest host box a launcher may hand over. */
+    private static final Profile[] HOST_MINIMUMS = {
+        new Profile(0, 120, 88), new Profile(1, 130, 160), new Profile(2, 280, 96),
+        new Profile(3, 288, 220), new Profile(4, 288, 220), new Profile(5, 170, 96),
+        new Profile(6, 280, 80)
+    };
     /** Approved anchors, independent of the production helper. */
     private static final int[] LIGHT_PALETTE = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF3E9558,
-        0xFF8AB648, 0xFFE8B923, 0xFFEEA224, 0xFFF28A25, 0xFFEB5E2F, 0xFFDC3D3D
+        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF388850,
+        0xFF628332, 0xFF947512, 0xFFA56E16, 0xFFB46519, 0xFFCD5128, 0xFFDC3D3D
     };
     private static final int[] DARK_PALETTE = {
         0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF98D993,
@@ -90,8 +100,8 @@ public class WidgetPresentationInstrumentedTest {
     };
     /** Independently computed OKLab midpoints; index is the segment. */
     private static final int[] LIGHT_INTERIOR = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF28815A, 0xFF67A652,
-        0xFFBCB83A, 0xFFEBAE24, 0xFFF09625, 0xFFEF752B, 0xFFE44E37, 0
+        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF257B56, 0xFF508642,
+        0xFF7D7D25, 0xFF9D7214, 0xFFAD6A18, 0xFFC15C21, 0xFFD54833, 0
     };
     private static final int[] DARK_INTERIOR = {
         0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF7ED6A5, 0xFFB2D780,
@@ -353,6 +363,342 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
+    @Test public void finalNativeCountdownReservationsCoverScaleAndSummaryReentry()
+            throws Exception {
+        Locale originalLocale = Locale.getDefault();
+        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
+        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
+        try {
+            openHost();
+            // Existing winter fixture supports both one- and two-digit hours.
+            prepareSchedule(Calendar.JANUARY, 1);
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (String language : new String[]{"en", "ar", "bn"}) {
+                        for (float fontScale : new float[]{1f, 1.3f, 1.5f, 2f}) {
+                            Context context = configured(language, fontScale);
+                            float density = context.getResources().getDisplayMetrics().density;
+                            float width = 720f * fontScale;
+                            float height = 600f * fontScale;
+                            for (String fixture : new String[]{"midday", "night-start"}) {
+                                PrayerWidgetHelper.WidgetTimelineState normal =
+                                    state(context, language, fixture);
+                                PrayerWidgetHelper.WidgetTimelineState larger =
+                                    state(context, language, fixture, true);
+                                Rendered square = null, bigSquare = null;
+                                Rendered table = null, bigTable = null;
+                                try {
+                                    Profile squareProfile = new Profile(1, width, height);
+                                    square = checkedCountdown(squareProfile, context, normal,
+                                        false, false, R.dimen.w_countdown_size);
+                                    bigSquare = checkedCountdown(squareProfile, context, larger,
+                                        false, false, R.dimen.w_countdown_size);
+
+                                    Profile tableProfile = new Profile(4, width, height);
+                                    table = checkedCountdown(tableProfile, context, normal,
+                                        false, false, R.dimen.w_countdown_table_size);
+                                    bigTable = checkedCountdown(tableProfile, context, larger,
+                                        false, false, R.dimen.w_countdown_table_size);
+
+                                    // Derive a header-only host from actual inflated geometry,
+                                    // not WidgetLayout.requiredHeight().
+                                    float summaryHeight = (float)Math.ceil(Math.max(
+                                        nativeTableHeaderHeight(table),
+                                        nativeTableHeaderHeight(bigTable)) / density) + 2f;
+                                    Profile summaryProfile =
+                                        new Profile(4, width, summaryHeight);
+
+                                    for (int pass = 0; pass < 2; pass++) {
+                                        PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                            pass == 0 ? normal : larger;
+                                        // Two dp inside this snapshot's own checked regular
+                                        // reservation forces the real width-based compact selection.
+                                        Profile compactProfile = compactProfile(
+                                            pass == 0 ? square : bigSquare, height);
+                                        Rendered compact = checkedCountdown(
+                                            compactProfile, context, snapshot, true, false,
+                                            R.dimen.w_countdown_size_compact);
+                                        surface.removeView(compact.host);
+                                        Rendered summary = checkedCountdown(
+                                            summaryProfile, context, snapshot, false, true,
+                                            R.dimen.w_countdown_table_size);
+                                        surface.removeView(summary.host);
+
+                                        // Larger must still leave both keyguard sizes Normal.
+                                        Rendered smallLock = checkedCountdown(
+                                            new Profile(5, width, height), context, snapshot,
+                                            true, false,
+                                            R.dimen.w_countdown_small_size_compact);
+                                        surface.removeView(smallLock.host);
+                                        Rendered mediumLock = checkedCountdown(
+                                            new Profile(6, width, height), context, snapshot,
+                                            true, false,
+                                            R.dimen.w_countdown_table_size_compact);
+                                        surface.removeView(mediumLock.host);
+                                    }
+                                } finally {
+                                    for (Rendered rendered :
+                                            new Rendered[]{square, bigSquare, table, bigTable}) {
+                                        if (rendered != null) surface.removeView(rendered.host);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("final-countdown-reservation", error);
+                }
+            });
+        } finally {
+            closeHost();
+            Locale.setDefault(originalLocale);
+            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
+            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
+        }
+        assertTrue("Final countdown reservation defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    private Rendered checkedCountdown(Profile profile, Context context,
+            PrayerWidgetHelper.WidgetTimelineState snapshot, boolean compact,
+            boolean summaryOnly, int normalDimension) {
+        WidgetLayout selected = new WidgetLayout(context, snapshot, profile.variant,
+            profile.width, profile.height);
+        String tag = profile.name() + "/"
+            + context.getResources().getConfiguration().getLocales().get(0)
+            + "/font" + context.getResources().getConfiguration().fontScale
+            + "/larger=" + snapshot.presentation.widgetLargeText;
+        assertEquals("Fixture must reach the intended native profile: " + tag,
+            compact, selected.compact);
+        assertEquals("Fixture must reach real summary re-entry: " + tag,
+            summaryOnly, selected.summaryOnly);
+        assertTrue("Fixture must fit without a simpler variant: " + tag,
+            selected.fitsWithinBounds());
+
+        Rendered rendered = render(profile, context, snapshot);
+        try {
+            Chronometer clock = rendered.root.findViewById(COUNTDOWNS[profile.variant]);
+            float scale = snapshot.presentation.widgetLargeText
+                && profile.variant <= 4 ? 1.2f : 1f;
+            assertEquals("Final effective PX size: " + tag,
+                context.getResources().getDimension(normalDimension) * scale,
+                clock.getTextSize(), .01f);
+            if (profile.variant == 4) {
+                assertEquals("Native schedule visibility: " + tag,
+                    summaryOnly ? View.GONE : View.VISIBLE,
+                    rendered.root.findViewById(R.id.widget_schedule_container)
+                        .getVisibility());
+            }
+            assertCountdownReservation(rendered);
+            verifyTextGeometry(rendered.root, clock);
+            return rendered;
+        } catch (AssertionError | RuntimeException error) {
+            surface.removeView(rendered.host);
+            throw error;
+        }
+    }
+
+    private static int nativeTableHeaderHeight(Rendered rendered) {
+        Rect metadata = bounds(rendered.root,
+            rendered.root.findViewById(R.id.widget_metadata));
+        Rect progress = bounds(rendered.root,
+            rendered.root.findViewById(R.id.widget_progress_container));
+        return progress.bottom - metadata.top
+            + rendered.root.getPaddingTop() + rendered.root.getPaddingBottom();
+    }
+
+    private static Profile compactProfile(Rendered rendered, float height) {
+        Chronometer clock =
+            rendered.root.findViewById(COUNTDOWNS[rendered.profile.variant]);
+        float density =
+            rendered.context.getResources().getDisplayMetrics().density;
+        float width = (clock.getMinWidth()
+            + rendered.root.getPaddingLeft()
+            + rendered.root.getPaddingRight()) / density - 2f;
+        return new Profile(rendered.profile.variant, width, height);
+    }
+
+    private static void assertCountdownReservation(Rendered rendered) {
+        Chronometer clock =
+            rendered.root.findViewById(COUNTDOWNS[rendered.profile.variant]);
+        PrayerWidgetHelper.WidgetTimelineState snapshot = rendered.state;
+        assertTrue("Reservation oracle requires a valid native countdown", snapshot.valid);
+        long seconds = Math.max(0L,
+            snapshot.targetTimestamp - snapshot.now) / 1000L;
+        String[] samples = {
+            DateUtils.formatElapsedTime(seconds),
+            DateUtils.formatElapsedTime(seconds - seconds % 3600L + 3599L),
+            DateUtils.formatElapsedTime(3599L)
+        };
+        TextPaint paint = new TextPaint(clock.getPaint());
+        float width = 0;
+        int height = 0;
+        for (String sample : samples) {
+            float desired = Layout.getDesiredWidth(sample, paint);
+            width = Math.max(width, desired);
+            StaticLayout.Builder builder = StaticLayout.Builder.obtain(
+                    sample, 0, sample.length(), paint,
+                    Math.max(1, (int)Math.ceil(desired) + 1))
+                .setTextDirection(TextDirectionHeuristics.LTR)
+                .setIncludePad(clock.getIncludeFontPadding());
+            if (Build.VERSION.SDK_INT >= 28) {
+                builder.setUseLineSpacingFromFallbacks(clock.isFallbackLineSpacing());
+            }
+            StaticLayout lines = builder.build();
+            assertEquals("Reference countdown must remain one native line", 1,
+                lines.getLineCount());
+            height = Math.max(height, lines.getHeight());
+        }
+        float density =
+            rendered.context.getResources().getDisplayMetrics().density;
+        String tag = rendered.profile.name() + "/size=" + clock.getTextSize();
+        assertEquals("Countdown width reservation at final PX size: " + tag,
+            Math.round(width + 2f * density), clock.getMinWidth(), 1f);
+        assertEquals("Countdown height reservation at final PX size: " + tag,
+            height, clock.getMinHeight(), 1f);
+    }
+
+    @Test public void stripFitModelMatchesPinnedHeroGeometry() throws Exception {
+        Locale originalLocale = Locale.getDefault();
+        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
+        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
+        try {
+            openHost();
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (String language : new String[]{"en", "ar", "bn"}) {
+                        for (float fontScale : new float[]{1f, 1.3f, 1.5f, 2f}) {
+                            Context translated = configured(language, fontScale);
+                            Configuration config = new Configuration(
+                                translated.getResources().getConfiguration());
+                            // Context-only mdpi makes the XML/model comparison exact.
+                            config.densityDpi = 160;
+                            Context context = translated.createConfigurationContext(config);
+                            assertEquals(1f,
+                                context.getResources().getDisplayMetrics().density, .001f);
+                            for (boolean large : new boolean[]{false, true}) {
+                                for (String fixture : new String[]{"midday", "warm", "invalid"}) {
+                                    PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                        state(context, language, fixture, large);
+                                    Profile profile = new Profile(0,
+                                        360f * fontScale, 600f * fontScale);
+                                    WidgetLayout selected = new WidgetLayout(context, snapshot,
+                                        0, profile.width, profile.height);
+                                    Rendered rendered = render(profile, context, snapshot);
+                                    try {
+                                        ViewGroup hero = rendered.root.findViewById(
+                                            R.id.widget_primary_group);
+                                        int required = hero.getPaddingTop() + hero.getPaddingBottom();
+                                        for (int i = 0; i < hero.getChildCount(); i++) {
+                                            View child = hero.getChildAt(i);
+                                            if (child.getVisibility() == View.GONE) continue;
+                                            ViewGroup.MarginLayoutParams margins =
+                                                (ViewGroup.MarginLayoutParams) child.getLayoutParams();
+                                            required += child.getMeasuredHeight()
+                                                + margins.topMargin + margins.bottomMargin;
+                                        }
+                                        ViewGroup.MarginLayoutParams reservation =
+                                            (ViewGroup.MarginLayoutParams) hero.getLayoutParams();
+                                        required += reservation.topMargin + reservation.bottomMargin
+                                            + rendered.root.getPaddingTop()
+                                            + rendered.root.getPaddingBottom();
+                                        assertEquals("Strip fit must match its native hero and reserve: "
+                                            + language + "/" + fontScale + "/" + large + "/" + fixture,
+                                            required, selected.minimumHeight, .01f);
+                                        verifyTextGeometry(rendered.root, rendered.root);
+                                    } finally {
+                                        surface.removeView(rendered.host);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("strip-fit-geometry", error);
+                }
+            });
+        } finally {
+            closeHost();
+            Locale.setDefault(originalLocale);
+            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
+            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
+        }
+        assertTrue("Strip fit geometry defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    @Test public void launcherHostBoxesKeepEveryWidgetComplete() throws Exception {
+        Locale originalLocale = Locale.getDefault();
+        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
+        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
+        try {
+            openHost();
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (String language : new String[]{"en", "ar"}) {
+                        for (float scale : new float[]{1f, 1.3f, 2f}) {
+                            Context context = configured(language, scale);
+                            PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                state(context, language, "midday");
+                            for (Profile box : NORMAL) {
+                                for (float padding : new float[]{0f, 8f, 16f}) {
+                                    // Large system fonts keep the two representative insets.
+                                    if (scale > 1f && padding == 8f) continue;
+                                    sweepHostBox(box, padding, context, snapshot, language, scale);
+                                }
+                            }
+                            if (scale == 1f) {
+                                for (Profile box : HOST_MINIMUMS) {
+                                    sweepHostBox(box, 0f, context, snapshot, language, scale);
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("launcher-host-boxes", error);
+                }
+            });
+        } finally {
+            closeHost();
+            Locale.setDefault(originalLocale);
+            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
+            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
+        }
+        assertTrue("Launcher host box defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    private void sweepHostBox(Profile box, float padding, Context context,
+            PrayerWidgetHelper.WidgetTimelineState snapshot, String language, float scale) {
+        float width = Math.max(1, box.width - 2 * padding);
+        float height = Math.max(1, box.height - 2 * padding);
+        String tag = VARIANTS[box.variant] + "-" + Math.round(width) + "x" + Math.round(height)
+            + "-" + language + "-font" + scale + "-pad" + (int)padding;
+        try {
+            WidgetLayout model = new WidgetLayout(context, snapshot, box.variant, width, height);
+            if (!model.fitsWithinBounds()) {
+                audit("launcher-box-overflow " + tag);
+                // A host box this tall cannot be below any provider minimum; Normal
+                // text must fit it. Shorter boxes and enlarged system fonts only audit.
+                if (scale == 1f && height >= 88f) {
+                    record("launcher-box-overflow-" + tag, new AssertionError(
+                        "Normal-font host box must keep the widget complete: " + tag));
+                }
+                return;
+            }
+            Profile profile = new Profile(box.variant, width, height);
+            Rendered rendered = render(profile, context, snapshot);
+            try {
+                verify(rendered, language, scale, model.summaryOnly);
+                verifyTextGeometry(rendered.root, rendered.root);
+                assertCountdownReservation(rendered);
+                if (capture) capture(rendered, "host-" + tag);
+                audit("launcher-box " + tag);
+            } finally {
+                surface.removeView(rendered.host);
+            }
+        } catch (Throwable error) {
+            record("launcher-box-" + tag, error);
+        }
+    }
+
     /** The 2x1 hero follows the reading edge: left in English, right in Arabic. */
     @Test public void stripHeroFollowsTheReadingEdgeInBothDirections() throws Exception {
         target = instrumentation.getTargetContext();
@@ -417,7 +763,8 @@ public class WidgetPresentationInstrumentedTest {
         if (!large) return base;
         JSONObject json = base.presentation.json();
         json.put("widgetLargeText", true);
-        long[] localEvents = schedule.localEvents(base.now, zone, base.timeline.day);
+        long[] localEvents = base.timeline == null ? new long[6]
+            : schedule.localEvents(base.now, zone, base.timeline.day);
         return new PrayerWidgetHelper.WidgetTimelineState(context, NativePresentation.parse(json),
             base.timeline, base.now, localEvents, base.numericLocale);
     }
@@ -811,6 +1158,7 @@ public class WidgetPresentationInstrumentedTest {
             long displayedSeconds = parseCountdown(clock.getText().toString());
             long expectedSeconds = Math.max(0, (s.chronometerBase - SystemClock.elapsedRealtime() + 999) / 1000);
             assertTrue("Countdown is incomplete or stale: " + clock.getText(), Math.abs(displayedSeconds - expectedSeconds) <= 2);
+            assertCountdownReservation(rendered);
         } else assertEquals("Stopped recovery countdown", "—", clock.getText().toString());
 
         if (p.variant < 4) {
@@ -974,7 +1322,7 @@ public class WidgetPresentationInstrumentedTest {
                     Rendered lightRender = renderRemote(remote, light, state);
                     Rendered darkRender = renderRemote(remote, dark, state);
                     // The same elapsed fraction selects each host's own palette.
-                    int lightExpected = 0xFF8AB648;
+                    int lightExpected = 0xFF628332;
                     int darkExpected = 0xFFCAD46A;
                     assertProgressFill(lightRender, lightExpected, 0);
                     assertProgressFill(darkRender, darkExpected, 0);
@@ -1163,26 +1511,23 @@ public class WidgetPresentationInstrumentedTest {
         for (boolean night : new boolean[]{false, true}) {
             Context context = themed(night);
             int track = context.getColor(R.color.w_track);
-            int[] anchors = night ? DARK_PALETTE : LIGHT_PALETTE;
-            int[] interior = night ? DARK_INTERIOR : LIGHT_INTERIOR;
-            double minimum = Double.MAX_VALUE;
-            String where = "";
-            for (int i = 0; i < anchors.length; i++) {
-                double ratio = contrast(anchors[i], track);
+            WidgetProgressColor.Palette palette = night
+                ? WidgetProgressPalette.dark(context) : WidgetProgressPalette.light(context);
+            double minimum = Double.POSITIVE_INFINITY;
+            int minimumStep = 0;
+            for (int step = 0; step <= 11000; step++) {
+                int fill = WidgetProgressColor.sample(palette, 0L, 11000L, step);
+                double ratio = contrast(fill, track);
                 if (ratio < minimum) {
                     minimum = ratio;
-                    where = "anchor " + i;
-                }
-            }
-            for (int segment = 1; segment <= 10; segment++) {
-                double ratio = contrast(interior[segment], track);
-                if (ratio < minimum) {
-                    minimum = ratio;
-                    where = "segment " + segment + " midpoint";
+                    minimumStep = step;
                 }
             }
             audit("progress-contrast theme=" + (night ? "dark" : "light")
-                + " min=" + String.format(Locale.US, "%.2f", minimum) + " at " + where);
+                + " min=" + String.format(Locale.US, "%.2f", minimum)
+                + " at fraction=" + (minimumStep / 11000.0));
+            assertTrue("Resolved native fill/track contrast fell below 3:1: " + minimum,
+                minimum >= 3.0);
         }
     }
 

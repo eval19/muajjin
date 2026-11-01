@@ -1,6 +1,6 @@
 # Home-screen widget progress fill: 12-anchor OKLab progression
 
-Status: published as the [2.9.6 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.6)
+Released baseline: published as the [2.9.6 prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.6)
 (Android versionCode 296, 2026-10-30). Native-render and signed-artifact
 verification evidence is in `tasks/evidence.md`.
 The previous palette shipped in the
@@ -9,7 +9,45 @@ The previous palette shipped in the
 The runtime progression first shipped in 2.9.4 (Android versionCode 294).
 Original implementation prepared: 2026-10-25; baseline `8fa8296`.
 
-## Contract
+## Current source refinement (unreleased)
+
+The light API 31+ progress palette now targets at least 3:1 fill/track contrast.
+The track remains `#D5DDD9`; dark colors, legacy API 24–30 stages, interval
+fractions, green hold and red endpoint are unchanged. The lighter yellow is
+intentionally replaced by deeper gold; there is no runtime contrast clamp.
+
+| Anchor | Current light color |
+|---:|---|
+| 0–4 | `#0B6E5B` |
+| 5 | `#388850` |
+| 6 | `#628332` |
+| 7 | `#947512` |
+| 8 | `#A56E16` |
+| 9 | `#B46519` |
+| 10 | `#CD5128` |
+| 11 | `#DC3D3D` |
+
+Anchor 8 remains the rounded OKLab midpoint of anchors 7 and 9. Independent
+source-level sampling at 110,001 evenly spaced fractions found a minimum
+light fill/track ratio of 3.119:1; the unchanged dark minimum was 3.294:1.
+These numerical checks are not native visual proof. JVM and native-resource
+regressions enforce at least 3:1 across 11,001 sampled fractions.
+
+Countdown fit measurements are cached by regular/compact profile and the two
+supported text scales, including Full Table summary re-entry. Native pixels
+remain pixels at the RemoteViews boundary; no text-size unit changes.
+Strip fit math now mirrors its existing 2dp hero gap and retains the 8dp
+bottom reservation in recovery; its FrameLayout/XML geometry is unchanged.
+Schedule cells inherit their unchanged zero minimum height from `WidgetCell`
+rather than 18 duplicate XML overrides. The three unreferenced legacy drawables
+`widget_background`, `widget_badge_background` and `widget_status_badge` are
+removed; live widget backgrounds and geometry are unchanged by that cleanup.
+
+The release and rendering evidence below belongs to the earlier released
+palette, not this refinement. Record current build and native-render outcomes
+separately; do not reuse historical pass claims.
+
+## Historical 2.9.6 contract (superseded light anchors)
 
 Only the filled portion of the five bar-bearing home-screen widgets changes.
 Labels, backgrounds, track, typography, countdowns, warm labels, keyguard

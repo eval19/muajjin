@@ -32,8 +32,11 @@ final class WidgetLayout {
     float contextBlockHeight, compactCellInset;
     int scheduleTextPixels;
     private final String countdownSample, countdownHourSample, countdownMinuteSample;
+    // Cache both supported scales: summary fallback can revisit either profile.
     private float regularCountdownWidth, compactCountdownWidth;
     private float regularCountdownHeight, compactCountdownHeight;
+    private float largerRegularCountdownWidth, largerCompactCountdownWidth;
+    private float largerRegularCountdownHeight, largerCompactCountdownHeight;
 
     WidgetLayout(Context context, PrayerWidgetHelper.WidgetTimelineState state,
                  int requestedVariant, float width, float height) {
@@ -91,6 +94,14 @@ final class WidgetLayout {
         // make Larger text smaller than Normal. Only spacing may then tighten.
         textScale = LARGE_TEXT_SCALE;
         chooseComposition();
+        // Re-evaluate width at the enlarged scale: the Normal-pass decision may no
+        // longer hold once Larger text is measured, and a host that fits compact
+        // Larger text must not fall through to a simpler variant.
+        if (!compact && !fitsWidth()) {
+            compact = true;
+            tight = true;
+            chooseComposition();
+        }
         if (!tight && height > 0 && minimumHeight > height) {
             tight = true;
             chooseComposition();
@@ -171,22 +182,38 @@ final class WidgetLayout {
     }
 
     float countdownWidth() {
-        float cached=compact?compactCountdownWidth:regularCountdownWidth;
-        if(cached>0) return cached;
-        float size=countdownSize();
-        float width=Math.max(textWidth(countdownSample,size,true),
-            Math.max(textWidth(countdownHourSample,size,true),textWidth(countdownMinuteSample,size,true)))+2;
-        if(compact) compactCountdownWidth=width;else regularCountdownWidth=width;
+        boolean larger = textScale == LARGE_TEXT_SCALE;
+        float cached = larger
+            ? (compact ? largerCompactCountdownWidth : largerRegularCountdownWidth)
+            : (compact ? compactCountdownWidth : regularCountdownWidth);
+        if (cached > 0) return cached;
+        float size = countdownSize();
+        float width = Math.max(textWidth(countdownSample, size, true),
+            Math.max(textWidth(countdownHourSample, size, true),
+                textWidth(countdownMinuteSample, size, true))) + 2;
+        if (larger) {
+            if (compact) largerCompactCountdownWidth = width;
+            else largerRegularCountdownWidth = width;
+        } else if (compact) compactCountdownWidth = width;
+        else regularCountdownWidth = width;
         return width;
     }
 
     float countdownHeight() {
-        float cached=compact?compactCountdownHeight:regularCountdownHeight;
-        if(cached>0) return cached;
-        float size=countdownSize();
-        float height=Math.max(textHeight(countdownSample,size,true),
-            Math.max(textHeight(countdownHourSample,size,true),textHeight(countdownMinuteSample,size,true)));
-        if(compact) compactCountdownHeight=height;else regularCountdownHeight=height;
+        boolean larger = textScale == LARGE_TEXT_SCALE;
+        float cached = larger
+            ? (compact ? largerCompactCountdownHeight : largerRegularCountdownHeight)
+            : (compact ? compactCountdownHeight : regularCountdownHeight);
+        if (cached > 0) return cached;
+        float size = countdownSize();
+        float height = Math.max(textHeight(countdownSample, size, true),
+            Math.max(textHeight(countdownHourSample, size, true),
+                textHeight(countdownMinuteSample, size, true)));
+        if (larger) {
+            if (compact) largerCompactCountdownHeight = height;
+            else largerRegularCountdownHeight = height;
+        } else if (compact) compactCountdownHeight = height;
+        else regularCountdownHeight = height;
         return height;
     }
 
@@ -323,7 +350,9 @@ final class WidgetLayout {
         float label = labelLineHeight;
         if (!state.valid) {
             float recovery = label;
-            if (variant == 1)
+            if (variant == 0)
+                recovery += progressGap() + 4; // Primary group retains its 8dp bottom reserve.
+            else if (variant == 1)
                 recovery = stacked ? label + 4 + lineHeight(contextSize(), false)
                     : Math.max(label, lineHeight(contextSize(), false));
             else if (variant == 4)
@@ -339,7 +368,7 @@ final class WidgetLayout {
         float body;
         switch (variant) {
             case 0:
-                body = primary + progressGap() + 4;
+                body = label + 2 + digits + progressGap() + 4;
                 break;
             case 1:
                 body = (stacked ? label + contextLine + 4 : Math.max(label, contextLine))

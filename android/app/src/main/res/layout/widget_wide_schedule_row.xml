@@ -12,8 +12,7 @@
         android:baselineAligned="false">
         <LinearLayout
             android:id="@+id/chip_fajr"
-            style="@style/WidgetCell"
-            android:minHeight="0dp">
+            style="@style/WidgetCell">
     
             <TextView
                 android:id="@+id/tv_chip_fajr_name"
@@ -36,7 +35,6 @@
         <LinearLayout
             android:id="@+id/chip_sunrise"
             style="@style/WidgetCell"
-            android:minHeight="0dp"
             android:layout_marginStart="@dimen/w_gap_cells">
     
             <TextView
@@ -60,7 +58,6 @@
         <LinearLayout
             android:id="@+id/chip_dhuhr"
             style="@style/WidgetCell"
-            android:minHeight="0dp"
             android:layout_marginStart="@dimen/w_gap_cells">
     
             <TextView
@@ -84,7 +81,6 @@
         <LinearLayout
             android:id="@+id/chip_asr"
             style="@style/WidgetCell"
-            android:minHeight="0dp"
             android:layout_marginStart="@dimen/w_gap_cells">
     
             <TextView
@@ -108,7 +104,6 @@
         <LinearLayout
             android:id="@+id/chip_maghrib"
             style="@style/WidgetCell"
-            android:minHeight="0dp"
             android:layout_marginStart="@dimen/w_gap_cells">
     
             <TextView
@@ -132,7 +127,6 @@
         <LinearLayout
             android:id="@+id/chip_isha"
             style="@style/WidgetCell"
-            android:minHeight="0dp"
             android:layout_marginStart="@dimen/w_gap_cells">
     
             <TextView

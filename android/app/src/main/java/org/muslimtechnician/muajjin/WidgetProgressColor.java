@@ -13,7 +13,8 @@ package org.muslimtechnician.muajjin;
  * (https://bottosson.github.io/posts/oklab/): sRGB decoding, the standard
  * transfer functions (0.04045 / 0.0031308), the reference matrices and cube
  * roots. Out-of-gamut channels are clamped before 8-bit encoding, and every
- * result is opaque.
+ * result is opaque. Contrast is owned by the supplied theme palette; sampling
+ * does not remap its colors or change stage positions.
  */
 final class WidgetProgressColor {
     private WidgetProgressColor() {}
