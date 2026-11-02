@@ -103,6 +103,26 @@ widget host; these two providers remain keyguard-only, not universally supported
 home widgets. Their white text and restrained shadow remain wallpaper-dependent.
 Picker artwork uses a sample backdrop; the live keyguard views remain transparent.
 
+### Shared app and widget theme
+
+The app's **Light** and **Dark** choices also force the five home-screen widgets
+to that palette, independently of the phone's theme. **Device/system** follows
+the phone, including changes made while the app is closed. The same preference
+is sent to all seven providers; the two keyguard cards keep their transparent
+backgrounds and white wallpaper-facing text.
+Android 12+ resolves system-mode colors when the host reapplies the widget,
+without another app handoff. On Android 7–11, text colors resolve on the next
+native widget refresh; no WebView or network connection is needed.
+
+Theme changes update presentation only: they do not recalculate prayer times,
+resend the schedule, or change alarms. The schema-2 presentation stores `theme`
+as `light`, `dark`, or `system`; older or malformed stored theme values default
+only that field to `system`, preserving the other presentation settings.
+
+Forced-theme captures and Light/Dark/Device reapplication were verified across
+all seven variants in the API 36 native debug host. The legacy progress XML was
+also rendered there; this is not an API 24–30 or Samsung-launcher runtime claim.
+
 ### Widget text size
 
 **Settings → Display → Widget text size** offers exactly two scales on Android.

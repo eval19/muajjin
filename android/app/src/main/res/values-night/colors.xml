@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="w_surface">#1B211E</color>
-    <color name="w_border">#2A332F</color>
-    <color name="w_text_primary">#EEF3F0</color>
-    <color name="w_text_secondary">#B4C0BA</color>
-    <color name="w_text_muted">#8A9791</color>
-    <color name="w_accent">#5FD3B5</color>
-    <color name="w_accent_tint">#1F3A33</color>
-    <color name="w_track">#34403A</color>
-    <color name="w_progress_gold">#CBB568</color>
-    <color name="w_progress_amber">#D99A64</color>
-    <color name="w_progress_soft_red">#D98C89</color>
+    <color name="w_surface">@color/w_dark_surface</color>
+    <color name="w_border">@color/w_dark_border</color>
+    <color name="w_text_primary">@color/w_dark_text_primary</color>
+    <color name="w_text_secondary">@color/w_dark_text_secondary</color>
+    <color name="w_text_muted">@color/w_dark_text_muted</color>
+    <color name="w_accent">@color/w_dark_accent</color>
+    <color name="w_accent_tint">@color/w_dark_accent_tint</color>
+    <color name="w_track">@color/w_dark_track</color>
+    <color name="w_progress_gold">@color/w_dark_progress_gold</color>
+    <color name="w_progress_amber">@color/w_dark_progress_amber</color>
+    <color name="w_progress_soft_red">@color/w_dark_progress_soft_red</color>
     <!-- Dark OKLab anchors: prayer-text green through index 5, yellow at 6-7,
          clear orange at 8-9 and red at 10-11; equal index/11 positions as res/values. -->
     <color name="w_progress_fill_0">@color/w_accent</color>
@@ -25,6 +25,6 @@
     <color name="w_progress_fill_9">#FFA644</color>
     <color name="w_progress_fill_10">#F87171</color>
     <color name="w_progress_fill_11">#F87171</color>
-    <color name="w_warm_text">#FFB74D</color>
-    <color name="w_warm_fill">#F59E0B</color>
+    <color name="w_warm_text">@color/w_dark_warm_text</color>
+    <color name="w_warm_fill">@color/w_dark_warm_fill</color>
 </resources>

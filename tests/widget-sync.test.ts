@@ -8,7 +8,7 @@ import type { UserSettings } from '../src/types';
 
 const now = () => new Date('2026-10-13T12:00:00.000Z');
 const translate = (key: string) => key;
-const presentation: WidgetPresentation = buildWidgetPresentation(DEFAULT_SETTINGS, translate, 'en', 'ltr');
+const presentation: WidgetPresentation = buildWidgetPresentation(DEFAULT_SETTINGS, translate, 'en', 'ltr', 'system');
 const settings = { ...DEFAULT_SETTINGS, latitude: 21.3891, longitude: 39.8579, madhab: 0 };
 
 const originalTimezone = process.env.TZ;
@@ -55,7 +55,7 @@ const status = {
   validFrom: payload.schedule.validFrom, validUntil: payload.schedule.validUntil,
   revision: payload.revision,
 };
-const presentation = buildWidgetPresentation(settings, key => key, 'en', 'ltr');
+const presentation = buildWidgetPresentation(settings, key => key, 'en', 'ltr', 'system');
 const mode = process.env.MUAJJIN_QA_MODE;
 let statusQueries = 0, scheduleTransfers = 0, presentationTransfers = 0;
 const snapshot = () => ({ calculations, statusQueries, scheduleTransfers, presentationTransfers });
@@ -63,7 +63,7 @@ const makeSync = () => createWidgetSync({
   getScheduleStatus: async () => {
     statusQueries++;
     if (mode === 'retry' && statusQueries === 1) throw new Error('QA status unavailable');
-    return mode === 'ticks' ? { exists: false }
+    return mode === 'ticks' || mode === 'themes' ? { exists: false }
       : mode === 'corrupt' ? { ...status, validUntil: 8_650_000_000_000_000 } : status;
   },
   updateSchedule: async () => {
@@ -79,14 +79,17 @@ const makeSync = () => createWidgetSync({
 calculations = 0;
 let initial;
 let firstRejected;
-if (mode === 'retry' || mode === 'ticks') {
+if (mode === 'retry' || mode === 'ticks' || mode === 'themes') {
   const sync = makeSync();
   try { await sync({ settings, presentation }); firstRejected = false; }
   catch { firstRejected = true; }
   initial = snapshot();
   calculations = 0;
   if (mode === 'retry') await sync({ settings, presentation });
-  else {
+  else if (mode === 'themes') {
+    for (const theme of ['dark', 'light', 'system'])
+      await sync({ settings, presentation: buildWidgetPresentation(settings, key => key, 'en', 'ltr', theme) });
+  } else {
     for (let tick = 0; tick < 20; tick++) await sync({ settings, presentation });
     await sync({ settings, presentation: { ...presentation, timeFormat: '12h' } });
   }
@@ -141,17 +144,92 @@ describe('native schedule delivery', () => {
       updateSchedule: async (payload) => { schedules.push(payload); return { success: true }; },
       updatePresentation: async (payload) => { display.push(payload.presentation); return { success: true }; },
     }, () => true, now);
-    expect(buildWidgetPresentation(DEFAULT_SETTINGS, translate, 'en', 'ltr').widgetLargeText).toBe(false);
+    expect(buildWidgetPresentation(DEFAULT_SETTINGS, translate, 'en', 'ltr', 'system').widgetLargeText).toBe(false);
     await sync({ settings, presentation });
-    const larger = buildWidgetPresentation({ ...settings, widgetLargeText: true }, translate, 'en', 'ltr');
+    const larger = buildWidgetPresentation({ ...settings, widgetLargeText: true }, translate, 'en', 'ltr', 'system');
     expect(larger.widgetLargeText).toBe(true);
     await sync({ settings: { ...settings, widgetLargeText: true }, presentation: larger });
     expect(display[display.length - 1].widgetLargeText).toBe(true);
     await sync({
       settings: { ...settings, widgetLargeText: false },
-      presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr'),
+      presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr', 'system'),
     });
     expect(display[display.length - 1].widgetLargeText).toBe(false);
+    expect(schedules).toHaveLength(1);
+  });
+
+  test('theme transitions update presentation without resending the schedule', async () => {
+    const schedules: PrayerSchedulePayload[] = [];
+    const themes: WidgetPresentation['theme'][] = [];
+    const sync = createWidgetSync({
+      updateSchedule: async (payload) => { schedules.push(payload); return { success: true }; },
+      updatePresentation: async ({ presentation }) => { themes.push(presentation.theme); return { success: true }; },
+    }, () => true, now);
+    for (const theme of ['system', 'dark', 'dark', 'light', 'system'] as const) {
+      await sync({ settings, presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr', theme) });
+    }
+    expect(themes).toEqual(['system', 'dark', 'light', 'system']);
+    expect(schedules).toHaveLength(1);
+  });
+
+  test.each(['negative acknowledgment', 'storage rejection'] as const)(
+    'theme-only %s remains retryable without resending the schedule',
+    async (failure) => {
+      let denied = false;
+      const schedules: PrayerSchedulePayload[] = [];
+      const attempts: { revision: string; theme: WidgetPresentation['theme'] }[] = [];
+      const committed: WidgetPresentation['theme'][] = [];
+      const sync = createWidgetSync({
+        updateSchedule: async (payload) => { schedules.push(payload); return { success: true }; },
+        updatePresentation: async ({ revision, presentation }) => {
+          attempts.push({ revision, theme: presentation.theme });
+          if (denied) {
+            if (failure === 'storage rejection') throw new Error('Durable storage failed');
+            return { success: false };
+          }
+          committed.push(presentation.theme);
+          return { success: true };
+        },
+      }, () => true, now);
+      await sync({ settings, presentation });
+      const dark = buildWidgetPresentation(settings, translate, 'en', 'ltr', 'dark');
+      denied = true;
+      await expect(sync({ settings, presentation: dark })).rejects.toThrow('errors.widgetSyncFailed');
+      expect(committed).toEqual(['system']);
+      denied = false;
+      await sync({ settings, presentation: dark });
+      await sync({ settings, presentation: dark });
+      expect(committed).toEqual(['system', 'dark']);
+      expect(attempts.map(({ theme }) => theme)).toEqual(['system', 'dark', 'dark']);
+      expect(attempts[1].revision).not.toBe(attempts[2].revision);
+      expect(schedules).toHaveLength(1);
+    },
+  );
+
+  test('latest theme wins while an earlier presentation acknowledgment is pending', async () => {
+    const entered = Promise.withResolvers<void>();
+    const barrier = Promise.withResolvers<void>();
+    const schedules: PrayerSchedulePayload[] = [];
+    const committed: WidgetPresentation['theme'][] = [];
+    const sync = createWidgetSync({
+      updateSchedule: async (payload) => { schedules.push(payload); return { success: true }; },
+      updatePresentation: async ({ presentation }) => {
+        if (presentation.theme === 'dark') {
+          entered.resolve();
+          await barrier.promise;
+        }
+        committed.push(presentation.theme);
+        return { success: true };
+      },
+    }, () => true, now);
+    await sync({ settings, presentation });
+    const dark = sync({ settings, presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr', 'dark') });
+    await entered.promise;
+    const light = sync({ settings, presentation: buildWidgetPresentation(settings, translate, 'en', 'ltr', 'light') });
+    const system = sync({ settings, presentation });
+    barrier.resolve();
+    await Promise.all([dark, light, system]);
+    expect(committed).toEqual(['system', 'dark', 'system']);
     expect(schedules).toHaveLength(1);
   });
 
@@ -362,6 +440,7 @@ describe('native schedule delivery', () => {
     ['same offset, different DST rules', 'America/Phoenix', 'America/Los_Angeles', 'reuse', 96, 3],
     ['ordinary web', 'UTC', 'UTC', 'web', 0, 0],
     ['stable ticks and presentation edit', 'UTC', 'UTC', 'ticks', 0, 1],
+    ['theme-only transitions do not recalculate the horizon', 'UTC', 'UTC', 'themes', 0, 1],
     ['same synchronizer retries status after failed fallback', 'UTC', 'UTC', 'retry', 0, 1],
     ['unrepresentable status repairs a real month', 'UTC', 'UTC', 'corrupt', 32, 1],
   ] as const)('real engine work: %s', (_name, timezone, nativeZone, mode, calculations, transfers) => {
@@ -379,10 +458,10 @@ describe('native schedule delivery', () => {
         calculations,
         statusQueries: mode === 'web' ? 0 : mode === 'reuse' ? 3 : mode === 'retry' ? 2 : 1,
         scheduleTransfers: transfers,
-        presentationTransfers: mode === 'web' ? 0 : mode === 'reuse' ? 3 : mode === 'ticks' ? 2 : 1,
+        presentationTransfers: mode === 'web' ? 0 : mode === 'reuse' ? 3 : mode === 'ticks' ? 2 : mode === 'themes' ? 4 : 1,
       },
     });
-    if (mode === 'retry' || mode === 'ticks') {
+    if (mode === 'retry' || mode === 'ticks' || mode === 'themes') {
       expect(observed).toMatchObject({
         firstRejected: mode === 'retry',
         initial: { calculations: 32, statusQueries: 1, scheduleTransfers: 1, presentationTransfers: mode === 'retry' ? 0 : 1 },

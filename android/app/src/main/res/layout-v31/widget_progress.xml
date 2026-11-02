@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_progress_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="@dimen/w_gap_progress">
+    <ProgressBar
+        android:id="@+id/pb_widget_progress_green"
+        style="@style/WidgetProgress" />
+    <ProgressBar
+        android:id="@+id/pb_widget_progress_gold"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_gold"
+        android:visibility="gone" />
+    <ProgressBar
+        android:id="@+id/pb_widget_progress_amber"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_amber"
+        android:visibility="gone" />
+    <ProgressBar
+        android:id="@+id/pb_widget_progress_soft_red"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_soft_red"
+        android:visibility="gone" />
+</FrameLayout>

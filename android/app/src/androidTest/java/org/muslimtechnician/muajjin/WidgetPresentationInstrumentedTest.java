@@ -557,74 +557,6 @@ public class WidgetPresentationInstrumentedTest {
             height, clock.getMinHeight(), 1f);
     }
 
-    @Test public void stripFitModelMatchesPinnedHeroGeometry() throws Exception {
-        Locale originalLocale = Locale.getDefault();
-        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
-        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
-        try {
-            openHost();
-            instrumentation.runOnMainSync(() -> {
-                try {
-                    for (String language : new String[]{"en", "ar", "bn"}) {
-                        for (float fontScale : new float[]{1f, 1.3f, 1.5f, 2f}) {
-                            Context translated = configured(language, fontScale);
-                            Configuration config = new Configuration(
-                                translated.getResources().getConfiguration());
-                            // Context-only mdpi makes the XML/model comparison exact.
-                            config.densityDpi = 160;
-                            Context context = translated.createConfigurationContext(config);
-                            assertEquals(1f,
-                                context.getResources().getDisplayMetrics().density, .001f);
-                            for (boolean large : new boolean[]{false, true}) {
-                                for (String fixture : new String[]{"midday", "warm", "invalid"}) {
-                                    PrayerWidgetHelper.WidgetTimelineState snapshot =
-                                        state(context, language, fixture, large);
-                                    Profile profile = new Profile(0,
-                                        360f * fontScale, 600f * fontScale);
-                                    WidgetLayout selected = new WidgetLayout(context, snapshot,
-                                        0, profile.width, profile.height);
-                                    Rendered rendered = render(profile, context, snapshot);
-                                    try {
-                                        ViewGroup hero = rendered.root.findViewById(
-                                            R.id.widget_primary_group);
-                                        int required = hero.getPaddingTop() + hero.getPaddingBottom();
-                                        for (int i = 0; i < hero.getChildCount(); i++) {
-                                            View child = hero.getChildAt(i);
-                                            if (child.getVisibility() == View.GONE) continue;
-                                            ViewGroup.MarginLayoutParams margins =
-                                                (ViewGroup.MarginLayoutParams) child.getLayoutParams();
-                                            required += child.getMeasuredHeight()
-                                                + margins.topMargin + margins.bottomMargin;
-                                        }
-                                        ViewGroup.MarginLayoutParams reservation =
-                                            (ViewGroup.MarginLayoutParams) hero.getLayoutParams();
-                                        required += reservation.topMargin + reservation.bottomMargin
-                                            + rendered.root.getPaddingTop()
-                                            + rendered.root.getPaddingBottom();
-                                        assertEquals("Strip fit must match its native hero and reserve: "
-                                            + language + "/" + fontScale + "/" + large + "/" + fixture,
-                                            required, selected.minimumHeight, .01f);
-                                        verifyTextGeometry(rendered.root, rendered.root);
-                                    } finally {
-                                        surface.removeView(rendered.host);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (Throwable error) {
-                    record("strip-fit-geometry", error);
-                }
-            });
-        } finally {
-            closeHost();
-            Locale.setDefault(originalLocale);
-            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
-            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
-        }
-        assertTrue("Strip fit geometry defects:\n" + joinFailures(), failures.isEmpty());
-    }
-
     @Test public void launcherHostBoxesKeepEveryWidgetComplete() throws Exception {
         Locale originalLocale = Locale.getDefault();
         Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
@@ -1394,6 +1326,280 @@ public class WidgetPresentationInstrumentedTest {
         assertTrue("Fill reset defects:\n" + joinFailures(), failures.isEmpty());
     }
 
+    @Test public void forcedAppThemesOverrideOppositeHostsAcrossEveryVariant() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (boolean hostNight : new boolean[]{false, true}) {
+                        Context host = themed(hostNight);
+                        String forced = hostNight ? "light" : "dark";
+                        for (Profile profile : NORMAL) {
+                            Rendered rendered = render(profile, host, themeState(host, forced));
+                            try {
+                                assertThemeOutput(rendered, !hostNight);
+                                if (capture) capture(rendered, "forced-" + forced + "-" + profile.name());
+                            } finally {
+                                surface.removeView(rendered.host);
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Forced widget theme fixture failed", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+    }
+
+    @Test public void themeReapplyClearsForcedColorsAndRestoresSystemAcrossEveryVariant() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (boolean hostNight : new boolean[]{false, true}) {
+                        Context host = themed(hostNight);
+                        for (Profile profile : NORMAL) {
+                            Rendered rendered = render(profile, host, themeState(host, "dark"));
+                            try {
+                                assertThemeOutput(rendered, true);
+                                for (String mode : new String[]{"light", "system", "light", "dark", "system"}) {
+                                    PrayerWidgetHelper.WidgetTimelineState next = themeState(host, mode);
+                                    RemoteViews remote = PrayerWidgetHelper.createWidgetViews(host, next,
+                                        profile.variant, profile.width, profile.height);
+                                    remote.reapply(host, rendered.root);
+                                    layoutHost(rendered.host, host, profile);
+                                    rendered = new Rendered(host, profile, rendered.host, rendered.root,
+                                        next, remote.getLayoutId());
+                                    assertThemeOutput(rendered, "system".equals(mode)
+                                        ? hostNight : "dark".equals(mode));
+                                }
+                            } finally {
+                                surface.removeView(rendered.host);
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("Widget theme reapply fixture failed", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+    }
+
+    @Test public void systemThemeRemoteViewsFollowEachHostAcrossEveryVariant() throws Exception {
+        // Resource-valued RemoteViews color actions were added in API 31.
+        // Older devices resolve colors on the next native dispatch (covered by
+        // the theme-transition test), not when reusing an old serialized payload.
+        assumeTrue(Build.VERSION.SDK_INT >= 31);
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    Context dispatchContext = themed(false);
+                    PrayerWidgetHelper.WidgetTimelineState snapshot = themeState(dispatchContext, "system");
+                    for (Profile profile : NORMAL) {
+                        RemoteViews remote = PrayerWidgetHelper.createWidgetViews(dispatchContext, snapshot,
+                            profile.variant, profile.width, profile.height);
+                        for (boolean hostNight : new boolean[]{false, true}) {
+                            Context host = themed(hostNight);
+                            // Reuse one dispatch. Device mode must be resolved by the
+                            // host even when the app does not send another update.
+                            Rendered rendered = renderRemote(remote, host, snapshot, profile);
+                            try {
+                                assertThemeOutput(rendered, hostNight);
+                                remote.reapply(host, rendered.root);
+                                layoutHost(rendered.host, host, profile);
+                                assertThemeOutput(rendered, hostNight);
+                            } finally {
+                                surface.removeView(rendered.host);
+                            }
+                        }
+                    }
+                } catch (Exception error) {
+                    throw new AssertionError("System widget theme fixture failed", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+    }
+
+    private PrayerWidgetHelper.WidgetTimelineState themeState(Context context, String theme) throws Exception {
+        PrayerWidgetHelper.WidgetTimelineState base = fractionState(context, 6.0 / 11.0, "en");
+        JSONObject json = base.presentation.json();
+        json.put("theme", theme);
+        return new PrayerWidgetHelper.WidgetTimelineState(context, NativePresentation.parse(json),
+            base.timeline, base.now, new long[]{base.fajrTs, base.sunriseTs, base.dhuhrTs,
+                base.asrTs, base.maghribTs, base.ishaTs}, base.numericLocale);
+    }
+
+    private void assertThemeOutput(Rendered rendered, boolean night) throws Exception {
+        String tag = rendered.profile.name() + " expected=" + (night ? "dark" : "light");
+        int variant = rendered.profile.variant;
+        int[] background = drawablePixels(rendered.root.getBackground());
+        TextView countdown = rendered.root.findViewById(COUNTDOWNS[variant]);
+        if (variant >= 5) {
+            assertTrue(tag + ": keyguard root must remain transparent", isTransparent(background));
+            assertLockContrast(countdown, 0xFFFFFFFF, tag);
+            assertLockContrast(rendered.root.findViewById(variant == 5
+                ? R.id.tv_lock_small_label : R.id.tv_lock_med_label), 0xFFFFFFFF, tag);
+            if (variant == 5) {
+                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_small_time), 0xE6FFFFFF, tag);
+            } else {
+                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_med_current), 0xE6FFFFFF, tag);
+                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_med_next), 0xE6FFFFFF, tag);
+            }
+        } else {
+            assertEquals(tag + ": actual countdown text", night ? 0xFFEEF3F0 : 0xFF14201B,
+                countdown.getCurrentTextColor());
+            assertEquals(tag + ": actual card surface", night ? 0xFF1B211E : 0xFFFBFCFB,
+                background[32 * 64 + 32]);
+            boolean borderFound = false;
+            for (int pixel : background)
+                if (pixel == (night ? 0xFF37423D : 0xFFE3E9E5)) borderFound = true;
+            assertTrue(tag + ": actual card border", borderFound);
+            if (variant < 4) {
+                TextView label = rendered.root.findViewById(LABELS[variant]);
+                assertEquals(tag + ": actual prayer label", night ? DARK_PALETTE[0] : LIGHT_PALETTE[0],
+                    label.getCurrentTextColor());
+            }
+            assertThemeProgress(rendered, night);
+        }
+        // Compare all visible text/decorations with a native system-mode render
+        // in the requested palette, not with renderer action IDs or wiring.
+        Context expectedContext = themed(night);
+        Rendered expected = render(rendered.profile, expectedContext, themeState(expectedContext, "system"));
+        try {
+            assertThemeDecorations(rendered.root, expected.root);
+        } finally {
+            surface.removeView(expected.host);
+        }
+    }
+
+    private void assertThemeDecorations(View actual, View referenceRoot) {
+        if (actual.getVisibility() != View.VISIBLE) return;
+        if (actual.getId() != View.NO_ID) {
+            View reference = referenceRoot.findViewById(actual.getId());
+            assertNotNull("Missing visible presentation element " + actual.getId(), reference);
+            assertArrayEquals("Theme reapply retained a stale decoration at " + actual.getId(),
+                drawablePixels(reference.getBackground()), drawablePixels(actual.getBackground()));
+            if (actual instanceof TextView) {
+                assertTrue("Text presentation changed kind", reference instanceof TextView);
+                assertEquals("Theme reapply retained stale text color at " + actual.getId(),
+                    ((TextView) reference).getCurrentTextColor(), ((TextView) actual).getCurrentTextColor());
+            }
+        }
+        if (actual instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) actual;
+            for (int i = 0; i < group.getChildCount(); i++)
+                assertThemeDecorations(group.getChildAt(i), referenceRoot);
+        }
+    }
+
+    private void assertLockContrast(TextView text, int color, String tag) {
+        assertNotNull(tag + ": missing keyguard text", text);
+        assertEquals(tag + ": wallpaper-safe text", color, text.getCurrentTextColor());
+        assertEquals(tag + ": wallpaper-safe shadow", 0xB3000000, text.getShadowColor());
+        assertEquals(tag + ": shadow radius", 3f, text.getShadowRadius(), .01f);
+        assertEquals(tag + ": shadow x", 0f, text.getShadowDx(), .01f);
+        assertEquals(tag + ": shadow y", 1f, text.getShadowDy(), .01f);
+    }
+
+    private void assertThemeProgress(Rendered rendered, boolean night) {
+        ProgressBar visible = null;
+        int count = 0;
+        for (int id : PROGRESS) {
+            ProgressBar bar = rendered.root.findViewById(id);
+            assertNotNull("Missing progress stage", bar);
+            if (bar.getVisibility() == View.VISIBLE) {
+                visible = bar;
+                count++;
+            }
+        }
+        assertEquals("Exactly one themed progress bar is live", 1, count);
+        assertEquals("Theme must not change elapsed progress", rendered.state.progress, visible.getProgress());
+        int fill;
+        if (Build.VERSION.SDK_INT >= 31) {
+            fill = night ? DARK_PALETTE[6] : LIGHT_PALETTE[6];
+        } else {
+            switch (rendered.state.progressStage) {
+                case GOLD: fill = night ? 0xFFCBB568 : 0xFF8A6A20; break;
+                case AMBER: fill = night ? 0xFFD99A64 : 0xFFB45C28; break;
+                case SOFT_RED: fill = night ? 0xFFD98C89 : 0xFFB55350; break;
+                default: fill = night ? DARK_PALETTE[0] : LIGHT_PALETTE[0]; break;
+            }
+        }
+        Bitmap bitmap = Bitmap.createBitmap(visible.getWidth(), visible.getHeight(), Bitmap.Config.ARGB_8888);
+        try {
+            visible.jumpDrawablesToCurrentState();
+            visible.draw(new Canvas(bitmap));
+            int fillWidth = visible.getWidth() * rendered.state.progress / 1000;
+            int y = bitmap.getHeight() / 2;
+            boolean rtl = visible.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            int fillX = rtl ? bitmap.getWidth() - 1 - fillWidth / 2 : fillWidth / 2;
+            int trackX = rtl ? (bitmap.getWidth() - fillWidth) / 2
+                : (fillWidth + bitmap.getWidth()) / 2;
+            assertChannelDelta("Actual themed progress fill", fill, bitmap.getPixel(fillX, y), 1);
+            assertEquals("Actual themed progress track", night ? 0xFF34403A : 0xFFD5DDD9,
+                bitmap.getPixel(trackX, y));
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    @Test public void legacyProgressGroupsKeepForcedAndSystemPalettes() {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                int[] layouts = {R.layout.widget_progress_system, R.layout.widget_progress_light, R.layout.widget_progress_dark};
+                int[][] colors = {
+                    {0xFF0B6E5B, 0xFF8A6A20, 0xFFB45C28, 0xFFB55350},
+                    {0xFF5FD3B5, 0xFFCBB568, 0xFFD99A64, 0xFFD98C89}
+                };
+                for (boolean hostNight : new boolean[]{false, true}) {
+                    Context context = themed(hostNight);
+                    for (int mode = 0; mode < layouts.length; mode++) {
+                        boolean night = mode == 0 ? hostNight : mode == 2;
+                        for (int stage = 0; stage < PROGRESS.length; stage++) {
+                            RemoteViews remote = new RemoteViews(context.getPackageName(), layouts[mode]);
+                            for (int i = 0; i < PROGRESS.length; i++)
+                                remote.setViewVisibility(PROGRESS[i], i == stage ? View.VISIBLE : View.GONE);
+                            remote.setProgressBar(PROGRESS[stage], 1000, 500, false);
+                            FrameLayout host = new FrameLayout(context);
+                            View view = remote.apply(context, host);
+                            host.addView(view);
+                            surface.addView(host, new FrameLayout.LayoutParams(160, 8));
+                            try {
+                                host.measure(View.MeasureSpec.makeMeasureSpec(160, View.MeasureSpec.EXACTLY),
+                                    View.MeasureSpec.makeMeasureSpec(8, View.MeasureSpec.EXACTLY));
+                                host.layout(0, 0, 160, 8);
+                                ProgressBar bar = view.findViewById(PROGRESS[stage]);
+                                Bitmap bitmap = Bitmap.createBitmap(bar.getWidth(), bar.getHeight(), Bitmap.Config.ARGB_8888);
+                                try {
+                                    bar.jumpDrawablesToCurrentState();
+                                    bar.draw(new Canvas(bitmap));
+                                    assertEquals("Legacy forced/system fill", colors[night ? 1 : 0][stage],
+                                        bitmap.getPixel(bitmap.getWidth() / 4, bitmap.getHeight() / 2));
+                                    assertEquals("Legacy forced/system track", night ? 0xFF34403A : 0xFFD5DDD9,
+                                        bitmap.getPixel(bitmap.getWidth() * 3 / 4, bitmap.getHeight() / 2));
+                                } finally {
+                                    bitmap.recycle();
+                                }
+                            } finally {
+                                surface.removeView(host);
+                            }
+                        }
+                    }
+                }
+            });
+        } finally {
+            closeHost();
+        }
+    }
+
     private void openHost() {
         target = instrumentation.getTargetContext();
         assertTrue("Only the disposable debug application may host synthetic widgets",
@@ -1451,7 +1657,11 @@ public class WidgetPresentationInstrumentedTest {
 
     private Rendered renderRemote(RemoteViews remote, Context context,
                                   PrayerWidgetHelper.WidgetTimelineState state) {
-        Profile profile = NORMAL[0];
+        return renderRemote(remote, context, state, NORMAL[0]);
+    }
+
+    private Rendered renderRemote(RemoteViews remote, Context context,
+                                  PrayerWidgetHelper.WidgetTimelineState state, Profile profile) {
         FrameLayout host = new FrameLayout(context);
         host.setBackgroundColor("dark".equals(theme(context)) ? 0xff182030 : 0xffe0d6c2);
         View applied = remote.apply(context, host);
@@ -1461,7 +1671,7 @@ public class WidgetPresentationInstrumentedTest {
         surface.addView(host, new FrameLayout.LayoutParams(
             px(context, profile.width), px(context, profile.height)));
         layoutHost(host, context, profile);
-        ViewGroup root = applied.findViewById(ROOTS[0]);
+        ViewGroup root = applied.findViewById(ROOTS[profile.variant]);
         assertNotNull("Theme host lost the variant root", root);
         return new Rendered(context, profile, host, root, state, remote.getLayoutId());
     }

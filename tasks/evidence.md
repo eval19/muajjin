@@ -1,5 +1,14 @@
 # Muajjin implementation evidence
 
+## Strip countdown spacing 6dp — 2026-11-02 (2.9.87 source, post-release)
+
+- Reduced only the Strip text group's bottom reserve from 7dp to 6dp (`res/layout/widget_prayer_strip.xml`). Progress bar, `progressGap()`, type sizes, provider footprint, and timing behavior are unchanged.
+- Not yet in the published `v2.9.87` artifact, which ships the 7dp value; this change requires a new build/release before users see it.
+- Packaged-APK check: `aapt2 dump xmltree` on the debug APK reports `layout_marginBottom=6.000000dp`, and the progress container still carries `layout_gravity=0x50` (bottom).
+- Native verification on the isolated API 36 emulator: all 15 `WidgetPresentationInstrumentedTest` methods passed, including the strip geometry, host-box completeness, and countdown-reservation cases.
+- Rendered 160×96dp Strip at mdpi: bar ink occupies y=84..87 (4dp), the lowest digit ink is y=70, and the text block's layout bottom is y=82 (96 − 8 root padding − 6 margin). The whole block therefore shifts down exactly 1dp versus 7dp.
+- Limit: the visible ink-to-bar clearance is 13px, most of which is the countdown line box's built-in slack below the glyphs, so the 1dp shift is smaller on screen than on paper. `WidgetLayout` still reserves `progressGap() + 4`, which is now a 2dp conservative over-reserve for this variant; it cannot clip but can make a borderline host fall back 2dp early. Actual launcher, large-text, and API 24–30 appearance remain unverified.
+
 ## 2.9.87 Strip spacing prerelease — 2026-11-02 (published prerelease)
 
 - Version 2.9.87 / versionCode 305. Reduced only the Strip text group's bottom reserve from 8dp to 7dp; its progress bar, type sizes, provider footprint, and timing behavior are unchanged.

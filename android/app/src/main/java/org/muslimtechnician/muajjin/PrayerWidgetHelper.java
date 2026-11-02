@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -53,6 +54,13 @@ public final class PrayerWidgetHelper {
         R.id.tv_name_asr, R.id.tv_name_maghrib, R.id.tv_name_isha};
     private static final int[] TABLE_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr,
         R.id.tv_time_asr, R.id.tv_time_maghrib, R.id.tv_time_isha};
+    private static final int[][] CONTEXT_TEXT = {
+        {},
+        {R.id.tv_square_next_time, R.id.tv_square_footer_left, R.id.tv_square_footer_right},
+        {R.id.tv_banner_footer_top, R.id.tv_banner_footer_bottom},
+        {R.id.tv_wide_footer_top, R.id.tv_wide_footer_bottom},
+        {R.id.tv_large_location, R.id.tv_large_hijri, R.id.tv_large_current_pill}
+    };
 
     /** Immutable, fully formatted once per dispatch; no renderer reads/parses preferences. */
     public static final class WidgetTimelineState {
@@ -133,6 +141,7 @@ public final class PrayerWidgetHelper {
         return ids;
     }
     public static void updateAllWidgets(Context context,WidgetTimelineState state,int[][] ids) {
+        context=themeContext(context,state.presentation.theme);
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
         // One sample pair per dispatch, shared by every bar-bearing variant and
         // duplicate instance. Keyguard-only dispatches need no color work.
@@ -234,6 +243,8 @@ public final class PrayerWidgetHelper {
     static RemoteViews createWidgetViews(Context context, WidgetTimelineState state,
                                          int requestedVariant, float widthDp, float heightDp,
                                          WidgetProgressPalette.Fill fill) {
+        String theme = state.presentation.theme;
+        context = themeContext(context, theme);
         WidgetLayout layout = new WidgetLayout(context, state, requestedVariant, widthDp, heightDp);
         if ((layout.variant == 1 || layout.variant == 3) && widthDp > 0 && heightDp > 0
                 && !layout.fitsWithinBounds()) {
@@ -264,9 +275,8 @@ public final class PrayerWidgetHelper {
         if (variant < 5) {
             views.setViewPadding(R.id.widget_progress_container, 0, layout.px(layout.progressGap()), 0, 0);
             if (Build.VERSION.SDK_INT >= 31) {
-                // One green bar carries the sampled OKLab fill. The theme-qualified
-                // tint lists let the host re-select the palette on its own
-                // configuration changes without another widget dispatch.
+                // System mode keeps both palettes host-resolvable. Forced modes
+                // send the same palette for either launcher configuration.
                 boolean live=fill!=null;
                 views.setViewVisibility(R.id.widget_progress_container, live ? View.VISIBLE : View.GONE);
                 for(int progressId:PROGRESS)
@@ -275,9 +285,18 @@ public final class PrayerWidgetHelper {
                 if(live) {
                     views.setProgressBar(R.id.pb_widget_progress_green,1000,state.progress,false);
                     views.setColorStateList(R.id.pb_widget_progress_green,"setProgressTintList",
-                        fill.lightList,fill.darkList);
+                        "dark".equals(theme) ? fill.darkList : fill.lightList,
+                        "light".equals(theme) ? fill.lightList : fill.darkList);
+                    views.setColorStateList(R.id.pb_widget_progress_green, "setProgressBackgroundTintList",
+                        themeResource(theme, R.color.w_track, R.color.w_light_track, R.color.w_dark_track));
                 }
             } else {
+                // Before API 31 RemoteViews cannot send ColorStateList setters.
+                // XML tint resources preserve both forced and system modes.
+                RemoteViews bars = new RemoteViews(context.getPackageName(), themeResource(theme,
+                    R.layout.widget_progress_system, R.layout.widget_progress_light, R.layout.widget_progress_dark));
+                views.removeAllViews(R.id.widget_progress_container);
+                views.addView(R.id.widget_progress_container, bars);
                 int selected=progressViewId(state.progressStage);
                 views.setViewVisibility(R.id.widget_progress_container, selected==View.NO_ID ? View.GONE : View.VISIBLE);
                 for(int progressId:PROGRESS)
@@ -329,6 +348,7 @@ public final class PrayerWidgetHelper {
         int vertical = layout.px(layout.verticalInset());
         views.setViewPadding(ROOTS[variant], horizontal, vertical, horizontal, vertical);
         views.setOnClickPendingIntent(ROOTS[variant], getOpenAppIntent(context));
+        applyTheme(context, views, state, variant);
         applyDirection(views, ROOTS[variant], state);
         return views;
     }
@@ -375,9 +395,10 @@ public final class PrayerWidgetHelper {
             if (table) {
                 boolean current = prayerId.equalsIgnoreCase(state.activePrayerId)
                     && (i != 5 || state.ishaTs == state.startTimestamp);
-                views.setInt(cells[i], "setBackgroundResource", current ? R.drawable.widget_active_row : 0);
-                setTextColorResource(context, views, names[i], current ? R.color.w_accent : R.color.w_text_secondary);
-                setTextColorResource(context, views, clocks[i], current ? R.color.w_accent : R.color.w_text_primary);
+                views.setInt(cells[i], "setBackgroundResource", current ? themeResource(state.presentation.theme,
+                    R.drawable.widget_active_row, R.drawable.widget_active_row_light, R.drawable.widget_active_row_dark) : 0);
+                setTextColorResource(context, views, names[i], current ? R.color.w_accent : R.color.w_text_secondary, state.presentation.theme);
+                setTextColorResource(context, views, clocks[i], current ? R.color.w_accent : R.color.w_text_primary, state.presentation.theme);
             } else {
                 renderSingleChip(context, views, cells[i], names[i], clocks[i], prayerId, eventTimestamp(state, i), state);
             }
@@ -400,19 +421,54 @@ public final class PrayerWidgetHelper {
                                          int timeId, String prayerId, long eventTs, WidgetTimelineState state) {
         boolean current = state.valid && prayerId.equals(state.activePrayerId) && eventTs == state.startTimestamp;
         boolean next = state.valid && prayerId.equals(state.nextPrayerId) && eventTs == state.targetTimestamp;
-        int background = current ? R.drawable.widget_chip_current
-            : next ? R.drawable.widget_chip_next : R.drawable.widget_chip_transparent;
+        String theme = state.presentation.theme;
+        int background = current ? themeResource(theme, R.drawable.widget_chip_current,
+            R.drawable.widget_chip_current_light, R.drawable.widget_chip_current_dark)
+            : next ? themeResource(theme, R.drawable.widget_chip_next,
+                R.drawable.widget_chip_next_light, R.drawable.widget_chip_next_dark) : R.drawable.widget_chip_transparent;
         int color = current ? R.color.w_accent
             : !next && eventTs < state.now && eventTs < state.startTimestamp
                 ? R.color.w_text_muted : R.color.w_text_secondary;
         views.setInt(chipId, "setBackgroundResource", background);
-        setTextColorResource(context, views, nameId, color);
-        setTextColorResource(context, views, timeId, color);
+        setTextColorResource(context, views, nameId, color, theme);
+        setTextColorResource(context, views, timeId, color, theme);
     }
 
-    private static void setTextColorResource(Context context, RemoteViews views, int id, int resource) {
-        if (Build.VERSION.SDK_INT >= 31) views.setColor(id, "setTextColor", resource);
+    private static void setTextColorResource(Context context, RemoteViews views, int id, int resource, String theme) {
+        if (Build.VERSION.SDK_INT >= 31 && "system".equals(theme))
+            views.setColor(id, "setTextColor", resource);
         else views.setTextColor(id, context.getColor(resource));
+    }
+
+    private static Context themeContext(Context context, String theme) {
+        if ("system".equals(theme)) return context;
+        int night = "dark".equals(theme) ? Configuration.UI_MODE_NIGHT_YES : Configuration.UI_MODE_NIGHT_NO;
+        Configuration current = context.getResources().getConfiguration();
+        if ((current.uiMode & Configuration.UI_MODE_NIGHT_MASK) == night) return context;
+        Configuration selected = new Configuration(current);
+        selected.uiMode = (selected.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | night;
+        return context.createConfigurationContext(selected);
+    }
+
+    private static int themeResource(String theme, int system, int light, int dark) {
+        return "light".equals(theme) ? light : "dark".equals(theme) ? dark : system;
+    }
+
+    private static void applyTheme(Context context, RemoteViews views, WidgetTimelineState state, int variant) {
+        // Transparent keyguard widgets retain their wallpaper-safe white text/shadows.
+        if (variant >= 5) return;
+        String theme = state.presentation.theme;
+        views.setInt(ROOTS[variant], "setBackgroundResource", themeResource(theme,
+            R.drawable.widget_card_bg, R.drawable.widget_card_bg_light, R.drawable.widget_card_bg_dark));
+        setTextColorResource(context, views, COUNTDOWNS[variant], R.color.w_text_primary, theme);
+        if (variant < 4) {
+            setTextColorResource(context, views, LABELS[variant], R.color.w_accent, theme);
+            setTextColorResource(context, views, WARM_LABELS[variant], R.color.w_warm_text, theme);
+        } else {
+            setTextColorResource(context, views, R.id.tv_large_summary, R.color.w_text_primary, theme);
+        }
+        for (int id : CONTEXT_TEXT[variant])
+            setTextColorResource(context, views, id, R.color.w_text_secondary, theme);
     }
 
     private static long scheduledTransition=0,scheduledCosmetic=0,scheduledFallback=0;

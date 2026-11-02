@@ -159,6 +159,70 @@ public class NativeStorageInstrumentedTest {
         }
     }
 
+    @Test public void widgetThemeRoundTripsAllModesWithoutChangingSchema() throws Exception {
+        Context context = debugContext();
+        String name = "native-storage-theme-" + UUID.randomUUID();
+        SharedPreferences prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE);
+        try {
+            assertEquals("Unconfigured widgets follow the phone", "system",
+                NativePresentation.defaults("QA theme").json().optString("theme"));
+            for (String theme : new String[]{"light", "dark", "system"}) {
+                JSONObject json = NativePresentation.defaults("QA theme").json();
+                json.put("theme", theme);
+                NativeScheduleStore.savePresentation(prefs, NativePresentation.parse(json), "theme-" + theme);
+                NativePresentation restored = NativeScheduleStore.loadPresentation(prefs);
+                assertEquals("Theme must survive the native preference boundary", theme,
+                    restored.json().optString("theme"));
+                JSONObject serialized = new JSONObject(prefs.getString(NativeScheduleStore.PRESENTATION, ""));
+                assertEquals("Theme extends the existing wire format", 2, serialized.getInt("schema"));
+                assertEquals(theme, serialized.getString("theme"));
+                assertEquals(theme, restored.json().getString("theme"));
+                assertEquals("QA theme", restored.locationName);
+            }
+        } finally {
+            context.deleteSharedPreferences(name);
+        }
+    }
+
+    @Test public void missingAndMalformedWidgetThemesRecoverOnlyTheirOwnField() throws Exception {
+        Context context = debugContext();
+        String name = "native-storage-theme-recovery-" + UUID.randomUUID();
+        SharedPreferences prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE);
+        try {
+            Object[] incoming = {null, JSONObject.NULL, "", "Dark", "device", " dark ",
+                true, 7, new JSONObject(), new org.json.JSONArray()};
+            for (Object theme : incoming) {
+                JSONObject json = NativePresentation.defaults("QA theme recovery").json();
+                json.put("language", "ar");
+                json.put("direction", "rtl");
+                json.put("timeFormat", "24h");
+                json.put("hijriAdjustment", -2);
+                json.put("hijriDateChangeAtMaghrib", false);
+                json.put("widgetLargeText", true);
+                json.getJSONObject("labels").put("fajr", "فجر الاختبار");
+                json.getJSONArray("months").put(0, "شهر الاختبار");
+                if (theme == null) json.remove("theme"); else json.put("theme", theme);
+                // Seed the actual stored JSON: parsing before saving would hide a
+                // migration bug by normalizing the old/malformed field first.
+                assertTrue(prefs.edit().putString(NativeScheduleStore.PRESENTATION, json.toString()).commit());
+                NativePresentation restored = NativeScheduleStore.loadPresentation(prefs);
+                String tag = "Stored theme=" + String.valueOf(theme);
+                assertEquals(tag, "system", restored.json().getString("theme"));
+                assertEquals(tag, "QA theme recovery", restored.locationName);
+                assertEquals(tag, "ar", restored.language);
+                assertEquals(tag, "rtl", restored.direction);
+                assertEquals(tag, "24h", restored.timeFormat);
+                assertEquals(tag, -2L, restored.hijriAdjustment);
+                assertFalse(tag, restored.hijriDateChangeAtMaghrib);
+                assertTrue(tag, restored.widgetLargeText);
+                assertEquals(tag, "فجر الاختبار", restored.label("fajr"));
+                assertEquals(tag, "شهر الاختبار", restored.json().getJSONArray("months").getString(0));
+            }
+        } finally {
+            context.deleteSharedPreferences(name);
+        }
+    }
+
     @Test public void unsupportedHijriShiftDoesNotDiscardOtherPresentationOrPrayerData() throws Exception {
         Context context = debugContext();
         String name = "native-storage-test-" + UUID.randomUUID();

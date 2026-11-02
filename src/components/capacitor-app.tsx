@@ -16,6 +16,9 @@ import {
 function useWidgetSync() {
   const { settings, setBridgeFailed } = useApp();
   const { t, activeTranslation, direction } = useTranslation();
+  const { theme } = useTheme();
+  // Preserve system intent so native widgets can follow the phone while the app is closed.
+  const widgetTheme = theme === 'light' || theme === 'dark' ? theme : 'system';
   const foreground = useForegroundActive();
   const [retryTrigger, setRetryTrigger] = useState(0);
   const lastFailedRef = useRef(false);
@@ -35,8 +38,9 @@ function useWidgetSync() {
         t,
         activeTranslation?.meta.languageCode ?? 'en',
         direction,
+        widgetTheme,
       ),
-    [settings, t, activeTranslation, direction],
+    [settings, t, activeTranslation, direction, widgetTheme],
   );
 
   useEffect(() => {

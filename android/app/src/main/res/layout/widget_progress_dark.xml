@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <ProgressBar android:id="@+id/pb_widget_progress_green"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar"
+        android:progressTint="@color/w_dark_accent"
+        android:progressBackgroundTint="@color/w_dark_track" />
+    <ProgressBar android:id="@+id/pb_widget_progress_gold"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_gold"
+        android:visibility="gone"
+        android:progressTint="@color/w_dark_progress_gold"
+        android:progressBackgroundTint="@color/w_dark_track" />
+    <ProgressBar android:id="@+id/pb_widget_progress_amber"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_amber"
+        android:visibility="gone"
+        android:progressTint="@color/w_dark_progress_amber"
+        android:progressBackgroundTint="@color/w_dark_track" />
+    <ProgressBar android:id="@+id/pb_widget_progress_soft_red"
+        style="@style/WidgetProgress"
+        android:progressDrawable="@drawable/widget_progress_bar_soft_red"
+        android:visibility="gone"
+        android:progressTint="@color/w_dark_progress_soft_red"
+        android:progressBackgroundTint="@color/w_dark_track" />
+</FrameLayout>

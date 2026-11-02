@@ -16,21 +16,21 @@ import java.util.Map;
 public final class NativePresentation {
     private static final String[] KEYS={"fajr","sunrise","dhuhr","asr","maghrib","isha","current","next","now","in","at","startsIn","am","pm","remainingHours","remainingMinutes","recovery"};
     private static final String[] ENGLISH={"Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha","Current Salat","Next Salat","Now","in","at","Starts in","AM","PM","{{hours}}h {{minutes}}m","{{minutes}}m","Open Muajjin to restore prayer settings"};
-    public final String language,direction,timeFormat,locationName;
+    public final String language,direction,timeFormat,locationName,theme;
     public final long hijriAdjustment;
     public final boolean hijriDateChangeAtMaghrib;
     /** Widget-only two-state type scale; Normal (false) preserves existing sizes. */
     public final boolean widgetLargeText;
     private final Map<String,String> labels;
     private final String[] months;
-    private NativePresentation(String language,String direction,String timeFormat,String location,long adjustment,boolean rollover,boolean widgetLargeText,Map<String,String> labels,String[] months) {
+    private NativePresentation(String language,String direction,String timeFormat,String location,long adjustment,boolean rollover,boolean widgetLargeText,String theme,Map<String,String> labels,String[] months) {
         this.language=language;this.direction=direction;this.timeFormat=timeFormat;this.locationName=location;
-        this.hijriAdjustment=adjustment;this.hijriDateChangeAtMaghrib=rollover;this.widgetLargeText=widgetLargeText;
+        this.hijriAdjustment=adjustment;this.hijriDateChangeAtMaghrib=rollover;this.widgetLargeText=widgetLargeText;this.theme=theme;
         this.labels=Collections.unmodifiableMap(new LinkedHashMap<>(labels));this.months=months.clone();
     }
     public static NativePresentation defaults(String location) {
         Map<String,String> labels=new LinkedHashMap<>();for(int i=0;i<KEYS.length;i++) labels.put(KEYS[i],ENGLISH[i]);
-        return new NativePresentation("en","ltr","system",location,0,true,false,labels,new String[]{"Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"});
+        return new NativePresentation("en","ltr","system",location,0,true,false,"system",labels,new String[]{"Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"});
     }
     public static NativePresentation parse(JSONObject json) throws JSONException {
         if(NativeScheduleStore.integer(json,"schema")!=2) throw new IllegalArgumentException("Unsupported presentation schema");
@@ -54,7 +54,9 @@ public final class NativePresentation {
         // Field-local recovery: an older or malformed value resets only this
         // preference instead of discarding the surrounding presentation.
         boolean widgetLargeText=Boolean.TRUE.equals(json.opt("widgetLargeText"));
-        return new NativePresentation(language,direction,format,location,adjustment,(Boolean)rollover,widgetLargeText,labels,months);
+        Object rawTheme=json.opt("theme");
+        String theme="light".equals(rawTheme)?"light":"dark".equals(rawTheme)?"dark":"system";
+        return new NativePresentation(language,direction,format,location,adjustment,(Boolean)rollover,widgetLargeText,theme,labels,months);
     }
     static String text(JSONObject json,String key,int max) throws JSONException {return text(json,key,max,false);}
     static String text(JSONObject json,String key,int max,boolean empty) throws JSONException {
@@ -85,6 +87,7 @@ public final class NativePresentation {
         JSONObject json=new JSONObject();json.put("schema",2);json.put("language",language);json.put("direction",direction);json.put("timeFormat",timeFormat);json.put("locationName",locationName);
         json.put("hijriAdjustment",hijriAdjustment);json.put("hijriDateChangeAtMaghrib",hijriDateChangeAtMaghrib);
         json.put("widgetLargeText",widgetLargeText);
+        json.put("theme",theme);
         json.put("labels",new JSONObject(labels));json.put("months",new JSONArray(months));return json;
     }
 }

@@ -20,6 +20,7 @@ export interface WidgetPresentation {
   schema: 2;
   language: string;
   direction: 'ltr' | 'rtl';
+  theme: 'light' | 'dark' | 'system';
   timeFormat: UserSettings['timeFormat'];
   locationName: string;
   hijriAdjustment: number;
@@ -95,6 +96,7 @@ export function buildWidgetPresentation(
   translate: (key: string) => string,
   language: string,
   direction: 'ltr' | 'rtl',
+  theme: WidgetPresentation['theme'],
 ): WidgetPresentation {
   const keys: Record<string, string> = {
     fajr: 'salats.fajr', sunrise: 'salats.shuruq', dhuhr: 'salats.dhuhr',
@@ -118,7 +120,7 @@ export function buildWidgetPresentation(
     return value && value !== key ? value : english.translations.hijri.months[String(index + 1) as keyof typeof english.translations.hijri.months];
   });
   return {
-    schema: 2, language, direction, timeFormat: settings.timeFormat,
+    schema: 2, language, direction, theme, timeFormat: settings.timeFormat,
     locationName: settings.city ?? '', hijriAdjustment: settings.hijriAdjustment,
     hijriDateChangeAtMaghrib: settings.hijriDateChangeAtMaghrib, labels, months,
     widgetLargeText: settings.widgetLargeText,
