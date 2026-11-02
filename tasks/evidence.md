@@ -1,8 +1,15 @@
 # Muajjin implementation evidence
 
-## 2.9.90 prerelease — 2026-11-03 (preparation)
+## 2.9.90 prerelease — 2026-11-03 (published prerelease)
 
-- Version 2.9.90 / versionCode 308. Reduced small countdown type size `w_countdown_small_size` from 26sp to 24sp (`res/values/widget_dimensions.xml`). On the Strip widget at ~83dp (MIUI), this fine-tunes digit ink height from 18dp to 17dp and places the label ink at ~17dp from the card top (balanced between the old 22dp sunken look and 26sp's 14dp). The normal type scale remains active (79dp <= 83dp host).
+- Version 2.9.90 / versionCode 308. Source `f754dcb2abf2589b9eb4ea2f0f2aac923785d660`, annotated tag `v2.9.90`, epoch `1793659117`.
+- Content: reduced small countdown type size `w_countdown_small_size` from 26sp to 24sp (`res/values/widget_dimensions.xml`). On the Strip widget at ~83dp (MIUI), this fine-tunes digit ink height from 18dp to 17dp and places the label ink at ~17dp from the card top (balanced between the old 22dp sunken look and 26sp's 14dp). The normal type scale remains active (79dp <= 83dp host).
+- Web gate: `bun run validate` exited 0 — zero-warning lint, application/tooling TypeScript, 307 tests across 9 files, and both Vite modes.
+- Native gate: 16 presentation tests passed on the isolated API 36 emulator.
+- Controlled build: `reproducible:build --mode github --tag v2.9.90 --output .tools/release-2.9.90-output`, Bun 1.2.2, Node v26.12.1, JDK 21, build-tools 36.0.0. Local unsigned artifact: 5,053,300 bytes, SHA-256 `e3fcde8356891ebdf059cbeea8d4e92be162590204d09ddfbe8e7cf5d5c0800c`.
+- [Signed run 41539453557](https://github.com/eval19/muajjin/actions/runs/41539453557) — `workflow_dispatch` on `v2.9.90` with `sign_release=true` — passed both web modes, native unit regressions, debug/instrumentation-APK assembly, and the controlled signed release assembly with certificate verification (`78f32658…5f8e`).
+- [Published prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.90): release ID `432052116`. Asset `muajjin-2.9.90-308-github-release.apk`, 5,104,618 bytes, SHA-256 `b22ef07f8e344863742c747ab8205d50189f07d5e6765e36140e817395eb3dbd`; an anonymous public re-download matched byte for byte.
+- Limits: no real launcher, keyguard, or API 24–30 rendering of this exact binary; instrumentation-APK assembly is not test execution.
 
 ## 2.9.89 prerelease — 2026-11-03 (published prerelease)
 
