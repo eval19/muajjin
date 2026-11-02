@@ -1,5 +1,17 @@
 # Muajjin implementation evidence
 
+## 2.9.88 prerelease — 2026-11-02 (build verified, not yet published)
+
+- Version 2.9.88 / versionCode 306. Source `cd6a3e1b960a5b4dc01567deb5e69bb55c0525a7`, annotated tag `v2.9.88`, epoch `1793648863`.
+- Content: shared app/widget theme (Light/Dark force all five home-screens, Device follows the phone offline), fixed forced palettes plus XML-tinted legacy progress groups for API < 31, transient keyguard exception preserved, dark card hairline `#2A332F` → `#37423D` (1.26:1 → 1.56:1 on `#1B211E`), Strip text-group reserve 7dp → 6dp.
+- Web gate: `bun run validate` exited 0 — zero-warning lint, application/tooling TypeScript, 307 tests across 9 files, and both Vite modes.
+- Native gate: 22 instrumentation tests passed for the theme repair (`WidgetPresentationInstrumentedTest` + `NativeStorageInstrumentedTest`); 15 presentation tests passed again after the hairline and 6dp changes.
+- Controlled build: `reproducible:build --mode github --tag v2.9.88 --output .tools/release-2.9.88-output`, Bun 1.2.2, Node v26.12.1, JDK 21, build-tools 36.0.0, lockfile SHA-256 `7fcf02f2…`.
+- Artifact `muajjin-2.9.88-306-github-release-unsigned.apk`: 5,053,297 bytes, SHA-256 `9c3d0218dd5d02f813e5e200757642bf32d5115f762c8e94e95d729f8b63380f`. `apksigner` reports no signature, as intended for the unsigned verification artifact; `zipalign -c -P 16 4` passed.
+- Artifact inspection: versionCode 306 / versionName 2.9.88, `build-info.json` mode `github` with the tag epoch, compiled Strip layout (`res/x7.xml`) carries `layout_marginBottom=6.000000dp`, `color/w_dark_border` packs `#ff37423d`, and all forced-theme drawables and `widget_progress_{system,light,dark}` layouts are present.
+- Not published: `release-apk.yml` on a tag push builds an **unsigned, non-installable** verification artifact and creates no GitHub Release. A signed installable APK requires `workflow_dispatch` with `sign_release=true` (repository keystore secrets), and the prerelease object with its asset must then be created separately.
+- Limits: no signed artifact, no GitHub release, no real launcher/keyguard/API 24–30 rendering of this exact binary. Tracked delta in the build metadata is the pre-existing `AGENTS.md` edit, which is out of release scope.
+
 ## Strip countdown spacing 6dp — 2026-11-02 (2.9.87 source, post-release)
 
 - Reduced only the Strip text group's bottom reserve from 7dp to 6dp (`res/layout/widget_prayer_strip.xml`). Progress bar, `progressGap()`, type sizes, provider footprint, and timing behavior are unchanged.
