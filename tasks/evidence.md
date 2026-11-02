@@ -1,5 +1,9 @@
 # Muajjin implementation evidence
 
+## 2.9.90 prerelease — 2026-11-03 (preparation)
+
+- Version 2.9.90 / versionCode 308. Reduced small countdown type size `w_countdown_small_size` from 26sp to 24sp (`res/values/widget_dimensions.xml`). On the Strip widget at ~83dp (MIUI), this fine-tunes digit ink height from 18dp to 17dp and places the label ink at ~17dp from the card top (balanced between the old 22dp sunken look and 26sp's 14dp). The normal type scale remains active (79dp <= 83dp host).
+
 ## 2.9.89 prerelease — 2026-11-03 (published prerelease)
 
 - Version 2.9.89 / versionCode 307. Source `d11388a3fed98a0d366abfc502433589b5ebce14`, annotated tag `v2.9.89`, epoch `1793657195`.
