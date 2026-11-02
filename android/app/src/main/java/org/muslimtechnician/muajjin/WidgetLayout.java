@@ -351,7 +351,7 @@ final class WidgetLayout {
         if (!state.valid) {
             float recovery = label;
             if (variant == 0)
-                recovery += progressGap() + 4; // Primary group retains its 8dp bottom reserve.
+                recovery += progressGap() + 4; // Conservatively reserve the full progress-container height.
             else if (variant == 1)
                 recovery = stacked ? label + 4 + lineHeight(contextSize(), false)
                     : Math.max(label, lineHeight(contextSize(), false));

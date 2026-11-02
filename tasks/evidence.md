@@ -1,5 +1,14 @@
 # Muajjin implementation evidence
 
+## 2.9.87 Strip spacing prerelease — 2026-11-02 (preparation)
+
+- Version 2.9.87 / versionCode 305. Reduced only the Strip text group's bottom reserve from 8dp to 7dp; its progress bar, type sizes, provider footprint, and timing behavior are unchanged.
+- Local verification with pinned Bun 1.2.2: zero-warning lint, application/tooling TypeScript, and 302 tests / 798 expectations / zero failures passed.
+- XML parsing confirmed the 7dp bottom-anchored group. Conservative native height accounting remains unchanged.
+- Signed GitHub workflow and artifact verification are required before publication. No device installation or instrumentation execution is authorized; actual launcher/large-text appearance remains unverified.
+- Release scope excludes unrelated agent configuration, comparison files, and existing screenshots/data.
+
+
 ## 2.9.86 countdown palette and strip spacing — 2026-11-01 (published prerelease)
 
 - Light API 31+ fill holds `#0B6E5B` through anchor 8, then one burnt-orange
@@ -985,3 +994,10 @@ JavaScript grew; this is disclosed, not described as a bundle/startup optimizati
 Verified: owned browser font pointer/database removed, cache-disabled probe reset, only owned Edge tab closed and original harness attachment restored; owned preview stopped. Owned emulator test APK uninstalled, task-created app fixtures/external chooser/screenshot data cleared, QA widget-bind grant revoked, working final debug app left installed and owned emulator stopped. No personal app data or user browser profile was cleared.
 
 Filesystem cleanup verified: removed 66 enumerated task-owned artifacts/directories plus 48 stopped isolated Gradle daemon logs; exact-scope existence checks report no remaining listed probes, screenshots, installer archives, alternate failed cache or generated build/reproducibility outputs. Gradle's isolated daemon was stopped. Permanent source/reference fixtures, project dependencies, isolated working runtimes/dependency caches, AVD runtime and original-icon rollback copies remain. Pre-existing/unrelated data and browser profiles were not purged. Build commands regenerate the cleared web/native outputs; build and sync before standalone Android packaging.
+
+## Strip countdown spacing — 2026-11-02
+
+- Reduced the Strip text group's bottom margin from 8dp to 7dp, bringing the countdown 1dp closer to the bottom-anchored progress bar. Font sizes, bar geometry, widget footprint, and timing behavior are unchanged.
+- Retained conservative height accounting in `WidgetLayout`; clarified its reserve comment.
+- Verification: in-memory XML parsing passed and confirmed the bottom-anchored group uses 7dp. The initial PowerShell check failed due to shell variable expansion; the Python XML check succeeded. No temporary files were created.
+- Limit: no APK build, native inflation, or launcher/device visual verification was performed. Large-text presentation remains unverified.
