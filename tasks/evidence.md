@@ -1,6 +1,6 @@
 # Muajjin implementation evidence
 
-## 2.9.88 prerelease — 2026-11-02 (build verified, not yet published)
+## 2.9.88 prerelease — 2026-11-02 (published prerelease)
 
 - Version 2.9.88 / versionCode 306. Source `cd6a3e1b960a5b4dc01567deb5e69bb55c0525a7`, annotated tag `v2.9.88`, epoch `1793648863`.
 - Content: shared app/widget theme (Light/Dark force all five home-screens, Device follows the phone offline), fixed forced palettes plus XML-tinted legacy progress groups for API < 31, transient keyguard exception preserved, dark card hairline `#2A332F` → `#37423D` (1.26:1 → 1.56:1 on `#1B211E`), Strip text-group reserve 7dp → 6dp.
