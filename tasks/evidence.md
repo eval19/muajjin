@@ -1,5 +1,10 @@
 # Muajjin implementation evidence
 
+## 2.9.89 prerelease — 2026-11-03 (preparation)
+
+- Version 2.9.89 / versionCode 307. Corrected Strip height model (`WidgetLayout.requiredHeight` case 0 and invalid recovery) to reserve 6dp rather than progressGap() + 4 (8dp) below the text block. The primary group's 6dp bottom margin already clears the bottom-pinned bar, eliminating the 2dp over-reserve that erroneously forced hosts around ~83dp (such as MIUI 2x1 cells) to drop to the compact type scale.
+- On an 83dp host, normal scale is now selected: 13sp label / 26sp countdown fit cleanly within 82dp (previously required 84.5dp > 83dp). Text grows upward, lifting the label ink from ~22dp to ~14dp from the card top without altering the countdown-to-bar gap or card footprint.
+
 ## 2.9.88 prerelease — 2026-11-02 (published prerelease)
 
 - Version 2.9.88 / versionCode 306. Source `cd6a3e1b960a5b4dc01567deb5e69bb55c0525a7`, annotated tag `v2.9.88`, epoch `1793648863`.

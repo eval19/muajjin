@@ -351,7 +351,9 @@ final class WidgetLayout {
         if (!state.valid) {
             float recovery = label;
             if (variant == 0)
-                recovery += progressGap() + 4; // Conservatively reserve the full progress-container height.
+                // The primary group's 6dp bottom margin already clears the
+                // bottom-pinned bar, so only that band is reserved for it.
+                recovery += 6;
             else if (variant == 1)
                 recovery = stacked ? label + 4 + lineHeight(contextSize(), false)
                     : Math.max(label, lineHeight(contextSize(), false));
@@ -368,7 +370,11 @@ final class WidgetLayout {
         float body;
         switch (variant) {
             case 0:
-                body = label + 2 + digits + progressGap() + 4;
+                // 6dp, not progressGap()+4: the primary group's bottom margin
+                // already occupies the bar's padding band, so reserving both
+                // double-counted 4dp and pushed the strip onto the compact
+                // type scale on hosts that actually have room.
+                body = label + 2 + digits + 6;
                 break;
             case 1:
                 body = (stacked ? label + contextLine + 4 : Math.max(label, contextLine))
