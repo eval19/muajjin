@@ -1,12 +1,17 @@
 # Muajjin implementation evidence
 
-## 2.9.87 Strip spacing prerelease — 2026-11-02 (preparation)
+## 2.9.87 Strip spacing prerelease — 2026-11-02 (published prerelease)
 
 - Version 2.9.87 / versionCode 305. Reduced only the Strip text group's bottom reserve from 8dp to 7dp; its progress bar, type sizes, provider footprint, and timing behavior are unchanged.
 - Local verification with pinned Bun 1.2.2: zero-warning lint, application/tooling TypeScript, and 302 tests / 798 expectations / zero failures passed.
 - XML parsing confirmed the 7dp bottom-anchored group. Conservative native height accounting remains unchanged.
-- Signed GitHub workflow and artifact verification are required before publication. No device installation or instrumentation execution is authorized; actual launcher/large-text appearance remains unverified.
+- [Signed workflow 41468455126](https://github.com/eval19/muajjin/actions/runs/41468455126) passed both web modes, native unit tests, debug/instrumentation-APK assembly, and controlled signed release assembly. Instrumentation tests were not executed; actual launcher/large-text appearance remains unverified.
 - Release scope excludes unrelated agent configuration, comparison files, and existing screenshots/data.
+- Source `130e97f1494013b42d19fa0fa4e083fdd4b487e4`, annotated tag `v2.9.87`, epoch `1793632027`, signed artifact `13154616677`.
+- APK `muajjin-2.9.87-305-github-release.apk`: 5,095,754 bytes; SHA-256 `f85505d18f82c07c9d243b0d97ed78ee76b537a393fcaae3ed504cef1e1cd0c9`. Local apksigner verified v2/v3 signatures and original certificate `78f326588a8b17fb03910e1062341113bf5cdb224ac2a36da0116b6c7faf5f8e`.
+- Local APK inspection verified package/version identity, GitHub mode/epoch, 16KB ZIP alignment, and the compiled 7dp Strip margin. Release optimization renames the layout to `res/x7.xml`; Android's packed dimension value `0x701` decodes to 7dp.
+- [Published prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.87), release ID `431613641`, asset ID `702162904`: API digest and anonymous public re-download match the signed artifact. Latest stable remains `v2.9.1`.
+- Retained the final signed APK under `.tools/release-delivery/`; downloads and inspection used memory, with no temporary scripts, archives, screenshots, or device operations.
 
 
 ## 2.9.86 countdown palette and strip spacing — 2026-11-01 (published prerelease)
