@@ -1,9 +1,16 @@
 # Muajjin implementation evidence
 
-## 2.9.89 prerelease — 2026-11-03 (preparation)
+## 2.9.89 prerelease — 2026-11-03 (published prerelease)
 
-- Version 2.9.89 / versionCode 307. Corrected Strip height model (`WidgetLayout.requiredHeight` case 0 and invalid recovery) to reserve 6dp rather than progressGap() + 4 (8dp) below the text block. The primary group's 6dp bottom margin already clears the bottom-pinned bar, eliminating the 2dp over-reserve that erroneously forced hosts around ~83dp (such as MIUI 2x1 cells) to drop to the compact type scale.
+- Version 2.9.89 / versionCode 307. Source `d11388a3fed98a0d366abfc502433589b5ebce14`, annotated tag `v2.9.89`, epoch `1793657195`.
+- Content: corrected Strip height model (`WidgetLayout.requiredHeight` case 0 and invalid recovery) to reserve 6dp rather than progressGap() + 4 (8dp) below the text block. The primary group's 6dp bottom margin already clears the bottom-pinned bar, eliminating the 2dp over-reserve that forced hosts around ~83dp (such as MIUI 2x1 cells) to drop to the compact type scale.
 - On an 83dp host, normal scale is now selected: 13sp label / 26sp countdown fit cleanly within 82dp (previously required 84.5dp > 83dp). Text grows upward, lifting the label ink from ~22dp to ~14dp from the card top without altering the countdown-to-bar gap or card footprint.
+- Web gate: `bun run validate` exited 0 — zero-warning lint, application/tooling TypeScript, 307 tests across 9 files, and both Vite modes.
+- Native gate: 16 presentation tests passed on the isolated API 36 emulator.
+- Controlled build: `reproducible:build --mode github --tag v2.9.89 --output .tools/release-2.9.89-output`, Bun 1.2.2, Node v26.12.1, JDK 21, build-tools 36.0.0. Local unsigned artifact: 5,053,301 bytes, SHA-256 `68b556f8f103d32ef74fbc11bc6386807f7f45778a4e8d32d6f5195b6d9154b7`.
+- [Signed run 41534858370](https://github.com/eval19/muajjin/actions/runs/41534858370) — `workflow_dispatch` on `v2.9.89` with `sign_release=true` — passed both web modes, native unit regressions, debug/instrumentation-APK assembly, and the controlled signed release assembly with certificate verification (`78f32658…5f8e`).
+- [Published prerelease](https://github.com/eval19/muajjin/releases/tag/v2.9.89): release ID `432030646`. Asset `muajjin-2.9.89-307-github-release.apk`, 5,104,618 bytes, SHA-256 `b7532cbe91aef33c9bfd7eec4f3da3fcbb803b30d849f9654b5e4a49a67f073c`; an anonymous public re-download matched byte for byte.
+- Limits: no real launcher, keyguard, or API 24–30 rendering of this exact binary; instrumentation-APK assembly is not test execution.
 
 ## 2.9.88 prerelease — 2026-11-02 (published prerelease)
 
