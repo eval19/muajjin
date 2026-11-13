@@ -25,9 +25,22 @@ public class PrayerWidgetAlarmReceiver extends BroadcastReceiver {
         PrayerUpdateCoordinator.execute(()->{
             // A transition or its fallback must re-arm even if it fires just before
             // the target; otherwise the static scheduler cache can leave no alarm.
-            try {PrayerUpdateCoordinator.dispatchNow(application,mustForceReschedule(transition,fallback,reconcile));}
+            try {
+                if(transition) {
+                    long target=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE)
+                        .getLong("next_transition_at",0L);
+                    long settleMs=earlyTransitionWaitMs(target,System.currentTimeMillis());
+                    if(settleMs>0) try { Thread.sleep(settleMs); } catch(InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                }
+                PrayerUpdateCoordinator.dispatchNow(application,mustForceReschedule(transition,fallback,reconcile));
+            }
             finally {result.finish();}
         });
+    }
+    static long earlyTransitionWaitMs(long target,long now) {
+        if(target<=0 || now>=target) return 0L;
+        long remaining=target-now;
+        return remaining<=1000L ? remaining+PrayerWidgetHelper.TRANSITION_DELIVERY_LEEWAY_MS : 0L;
     }
     static boolean mustForceReschedule(boolean transition,boolean fallback,boolean reconcile) {
         return transition||fallback||reconcile;

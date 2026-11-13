@@ -11,4 +11,13 @@ public class PrayerWidgetAlarmReceiverTest {
         assertTrue(PrayerWidgetAlarmReceiver.mustForceReschedule(false, false, true));
         assertFalse(PrayerWidgetAlarmReceiver.mustForceReschedule(false, false, false));
     }
+
+    @Test public void subSecondEarlyTransitionWaitsPastBoundaryWithoutBlockingLongWindows() {
+        long target = 1_800_000_000_000L;
+        assertTrue(PrayerWidgetAlarmReceiver.earlyTransitionWaitMs(target, target - 20L) == 20L + PrayerWidgetHelper.TRANSITION_DELIVERY_LEEWAY_MS);
+        assertTrue(PrayerWidgetAlarmReceiver.earlyTransitionWaitMs(target, target) == 0L);
+        assertTrue(PrayerWidgetAlarmReceiver.earlyTransitionWaitMs(target, target + 50L) == 0L);
+        assertTrue(PrayerWidgetAlarmReceiver.earlyTransitionWaitMs(target, target - 5000L) == 0L);
+        assertTrue(PrayerWidgetAlarmReceiver.earlyTransitionWaitMs(0L, target) == 0L);
+    }
 }

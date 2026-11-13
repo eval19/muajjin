@@ -15,24 +15,23 @@ public class WidgetProgressColorTest {
     private static final long DURATION = SEGMENT * 11;
 
     private static final int[] LIGHT = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFFC2410C, 0xFFC2410C, 0xFFC2410C
+        0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF258E52,
+        0xFF4E8E16, 0xFFA67C06, 0xFFCC640B, 0xFFD9550E, 0xFFD9550E, 0xFFD9550E
     };
     private static final int[] DARK = {
-        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5,
-        0xFFFACC15, 0xFFFACC15, 0xFFFFA644, 0xFFFFA644, 0xFFF87171, 0xFFF87171
+        0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF4ADE80,
+        0xFFA3E635, 0xFFFACC15, 0xFFFBBF24, 0xFFFB923C, 0xFFFB923C, 0xFFF97316
     };
 
     /** Independent double-precision OKLab midpoints (segment, t = 0.5). */
     private static final int[] LIGHT_MID = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF816140, 0xFFC2410C, 0xFFC2410C, 0
+        0, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF2E9266, 0xFF3D8E3B,
+        0xFF808610, 0xFFBA7109, 0xFFD35D0D, 0xFFD9550E, 0xFFD9550E, 0
     };
     private static final int[] DARK_MID = {
-        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFFB9D280,
-        0xFFFACC15, 0xFFFDB934, 0xFFFFA644, 0xFFFC8D5F, 0xFFF87171, 0
+        0, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF40B97E, 0xFF7DE263,
+        0xFFD3DA28, 0xFFFBC61E, 0xFFFCA933, 0xFFFB923C, 0xFFFA832C, 0
     };
-
     private static final WidgetProgressColor.Palette LIGHT_PALETTE =
         WidgetProgressColor.prepare(LIGHT);
     private static final WidgetProgressColor.Palette DARK_PALETTE =
@@ -46,54 +45,54 @@ public class WidgetProgressColorTest {
         return WidgetProgressColor.sample(DARK_PALETTE, START, START + DURATION, now);
     }
 
-    @Test public void exactAnchorsKeepOrderAlphaAndEndpointReds() {
+    @Test public void exactAnchorsKeepOrderAlphaAndWarmOrangeEndpoints() {
         assertEquals(12, LIGHT_PALETTE.size());
         assertEquals(12, DARK_PALETTE.size());
         for (int i = 0; i < 12; i++) {
             assertEquals("light anchor " + i, LIGHT[i], light(START + i * SEGMENT));
             assertEquals("dark anchor " + i, DARK[i], dark(START + i * SEGMENT));
         }
-        assertEquals("The approved dark endpoint is exact", 0xFFF87171, dark(START + DURATION));
-        assertEquals("The approved light endpoint is exact", 0xFFC2410C, light(START + DURATION));
+        assertEquals("The approved dark endpoint is exact", 0xFFF97316, dark(START + DURATION));
+        assertEquals("The approved light endpoint is exact", 0xFFD9550E, light(START + DURATION));
         assertEquals(0xFF, dark(START) >>> 24);
     }
 
     @Test public void firstSegmentNeverLeavesTheAppGreen() {
         long[] plateau = {START, START + 1, START + SEGMENT / 2, START + SEGMENT - 1, START + SEGMENT};
         for (long now : plateau) {
-            assertEquals("light plateau", 0xFF0B6E5B, light(now));
-            assertEquals("dark plateau", 0xFF5FD3B5, dark(now));
+            assertEquals("light plateau", 0xFF369679, light(now));
+            assertEquals("dark plateau", 0xFF369679, dark(now));
         }
     }
 
-    @Test public void lightGreenHoldRunsToNineOfElevenThenOrange() {
-        for (long now : new long[]{START, START + 4 * SEGMENT, START + 8 * SEGMENT - 1,
-                START + 8 * SEGMENT}) {
-            assertEquals("Light emerald must hold through 8/11 of the interval",
-                0xFF0B6E5B, light(now));
+    @Test public void lightGreenHoldRunsToFourOfElevenThenWarmOrange() {
+        for (long now : new long[]{START, START + 2 * SEGMENT, START + 4 * SEGMENT - 1,
+                START + 4 * SEGMENT}) {
+            assertEquals("Light app green must hold through 4/11 of the interval",
+                0xFF369679, light(now));
         }
         assertTrue("Light green must begin transitioning after its hold",
-            light(START + 8 * SEGMENT + SEGMENT / 2) != 0xFF0B6E5B);
-        assertEquals("Burnt orange must be exact at 9/11", 0xFFC2410C,
+            light(START + 4 * SEGMENT + SEGMENT / 2) != 0xFF369679);
+        assertEquals("Warm orange must be exact at 9/11", 0xFFD9550E,
             light(START + 9 * SEGMENT));
-        assertEquals("Burnt orange must hold to the end", 0xFFC2410C,
+        assertEquals("Warm orange must hold to the end", 0xFFD9550E,
             light(START + DURATION));
     }
 
     @Test public void darkGreenHoldMatchesTheLightThemeCheckpoints() {
-        for (long now : new long[]{START, START + 2 * SEGMENT, START + 5 * SEGMENT}) {
-            assertEquals("Dark emerald must hold through 5/11",
-                0xFF5FD3B5, dark(now));
+        for (long now : new long[]{START, START + 2 * SEGMENT, START + 4 * SEGMENT}) {
+            assertEquals("Dark app green must hold through 4/11",
+                0xFF369679, dark(now));
         }
-        assertTrue("Dark must leave its green hold after 5/11",
-            dark(START + 5 * SEGMENT + SEGMENT / 2) != 0xFF5FD3B5);
-        assertEquals("Dark yellow at 6/11", 0xFFFACC15,
+        assertTrue("Dark must leave its green hold after 4/11",
+            dark(START + 4 * SEGMENT + SEGMENT / 2) != 0xFF369679);
+        assertEquals("Dark lime at 6/11", 0xFFA3E635,
             dark(START + 6 * SEGMENT));
-        assertEquals("Dark orange at 8/11", 0xFFFFA644,
-            dark(START + 8 * SEGMENT));
-        assertEquals("Dark red at 10/11", 0xFFF87171,
-            dark(START + 10 * SEGMENT));
-        assertEquals("Dark red holds to the end", 0xFFF87171,
+        assertEquals("Dark yellow at 7/11", 0xFFFACC15,
+            dark(START + 7 * SEGMENT));
+        assertEquals("Dark warm orange at 9/11", 0xFFFB923C,
+            dark(START + 9 * SEGMENT));
+        assertEquals("Dark orange endpoint at 11/11", 0xFFF97316,
             dark(START + DURATION));
     }
 
@@ -220,15 +219,15 @@ public class WidgetProgressColorTest {
 
         int light = light(START + 6 * SEGMENT);
         int dark = dark(START + 6 * SEGMENT);
-        assertEquals(0xFF0B6E5B, light);
-        assertEquals(0xFFFACC15, dark);
+        assertEquals(0xFF4E8E16, light);
+        assertEquals(0xFFA3E635, dark);
         assertTrue("Concurrent theme samples contaminated each other", light != dark);
     }
 
     @Test public void bothPalettesKeepThreeToOneTrackContrastAcrossTheInterval() {
         for (int theme = 0; theme < 2; theme++) {
             WidgetProgressColor.Palette palette = theme == 0 ? LIGHT_PALETTE : DARK_PALETTE;
-            int track = theme == 0 ? 0xFFD5DDD9 : 0xFF34403A;
+            int track = theme == 0 ? 0xFFEBF0EE : 0xFF29352F;
             double minimum = Double.POSITIVE_INFINITY;
             for (int step = 0; step <= 11000; step++) {
                 int fill = WidgetProgressColor.sample(palette, 0L, 11000L, step);

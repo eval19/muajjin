@@ -21,9 +21,8 @@ import static org.junit.Assert.assertNotNull;
 public class WidgetProviderInfoInstrumentedTest {
     // Strip, Square, Banner, Wide, Full Table, Lock Small, Lock Medium.
     private static final int[][] CELL_HINTS = {
-        {110, 40}, {110, 110}, {250, 40}, {250, 220}, {250, 220}, {110, 40}, {250, 40}
+        {110, 40}, {110, 110}, {250, 40}, {250, 110}, {250, 220}, {110, 40}, {250, 40}
     };
-
     @Test public void everyPrayerWidgetDeclaresAFixedCanonicalFootprint() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         String packageName = context.getPackageName();

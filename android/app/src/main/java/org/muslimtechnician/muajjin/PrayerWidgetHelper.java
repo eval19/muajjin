@@ -26,7 +26,8 @@ import java.util.TimeZone;
 
 public final class PrayerWidgetHelper {
     public static final String PREFS_NAME = "MuajjinPrayerData";
-    private static final long TRANSITION_FALLBACK_MS = 15000L;
+    private static final long TRANSITION_FALLBACK_MS = 2000L;
+    static final long TRANSITION_DELIVERY_LEEWAY_MS = 50L;
     static final Class<?>[] PROVIDERS = {PrayerWidgetStripProvider.class,PrayerWidgetSmallProvider.class,
         PrayerWidgetBannerProvider.class,PrayerWidgetMediumProvider.class,PrayerWidgetLargeProvider.class,
         PrayerLockSmallProvider.class,PrayerLockMediumProvider.class};
@@ -160,8 +161,12 @@ public final class PrayerWidgetHelper {
     private static void setupChronometer(RemoteViews views,int viewId,WidgetTimelineState state) {
         long diff=state.targetTimestamp-state.now;
         views.setChronometerCountDown(viewId,true);
-        views.setChronometer(viewId,state.chronometerBase,null,diff>0);
+        views.setChronometer(viewId,state.chronometerBase,null,diff>=1000L);
         if(diff<=0) views.setTextViewText(viewId,"—");
+        else if(diff<1000L) {
+            java.text.NumberFormat numbers=java.text.NumberFormat.getIntegerInstance(state.numericLocale);
+            views.setTextViewText(viewId,WidgetLocale.elapsedTime(0,numbers));
+        }
     }
 
     private static void applyDirection(RemoteViews views,int root,WidgetTimelineState state) {
@@ -307,8 +312,10 @@ public final class PrayerWidgetHelper {
         switch (variant) {
             case 1:
                 bindText(views, R.id.tv_square_next_time, state.nextTime, layout.contextSize());
+                views.setViewVisibility(R.id.tv_square_next_time, state.valid ? View.VISIBLE : View.GONE);
                 bindText(views, R.id.tv_square_footer_left, state.footerText, layout.contextSize());
                 bindText(views, R.id.tv_square_footer_right, state.currentStartTime, layout.contextSize());
+                views.setViewPadding(R.id.widget_square_footer, 0, layout.px(layout.footerGap()), 0, 0);
                 views.setViewVisibility(R.id.widget_square_footer, state.valid ? View.VISIBLE : View.GONE);
                 break;
             case 2:
@@ -395,7 +402,8 @@ public final class PrayerWidgetHelper {
             if (table) {
                 boolean current = prayerId.equalsIgnoreCase(state.activePrayerId)
                     && (i != 5 || state.ishaTs == state.startTimestamp);
-                views.setInt(cells[i], "setBackgroundResource", current ? themeResource(state.presentation.theme,
+                String effectiveTheme = effectiveTheme(context, state.presentation.theme);
+                views.setInt(cells[i], "setBackgroundResource", current ? themeResource(effectiveTheme,
                     R.drawable.widget_active_row, R.drawable.widget_active_row_light, R.drawable.widget_active_row_dark) : 0);
                 setTextColorResource(context, views, names[i], current ? R.color.w_accent : R.color.w_text_secondary, state.presentation.theme);
                 setTextColorResource(context, views, clocks[i], current ? R.color.w_accent : R.color.w_text_primary, state.presentation.theme);
@@ -422,16 +430,17 @@ public final class PrayerWidgetHelper {
         boolean current = state.valid && prayerId.equals(state.activePrayerId) && eventTs == state.startTimestamp;
         boolean next = state.valid && prayerId.equals(state.nextPrayerId) && eventTs == state.targetTimestamp;
         String theme = state.presentation.theme;
-        int background = current ? themeResource(theme, R.drawable.widget_chip_current,
+        String effectiveTheme = effectiveTheme(context, theme);
+        int background = current ? themeResource(effectiveTheme, R.drawable.widget_chip_current,
             R.drawable.widget_chip_current_light, R.drawable.widget_chip_current_dark)
-            : next ? themeResource(theme, R.drawable.widget_chip_next,
+            : next ? themeResource(effectiveTheme, R.drawable.widget_chip_next,
                 R.drawable.widget_chip_next_light, R.drawable.widget_chip_next_dark) : R.drawable.widget_chip_transparent;
-        int color = current ? R.color.w_accent
-            : !next && eventTs < state.now && eventTs < state.startTimestamp
-                ? R.color.w_text_muted : R.color.w_text_secondary;
+        boolean past = !next && eventTs < state.now && eventTs < state.startTimestamp;
+        int nameColor = current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_secondary;
+        int timeColor = current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_primary;
         views.setInt(chipId, "setBackgroundResource", background);
-        setTextColorResource(context, views, nameId, color, theme);
-        setTextColorResource(context, views, timeId, color, theme);
+        setTextColorResource(context, views, nameId, nameColor, theme);
+        setTextColorResource(context, views, timeId, timeColor, theme);
     }
 
     private static void setTextColorResource(Context context, RemoteViews views, int id, int resource, String theme) {
@@ -450,6 +459,13 @@ public final class PrayerWidgetHelper {
         return context.createConfigurationContext(selected);
     }
 
+    private static String effectiveTheme(Context context, String theme) {
+        if (Build.VERSION.SDK_INT >= 31 || !"system".equals(theme)) return theme;
+        boolean night = (context.getResources().getConfiguration().uiMode
+            & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        return night ? "dark" : "light";
+    }
+
     private static int themeResource(String theme, int system, int light, int dark) {
         return "light".equals(theme) ? light : "dark".equals(theme) ? dark : system;
     }
@@ -458,7 +474,8 @@ public final class PrayerWidgetHelper {
         // Transparent keyguard widgets retain their wallpaper-safe white text/shadows.
         if (variant >= 5) return;
         String theme = state.presentation.theme;
-        views.setInt(ROOTS[variant], "setBackgroundResource", themeResource(theme,
+        String effectiveTheme = effectiveTheme(context, theme);
+        views.setInt(ROOTS[variant], "setBackgroundResource", themeResource(effectiveTheme,
             R.drawable.widget_card_bg, R.drawable.widget_card_bg_light, R.drawable.widget_card_bg_dark));
         setTextColorResource(context, views, COUNTDOWNS[variant], R.color.w_text_primary, theme);
         if (variant < 4) {
@@ -493,13 +510,14 @@ public final class PrayerWidgetHelper {
         boolean exact=Build.VERSION.SDK_INT<Build.VERSION_CODES.S||am.canScheduleExactAlarms();
         if(force||scheduledTransition!=state.targetTimestamp||scheduledExact!=exact) {
             PendingIntent pi=alarmIntent(context,0,PrayerWidgetAlarmReceiver.ACTION_PRAYER_TRANSITION);
+            long triggerAt=state.targetTimestamp+TRANSITION_DELIVERY_LEEWAY_MS;
             try {
-                if(exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
-                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
+                if(exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pi);
+                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pi);
             } catch(SecurityException denied) {
                 exact=false;
                 Log.w("MuajjinWidget","Exact permission denied; transition delivery is approximate",denied);
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,state.targetTimestamp,pi);
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pi);
             }
             scheduledTransition=state.targetTimestamp;scheduledExact=exact;
             context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE).edit()

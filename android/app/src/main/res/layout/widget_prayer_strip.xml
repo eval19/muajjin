@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_strip_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layoutDirection="inherit"
     android:textDirection="inherit"
+    android:clipToOutline="true"
     style="@style/WidgetCard"
     android:paddingStart="@dimen/w_compact_inset_horizontal"
     android:paddingEnd="@dimen/w_compact_inset_horizontal"
@@ -14,10 +15,9 @@
     <LinearLayout
         android:id="@+id/widget_primary_group"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="bottom|start"
-        android:layout_marginBottom="6dp">
+        android:gravity="start">
         <TextView
             android:id="@+id/tv_strip_label"
             style="@style/WidgetText.Label"
@@ -38,9 +38,5 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp" />
     </LinearLayout>
-    <include
-        layout="@layout/widget_progress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom" />
-</FrameLayout>
+    <include layout="@layout/widget_progress" />
+</LinearLayout>

@@ -226,7 +226,14 @@
       "madhabRequired": "Please select all options",
       "translationImportDescription": "Imported translations are applied immediately.",
       "translationImportDescriptionWithLearnMore": "Imported translations are applied immediately. Learn more",
-      "learnMore": "Learn more"
+      "learnMore": "Learn more",
+      "exactAlarmTitle": "Allow Exact Alarms",
+      "exactAlarmDesc": "Required on Android so home-screen widgets update on time at every prayer.",
+      "exactAlarmButton": "Open Alarms & Reminders Settings",
+      "exactAlarmRequiredAction": "Allow exact alarms to continue",
+      "batteryTitle": "Keep Widgets Awake (Recommended)",
+      "batteryDesc": "Muajjin runs no background service and only wakes briefly at prayer times. Set battery usage to Unrestricted so Android doesn't cancel or delay widget updates.",
+      "batteryButton": "Open Battery Settings"
     },
     "about": {
       "title": "About Muajjin",

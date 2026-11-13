@@ -91,21 +91,21 @@ public class WidgetPresentationInstrumentedTest {
     };
     /** Approved anchors, independent of the production helper. */
     private static final int[] LIGHT_PALETTE = {
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFFC2410C, 0xFFC2410C, 0xFFC2410C
+        0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF258E52,
+        0xFF4E8E16, 0xFFA67C06, 0xFFCC640B, 0xFFD9550E, 0xFFD9550E, 0xFFD9550E
     };
     private static final int[] DARK_PALETTE = {
-        0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5,
-        0xFFFACC15, 0xFFFACC15, 0xFFFFA644, 0xFFFFA644, 0xFFF87171, 0xFFF87171
+        0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF4ADE80,
+        0xFFA3E635, 0xFFFACC15, 0xFFFBBF24, 0xFFFB923C, 0xFFFB923C, 0xFFF97316
     };
     /** Independently computed OKLab midpoints; index is the segment. */
     private static final int[] LIGHT_INTERIOR = {
-        0, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B, 0xFF0B6E5B,
-        0xFF0B6E5B, 0xFF0B6E5B, 0xFF816140, 0xFFC2410C, 0xFFC2410C, 0
+        0, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF2E9266, 0xFF3D8E3B,
+        0xFF808610, 0xFFBA7109, 0xFFD35D0D, 0xFFD9550E, 0xFFD9550E, 0
     };
     private static final int[] DARK_INTERIOR = {
-        0, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFF5FD3B5, 0xFFB9D280,
-        0xFFFACC15, 0xFFFDB934, 0xFFFFA644, 0xFFFC8D5F, 0xFFF87171, 0
+        0, 0xFF369679, 0xFF369679, 0xFF369679, 0xFF40B97E, 0xFF7DE263,
+        0xFFD3DA28, 0xFFFBC61E, 0xFFFCA933, 0xFFFB923C, 0xFFFA832C, 0
     };
 
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -788,6 +788,109 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
+    /** One UI tall 2x1 cells center Strip vertically; dense 5x6 grids keep Square/Wide/Table intact. */
+    @Test public void oneUiAndDenseGridSizesPreserveVariantsAndCenterStrip() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    Context context = configured("en", 1f);
+                    PrayerWidgetHelper.WidgetTimelineState s = state(context, "en", "midday");
+                    Rendered tallStrip = render(new Profile(0, 180, 150), context, s);
+                    try {
+                        Rect primary = bounds(tallStrip.root, tallStrip.root.findViewById(R.id.widget_primary_group));
+                        Rect bar = bounds(tallStrip.root, tallStrip.root.findViewById(R.id.widget_progress_container));
+                        int topSurplus = primary.top - tallStrip.root.getPaddingTop();
+                        int bottomSurplus = tallStrip.root.getHeight() - tallStrip.root.getPaddingBottom() - bar.bottom;
+                        assertTrue("Tall Strip must center content instead of leaving an empty top void: top="
+                            + topSurplus + " bottom=" + bottomSurplus, Math.abs(topSurplus - bottomSurplus) <= px(context, 4));
+                        assertTrue("Strip bar must stay tight below countdown: " + (bar.top - primary.bottom),
+                            bar.top >= primary.bottom && bar.top - primary.bottom <= px(context, 8));
+                    } finally {
+                        surface.removeView(tallStrip.host);
+                    }
+                    Rendered compactSquare = render(new Profile(1, 150, 145), context, s);
+                    try {
+                        assertNotNull("Dense 2x2 must not drop to Strip", compactSquare.root.findViewById(R.id.widget_square_footer));
+                        verify(compactSquare, "en", 1f);
+                    } finally {
+                        surface.removeView(compactSquare.host);
+                    }
+                    Rendered compactWide = render(new Profile(3, 300, 155), context, s);
+                    try {
+                        assertNotNull("Dense 4x2 must keep all 6 prayer chips", compactWide.root.findViewById(R.id.chip_fajr));
+                        verify(compactWide, "en", 1f);
+                    } finally {
+                        surface.removeView(compactWide.host);
+                    }
+                    Rendered compactTable = render(new Profile(4, 300, 215), context, s);
+                    try {
+                        assertEquals("Dense 4x3 must keep its 6-prayer table",
+                            View.VISIBLE, compactTable.root.findViewById(R.id.widget_schedule_container).getVisibility());
+                        verify(compactTable, "en", 1f);
+                    } finally {
+                        surface.removeView(compactTable.host);
+                    }
+                } catch (Throwable error) {
+                    record("oneui-dense-grid", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("One UI / dense grid widget defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    /** All 4 combinations of phone numeric locale (en/ar) x app language (en/ar). */
+    @Test public void allFourPhoneAndAppLanguageCombinationsAlignAndUseBoldTypeface() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (String phoneTag : new String[]{"en-US", "ar-EG"}) {
+                        Locale phoneLocale = Locale.forLanguageTag(phoneTag);
+                        for (String appLang : new String[]{"en", "ar"}) {
+                            Configuration cfg = new Configuration(target.getResources().getConfiguration());
+                            cfg.setLocale(phoneLocale);
+                            cfg.fontScale = 1f;
+                            Context context = target.createConfigurationContext(cfg);
+                            JSONObject json = presentation(appLang, "midday").json();
+                            json.put("locationName", "Riyadh");
+                            NativePresentation display = NativePresentation.parse(json);
+                            long now = day.dhuhr + 600000L;
+                            PrayerTimeline timeline = PrayerTimeline.at(schedule, now, zone);
+                            long[] events = schedule.localEvents(now, zone, timeline.day);
+                            PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                new PrayerWidgetHelper.WidgetTimelineState(context, display, timeline, now, events, phoneLocale);
+                            boolean rtl = "ar".equals(appLang);
+                            for (Profile profile : new Profile[]{NORMAL[0], NORMAL[1], NORMAL[3], NORMAL[4]}) {
+                                Rendered rendered = render(profile, context, snapshot);
+                                try {
+                                    assertEquals("Direction must follow app language: " + phoneTag + "/" + appLang,
+                                        rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR,
+                                        rendered.root.getLayoutDirection());
+                                    Chronometer clock = rendered.root.findViewById(COUNTDOWNS[profile.variant]);
+                                    assertTrue("Countdown must stay bold: " + phoneTag + "/" + appLang,
+                                        clock.getTypeface() != null && clock.getTypeface().isBold());
+                                    if (Build.VERSION.SDK_INT >= 26)
+                                        assertNotSame("Countdown fell back to platform typeface: " + phoneTag + "/" + appLang,
+                                            Typeface.DEFAULT, clock.getTypeface());
+                                    verifyTextGeometry(rendered.root, rendered.root);
+                                } finally {
+                                    surface.removeView(rendered.host);
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("four-language-matrix", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("4-way language/numeral matrix defects:\n" + joinFailures(), failures.isEmpty());
+    }
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
         Calendar date = Calendar.getInstance(zone);
@@ -1131,11 +1234,16 @@ public class WidgetPresentationInstrumentedTest {
         }
         switch (p.variant) {
             case 1:
-                text(root, R.id.tv_square_next_time, s.nextTime);
-                text(root, R.id.tv_square_footer_left, s.footerText);
-                text(root, R.id.tv_square_footer_right, s.currentStartTime);
-                if (s.valid) assertGap(root, root.findViewById(R.id.widget_progress_container),
-                    root.findViewById(R.id.widget_square_footer), 16, rendered.context);
+                if (s.valid) {
+                    text(root, R.id.tv_square_next_time, s.nextTime);
+                    text(root, R.id.tv_square_footer_left, s.footerText);
+                    text(root, R.id.tv_square_footer_right, s.currentStartTime);
+                    assertGap(root, root.findViewById(R.id.widget_progress_container),
+                        root.findViewById(R.id.widget_square_footer), 16, rendered.context);
+                } else {
+                    assertEquals(View.GONE, root.findViewById(R.id.tv_square_next_time).getVisibility());
+                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_footer).getVisibility());
+                }
                 break;
             case 2:
                 text(root, R.id.tv_banner_footer_top, s.footerText);
@@ -1204,8 +1312,7 @@ public class WidgetPresentationInstrumentedTest {
                                 : day.dhuhr + Math.round((day.asr - day.dhuhr) * (anchor / 11.0));
                             Rendered rendered = render(NORMAL[0], context,
                                 stateAt(context, now, "en"));
-                            assertProgressFill(rendered, anchor <= 1
-                                ? context.getColor(R.color.w_accent) : anchors[anchor], 1);
+                            assertProgressFill(rendered, anchors[anchor], 1);
                             if (capture) capture(rendered,
                                 "progress-" + (night ? "dark" : "light") + "-anchor" + anchor);
                             surface.removeView(rendered.host);
@@ -1220,7 +1327,7 @@ public class WidgetPresentationInstrumentedTest {
                         for (double fraction : new double[]{0, 0.02, 0.5, 0.98}) {
                             Rendered rendered = renderVariant(context, 0, fraction, "en");
                             assertProgressFill(rendered, fraction <= 1.0 / 11
-                                ? context.getColor(R.color.w_accent)
+                                ? anchors[0]
                                 : expectedFill(context, rendered.state), 1);
                             surface.removeView(rendered.host);
                         }
@@ -1463,8 +1570,8 @@ public class WidgetPresentationInstrumentedTest {
             assertTrue(tag + ": actual card border", borderFound);
             if (variant < 4) {
                 TextView label = rendered.root.findViewById(LABELS[variant]);
-                assertEquals(tag + ": actual prayer label", night ? DARK_PALETTE[0] : LIGHT_PALETTE[0],
-                    label.getCurrentTextColor());
+                assertEquals(tag + ": actual prayer label",
+                    rendered.context.getColor(R.color.w_accent), label.getCurrentTextColor());
             }
             assertThemeProgress(rendered, night);
         }
@@ -1529,7 +1636,7 @@ public class WidgetPresentationInstrumentedTest {
                 case GOLD: fill = night ? 0xFFCBB568 : 0xFF8A6A20; break;
                 case AMBER: fill = night ? 0xFFD99A64 : 0xFFB45C28; break;
                 case SOFT_RED: fill = night ? 0xFFD98C89 : 0xFFB55350; break;
-                default: fill = night ? DARK_PALETTE[0] : LIGHT_PALETTE[0]; break;
+                default: fill = night ? 0xFF5FD3B5 : 0xFF0B6E5B; break;
             }
         }
         Bitmap bitmap = Bitmap.createBitmap(visible.getWidth(), visible.getHeight(), Bitmap.Config.ARGB_8888);
@@ -1543,7 +1650,7 @@ public class WidgetPresentationInstrumentedTest {
             int trackX = rtl ? (bitmap.getWidth() - fillWidth) / 2
                 : (fillWidth + bitmap.getWidth()) / 2;
             assertChannelDelta("Actual themed progress fill", fill, bitmap.getPixel(fillX, y), 1);
-            assertEquals("Actual themed progress track", night ? 0xFF34403A : 0xFFD5DDD9,
+            assertEquals("Actual themed progress track", night ? 0xFF29352F : 0xFFEBF0EE,
                 bitmap.getPixel(trackX, y));
         } finally {
             bitmap.recycle();
@@ -1583,7 +1690,7 @@ public class WidgetPresentationInstrumentedTest {
                                     bar.draw(new Canvas(bitmap));
                                     assertEquals("Legacy forced/system fill", colors[night ? 1 : 0][stage],
                                         bitmap.getPixel(bitmap.getWidth() / 4, bitmap.getHeight() / 2));
-                                    assertEquals("Legacy forced/system track", night ? 0xFF34403A : 0xFFD5DDD9,
+                                    assertEquals("Legacy forced/system track", night ? 0xFF29352F : 0xFFEBF0EE,
                                         bitmap.getPixel(bitmap.getWidth() * 3 / 4, bitmap.getHeight() / 2));
                                 } finally {
                                     bitmap.recycle();
@@ -1828,10 +1935,11 @@ public class WidgetPresentationInstrumentedTest {
                 int expected = current ? R.drawable.widget_chip_current : next ? R.drawable.widget_chip_next : R.drawable.widget_chip_transparent;
                 assertArrayEquals("Current/next/passed background: " + PRAYERS[i],
                     drawablePixels(rendered.context.getDrawable(expected)), drawablePixels(cell.getBackground()));
-                int color = rendered.context.getColor(current ? R.color.w_accent : next ? R.color.w_text_secondary
-                    : event < s.now && event < s.startTimestamp ? R.color.w_text_muted : R.color.w_text_secondary);
-                assertEquals("Current/next/passed name color", color, ((TextView)root.findViewById(names[i])).getCurrentTextColor());
-                assertEquals("Current/next/passed clock color", color, ((TextView)root.findViewById(times[i])).getCurrentTextColor());
+                boolean past = !next && event < s.now && event < s.startTimestamp;
+                int nameColor = rendered.context.getColor(current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_secondary);
+                int timeColor = rendered.context.getColor(current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_primary);
+                assertEquals("Current/next/passed name color", nameColor, ((TextView)root.findViewById(names[i])).getCurrentTextColor());
+                assertEquals("Current/next/passed clock color", timeColor, ((TextView)root.findViewById(times[i])).getCurrentTextColor());
             } else {
                 // Table intentionally has only current decoration, never a Wide next outline.
                 int[] actual = drawablePixels(cell.getBackground());

@@ -11,20 +11,20 @@
     <color name="w_progress_gold">@color/w_dark_progress_gold</color>
     <color name="w_progress_amber">@color/w_dark_progress_amber</color>
     <color name="w_progress_soft_red">@color/w_dark_progress_soft_red</color>
-    <!-- Dark OKLab anchors: prayer-text green through index 5, yellow at 6-7,
-         clear orange at 8-9 and red at 10-11; equal index/11 positions as res/values. -->
-    <color name="w_progress_fill_0">@color/w_accent</color>
-    <color name="w_progress_fill_1">@color/w_accent</color>
-    <color name="w_progress_fill_2">@color/w_accent</color>
-    <color name="w_progress_fill_3">@color/w_accent</color>
-    <color name="w_progress_fill_4">@color/w_accent</color>
-    <color name="w_progress_fill_5">@color/w_accent</color>
-    <color name="w_progress_fill_6">#FACC15</color>
+    <!-- Dark OKLab anchors: exact app green (#369679) through index 4,
+         bright green/lime at 5-6, sunny yellow at 7, warm orange at 8-11. -->
+    <color name="w_progress_fill_0">#369679</color>
+    <color name="w_progress_fill_1">#369679</color>
+    <color name="w_progress_fill_2">#369679</color>
+    <color name="w_progress_fill_3">#369679</color>
+    <color name="w_progress_fill_4">#369679</color>
+    <color name="w_progress_fill_5">#4ADE80</color>
+    <color name="w_progress_fill_6">#A3E635</color>
     <color name="w_progress_fill_7">#FACC15</color>
-    <color name="w_progress_fill_8">#FFA644</color>
-    <color name="w_progress_fill_9">#FFA644</color>
-    <color name="w_progress_fill_10">#F87171</color>
-    <color name="w_progress_fill_11">#F87171</color>
+    <color name="w_progress_fill_8">#FBBF24</color>
+    <color name="w_progress_fill_9">#FB923C</color>
+    <color name="w_progress_fill_10">#FB923C</color>
+    <color name="w_progress_fill_11">#F97316</color>
     <color name="w_warm_text">@color/w_dark_warm_text</color>
     <color name="w_warm_fill">@color/w_dark_warm_fill</color>
 </resources>

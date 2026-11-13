@@ -11,20 +11,20 @@
     <color name="w_progress_gold">@color/w_light_progress_gold</color>
     <color name="w_progress_amber">@color/w_light_progress_amber</color>
     <color name="w_progress_soft_red">@color/w_light_progress_soft_red</color>
-    <!-- OKLab progress-fill anchors at index/11: hold the prayer-text green
-         through index 8, then one burnt-orange stage for the last three anchors. -->
-    <color name="w_progress_fill_0">@color/w_accent</color>
-    <color name="w_progress_fill_1">@color/w_accent</color>
-    <color name="w_progress_fill_2">@color/w_accent</color>
-    <color name="w_progress_fill_3">@color/w_accent</color>
-    <color name="w_progress_fill_4">@color/w_accent</color>
-    <color name="w_progress_fill_5">@color/w_accent</color>
-    <color name="w_progress_fill_6">@color/w_accent</color>
-    <color name="w_progress_fill_7">@color/w_accent</color>
-    <color name="w_progress_fill_8">@color/w_accent</color>
-    <color name="w_progress_fill_9">#C2410C</color>
-    <color name="w_progress_fill_10">#C2410C</color>
-    <color name="w_progress_fill_11">#C2410C</color>
+    <!-- Light OKLab progress-fill anchors: exact app green (#369679) through
+         index 4, then smooth leaf green -> gold -> vivid warm orange. -->
+    <color name="w_progress_fill_0">#369679</color>
+    <color name="w_progress_fill_1">#369679</color>
+    <color name="w_progress_fill_2">#369679</color>
+    <color name="w_progress_fill_3">#369679</color>
+    <color name="w_progress_fill_4">#369679</color>
+    <color name="w_progress_fill_5">#258E52</color>
+    <color name="w_progress_fill_6">#4E8E16</color>
+    <color name="w_progress_fill_7">#A67C06</color>
+    <color name="w_progress_fill_8">#CC640B</color>
+    <color name="w_progress_fill_9">#D9550E</color>
+    <color name="w_progress_fill_10">#D9550E</color>
+    <color name="w_progress_fill_11">#D9550E</color>
     <color name="w_warm_text">@color/w_light_warm_text</color>
     <color name="w_warm_fill">@color/w_light_warm_fill</color>
 </resources>

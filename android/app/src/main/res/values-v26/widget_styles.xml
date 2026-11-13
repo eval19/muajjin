@@ -1,6 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="WidgetTextBase" parent="">
-        <item name="android:fontFamily">@font/ibm_plex_sans_arabic</item>
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_regular</item>
+    </style>
+    <style name="WidgetText.Label" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">@color/w_accent</item>
+        <item name="android:textSize">@dimen/w_label_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+    <style name="WidgetText.Countdown" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_countdown_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+    </style>
+    <style name="WidgetText.ScheduleTime" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_schedule_time_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:paddingTop">@dimen/w_gap_label</item>
+        <item name="android:textDirection">ltr</item>
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+    <style name="WidgetText.LockLabel" parent="WidgetText.Lock">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">@dimen/w_label_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+    <style name="WidgetText.LockCountdown" parent="WidgetText.LockLabel">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textSize">@dimen/w_countdown_small_size</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+        <item name="android:ellipsize">none</item>
+    </style>
+    <style name="WidgetText.MetadataBold" parent="WidgetText.Metadata">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="WidgetText.Summary" parent="WidgetText.Context">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_schedule_time_size</item>
+        <item name="android:textStyle">bold</item>
     </style>
 </resources>

@@ -44,6 +44,11 @@ function useWidgetSync() {
   );
 
   useEffect(() => {
+    if (!settings.onboardingComplete) {
+      lastFailedRef.current = false;
+      setBridgeFailed(false);
+      return;
+    }
     let live = true;
     void syncPrayerTimesToWidget({ settings, presentation })
       .then(() => {

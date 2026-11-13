@@ -9,11 +9,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useApp } from '@/contexts/app-context';
 import { useTranslation } from '@/contexts/translation-context';
+import {
+  openBatteryOptimizationSettings,
+  openExactAlarmSettings,
+  readWidgetReliability,
+} from '@/services/widget-sync-service';
+import type { WidgetReliability } from '@/services/widget-sync-service';
 import { UserSettings } from '@/types';
-import { CalendarDays, Scale } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { CalendarDays, Clock, Scale } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 export default function FinalSettingsPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -34,13 +41,57 @@ export default function FinalSettingsPage() {
     if (!hasValidLocation) navigate('/onboarding/location', { replace: true });
   }, [hasValidLocation, navigate]);
 
-  const isReadyToFinish = settings.madhab !== null && hasValidLocation;
+  const nativeAndroid =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  const [reliability, setReliability] = useState<WidgetReliability | null>(null);
+  const [reliabilityUnavailable, setReliabilityUnavailable] = useState(false);
+
+  const refreshReliability = useCallback(async () => {
+    if (!nativeAndroid) return;
+    try {
+      setReliability(await readWidgetReliability());
+      setReliabilityUnavailable(false);
+    } catch {
+      setReliabilityUnavailable(true);
+    }
+  }, [nativeAndroid]);
+
+  useEffect(() => {
+    if (!nativeAndroid) return;
+    void refreshReliability();
+    const onFocus = () => void refreshReliability();
+    window.addEventListener('focus', onFocus);
+    const listener = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void refreshReliability();
+    });
+    void listener.catch(() => {});
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      void listener.then((handle) => handle.remove()).catch(() => {});
+    };
+  }, [nativeAndroid, refreshReliability]);
+
+  const checkingExactAlarm =
+    nativeAndroid && !reliabilityUnavailable && reliability === null;
+  const needsExactAlarm =
+    nativeAndroid &&
+    !reliabilityUnavailable &&
+    reliability !== null &&
+    reliability.exactAlarmSupported !== false &&
+    !reliability.exactAlarmAllowed;
+  const isReadyToFinish =
+    settings.madhab !== null &&
+    hasValidLocation &&
+    !checkingExactAlarm &&
+    !needsExactAlarm;
   const handleFinish = () => {
     if (!hasValidLocation) {
       navigate('/onboarding/location', { replace: true });
       return;
     }
-    if (settings.madhab === null) return;
+    if (settings.madhab === null || checkingExactAlarm || needsExactAlarm) {
+      return;
+    }
     if (updateSettings({ ...settings, onboardingComplete: true })) navigate('/', { replace: true });
   };
 
@@ -96,6 +147,56 @@ export default function FinalSettingsPage() {
 
           {/* Hijri Calendar Info */}
           <HijriCalendarInfoCard />
+
+          {/* Exact Alarm Permission (Android 12+) */}
+          {needsExactAlarm && (
+            <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>{t('onboarding.exactAlarmTitle')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t('onboarding.exactAlarmDesc')}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  void openExactAlarmSettings()
+                    .then(refreshReliability)
+                    .catch(() => setReliabilityUnavailable(true));
+                }}>
+                {t('onboarding.exactAlarmButton')}
+              </Button>
+            </div>
+          )}
+
+          {/* Optional Battery Unrestricted Recommendation (One UI / Android 14+) */}
+          {nativeAndroid && reliability !== null && !reliability.batteryUnrestricted && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>{t('onboarding.batteryTitle')}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t('onboarding.batteryDesc')}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  void openBatteryOptimizationSettings()
+                    .then(refreshReliability)
+                    .catch(() => {});
+                }}>
+                {t('onboarding.batteryButton')}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -105,9 +206,11 @@ export default function FinalSettingsPage() {
         size="lg"
         className="w-full"
         disabled={!isReadyToFinish}>
-        {!isReadyToFinish
+        {settings.madhab === null || !hasValidLocation
           ? t('onboarding.madhabRequired')
-          : t('onboarding.getStarted')}
+          : needsExactAlarm
+            ? t('onboarding.exactAlarmRequiredAction')
+            : t('onboarding.getStarted')}
       </Button>
     </OnboardingPageLayout>
   );

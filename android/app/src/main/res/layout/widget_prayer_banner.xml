@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:layoutDirection="inherit"
     android:textDirection="inherit"
+    android:clipToOutline="true"
     style="@style/WidgetCard">
     <LinearLayout
         android:id="@+id/widget_primary_row"
@@ -51,12 +52,14 @@
                 style="@style/WidgetText.Context"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textAlignment="viewEnd"
                 android:gravity="end" />
             <TextView
                 android:id="@+id/tv_banner_footer_bottom"
                 style="@style/WidgetText.Context"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textAlignment="viewEnd"
                 android:gravity="end"
                 android:layout_marginTop="@dimen/w_gap_label" />
         </LinearLayout>

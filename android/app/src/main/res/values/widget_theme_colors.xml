@@ -7,7 +7,7 @@
     <color name="w_light_text_muted">#66746D</color>
     <color name="w_light_accent">#0B6E5B</color>
     <color name="w_light_accent_tint">#DCEFE9</color>
-    <color name="w_light_track">#D5DDD9</color>
+    <color name="w_light_track">#EBF0EE</color>
     <color name="w_light_progress_gold">#8A6A20</color>
     <color name="w_light_progress_amber">#B45C28</color>
     <color name="w_light_progress_soft_red">#B55350</color>
@@ -20,7 +20,7 @@
     <color name="w_dark_text_muted">#8A9791</color>
     <color name="w_dark_accent">#5FD3B5</color>
     <color name="w_dark_accent_tint">#1F3A33</color>
-    <color name="w_dark_track">#34403A</color>
+    <color name="w_dark_track">#29352F</color>
     <color name="w_dark_progress_gold">#CBB568</color>
     <color name="w_dark_progress_amber">#D99A64</color>
     <color name="w_dark_progress_soft_red">#D98C89</color>

@@ -50,12 +50,14 @@
                 style="@style/WidgetText.Lock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textAlignment="viewEnd"
                 android:gravity="end" />
             <TextView
                 android:id="@+id/tv_lock_med_next"
                 style="@style/WidgetText.Lock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textAlignment="viewEnd"
                 android:gravity="end"
                 android:layout_marginTop="@dimen/w_gap_label" />
         </LinearLayout>

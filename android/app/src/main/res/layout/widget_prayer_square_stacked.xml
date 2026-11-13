@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:layoutDirection="inherit"
     android:textDirection="inherit"
+    android:clipToOutline="true"
     style="@style/WidgetCard">
     <LinearLayout
         android:id="@+id/widget_primary_group"

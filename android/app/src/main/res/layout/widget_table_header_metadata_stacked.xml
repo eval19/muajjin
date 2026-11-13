@@ -11,12 +11,11 @@
         android:orientation="vertical">
         <TextView
             android:id="@+id/tv_large_location"
-            style="@style/WidgetText.Metadata"
+            style="@style/WidgetText.MetadataBold"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:ellipsize="end"
-            android:textStyle="bold" />
+            android:ellipsize="end" />
         <TextView
             android:id="@+id/tv_large_hijri"
             style="@style/WidgetText.Metadata"
@@ -50,13 +49,10 @@
                 android:layout_height="wrap_content" />
             <TextView
                 android:id="@+id/tv_large_summary"
-                style="@style/WidgetText.Context"
+                style="@style/WidgetText.Summary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/w_gap_label"
-                android:textColor="@color/w_text_primary"
-                android:textSize="@dimen/w_schedule_time_size"
-                android:textStyle="bold" />
+                android:layout_marginTop="@dimen/w_gap_label" />
         </LinearLayout>
         <LinearLayout
             android:id="@+id/widget_primary_group"

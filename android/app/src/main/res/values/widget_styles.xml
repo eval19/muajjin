@@ -14,6 +14,7 @@
         <item name="android:textSize">@dimen/w_label_size</item>
         <item name="android:textStyle">bold</item>
         <item name="android:ellipsize">end</item>
+        <item name="android:textAlignment">viewStart</item>
     </style>
     <style name="WidgetText.LabelWarm" parent="WidgetText.Label">
         <item name="android:textColor">@color/w_warm_text</item>
@@ -32,8 +33,20 @@
     <style name="WidgetText.CountdownTable" parent="WidgetText.Countdown">
         <item name="android:textSize">@dimen/w_countdown_table_size</item>
     </style>
-    <style name="WidgetText.Context" parent="WidgetText" />
-    <style name="WidgetText.Metadata" parent="WidgetText" />
+    <style name="WidgetText.Context" parent="WidgetText">
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+    <style name="WidgetText.Metadata" parent="WidgetText">
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+    <style name="WidgetText.MetadataBold" parent="WidgetText.Metadata">
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="WidgetText.Summary" parent="WidgetText.Context">
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_schedule_time_size</item>
+        <item name="android:textStyle">bold</item>
+    </style>
     <style name="WidgetText.ScheduleName" parent="WidgetText">
         <item name="android:textSize">@dimen/w_schedule_name_size</item>
         <item name="android:textAlignment">viewStart</item>

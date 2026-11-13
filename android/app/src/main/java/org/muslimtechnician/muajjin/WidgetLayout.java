@@ -134,7 +134,7 @@ final class WidgetLayout {
     }
 
     float horizontalInset() { return variant == 0 || tight ? 12 : 16; }
-    float verticalInset() { return variant == 0 || tight ? 8 : 16; }
+    float verticalInset() { return variant == 0 ? 8 : tight ? (variant == 3 || variant == 4 ? 6 : 8) : 16; }
     float cellHorizontalInset() {
         if (columns == 6) return sixColumnInset();
         return tight ? compactCellInset : 8;
@@ -142,12 +142,13 @@ final class WidgetLayout {
     private float sixColumnInset() {
         return Math.min(tight ? compactCellInset : 8f, SIX_COLUMN_INSET);
     }
-    float cellVerticalInset() { return tight ? 6 : 8; }
+    float cellVerticalInset() { return tight ? (variant == 3 || variant == 4 ? 3 : 6) : 8; }
     float cellLabelGap() { return tight ? 2 : 4; }
     float progressGap() { return variant == 0 || tight ? 4 : variant == 2 ? 8 : 12; }
-    float scheduleGap() { return tight ? 8 : 16; }
+    float footerGap() { return tight ? 4 : 8; }
+    float scheduleGap() { return tight ? (variant == 3 || variant == 4 ? 4 : 8) : 16; }
     float columnGap() { return dimension(R.dimen.w_gap_cells); }
-    float rowGap() { return tight ? 6 : 8; }
+    float rowGap() { return tight ? (variant == 3 || variant == 4 ? 4 : 6) : 8; }
     float contentWidth() { return width > 0 ? Math.max(0, width - 2 * horizontalInset()) : 0; }
 
     private void font(float size, boolean bold) {
@@ -273,9 +274,7 @@ final class WidgetLayout {
                 / context.getResources().getDisplayMetrics().density;
         }
         if (!state.valid && width > 0) {
-            float allocated = variant == 1 && !stacked
-                ? available - textWidth(state.nextTime, contextSize(), false) - 8 : available;
-            labelLineHeight = textHeight(state.label, labelSize(), true, Math.max(0, allocated));
+            labelLineHeight = textHeight(state.label, labelSize(), true, Math.max(0, available));
         }
         float contextAllocation = width <= 0 ? -1 : Math.max(0, stacked ? available : available - heroWidth() - 8);
         contextBlockHeight = textHeight(state.footerText, contextSize(), false, contextAllocation) + 4
@@ -329,7 +328,7 @@ final class WidgetLayout {
     float cellHeight() {
         float text = nameLineHeight + cellLabelGap()
             + clockLineHeight * (wrapClocks ? 2 : 1) + 2 * cellVerticalInset();
-        return Math.max(tight ? 48 : 64, text);
+        return Math.max(tight ? (variant == 3 || variant == 4 ? 36 : 48) : 64, text);
     }
 
     private float tableMetadataHeight() {
@@ -355,8 +354,7 @@ final class WidgetLayout {
                 // bottom-pinned bar, so only that band is reserved for it.
                 recovery += 6;
             else if (variant == 1)
-                recovery = stacked ? label + 4 + lineHeight(contextSize(), false)
-                    : Math.max(label, lineHeight(contextSize(), false));
+                recovery = label;
             else if (variant == 4)
                 recovery = tableMetadataHeight() + 8 + tableSummaryHeight();
             if (variant == 3 || (variant == 4 && !summaryOnly))
@@ -370,15 +368,11 @@ final class WidgetLayout {
         float body;
         switch (variant) {
             case 0:
-                // 6dp, not progressGap()+4: the primary group's bottom margin
-                // already occupies the bar's padding band, so reserving both
-                // double-counted 4dp and pushed the strip onto the compact
-                // type scale on hosts that actually have room.
-                body = label + 2 + digits + 6;
+                body = label + 2 + digits + progressGap() + 4;
                 break;
             case 1:
                 body = (stacked ? label + contextLine + 4 : Math.max(label, contextLine))
-                    + 4 + digits + progressGap() + 4 + 8
+                    + 4 + digits + progressGap() + 4 + footerGap()
                     + (stacked ? 2 * contextLine + 4 : contextLine);
                 break;
             case 2:

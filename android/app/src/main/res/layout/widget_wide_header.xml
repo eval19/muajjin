@@ -51,6 +51,7 @@
             style="@style/WidgetText.Context"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textAlignment="viewEnd"
             android:gravity="end"
             android:text="Now: Dhuhr" />
 
@@ -60,6 +61,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/w_gap_label"
+            android:textAlignment="viewEnd"
             android:gravity="end"
             android:text="Asr at 3:06 PM" />
     </LinearLayout>
