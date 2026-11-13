@@ -35,9 +35,9 @@ public final class PrayerWidgetHelper {
         R.id.widget_banner_root, R.id.widget_wide_root, R.id.widget_large_root,
         R.id.widget_lock_small_root, R.id.widget_lock_medium_root};
     private static final int[] LABELS = {R.id.tv_strip_label, R.id.tv_square_label,
-        R.id.tv_banner_label, R.id.tv_wide_label, 0, R.id.tv_lock_small_label, R.id.tv_lock_med_label};
+        R.id.tv_banner_label, R.id.tv_wide_label, R.id.tv_large_label, R.id.tv_lock_small_label, R.id.tv_lock_med_label};
     private static final int[] WARM_LABELS = {R.id.tv_strip_label_warm, R.id.tv_square_label_warm,
-        R.id.tv_banner_label_warm, R.id.tv_wide_label_warm};
+        R.id.tv_banner_label_warm, R.id.tv_wide_label_warm, R.id.tv_large_label_warm};
     private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown, R.id.tv_square_countdown,
         R.id.tv_banner_countdown, R.id.tv_wide_countdown, R.id.tv_large_countdown,
         R.id.tv_lock_small_countdown, R.id.tv_lock_med_countdown};
@@ -49,12 +49,9 @@ public final class PrayerWidgetHelper {
         R.id.tv_chip_dhuhr_name, R.id.tv_chip_asr_name, R.id.tv_chip_maghrib_name, R.id.tv_chip_isha_name};
     private static final int[] CHIP_TIMES = {R.id.tv_chip_fajr_time, R.id.tv_chip_sunrise_time,
         R.id.tv_chip_dhuhr_time, R.id.tv_chip_asr_time, R.id.tv_chip_maghrib_time, R.id.tv_chip_isha_time};
-    private static final int[] TABLE_CELLS = {R.id.row_fajr, R.id.row_sunrise, R.id.row_dhuhr,
-        R.id.row_asr, R.id.row_maghrib, R.id.row_isha};
-    private static final int[] TABLE_NAMES = {R.id.tv_name_fajr, R.id.tv_name_sunrise, R.id.tv_name_dhuhr,
-        R.id.tv_name_asr, R.id.tv_name_maghrib, R.id.tv_name_isha};
-    private static final int[] TABLE_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr,
-        R.id.tv_time_asr, R.id.tv_time_maghrib, R.id.tv_time_isha};
+    private static final int[] TABLE_CELLS = {R.id.row_fajr, R.id.row_sunrise, R.id.row_dhuhr, R.id.row_asr};
+    private static final int[] TABLE_NAMES = {R.id.tv_name_fajr, R.id.tv_name_sunrise, R.id.tv_name_dhuhr, R.id.tv_name_asr};
+    private static final int[] TABLE_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr, R.id.tv_time_asr};
     private static final int[][] CONTEXT_TEXT = {
         {},
         {R.id.tv_square_next_time, R.id.tv_square_footer_left, R.id.tv_square_footer_right},
@@ -71,15 +68,25 @@ public final class PrayerWidgetHelper {
         public final String label,nextName,nextTime,footerText,contextLine2,summaryText,lockTime,activePrayerId,nextPrayerId,hijriText,currentStartTime;
         public final long fajrTs,sunriseTs,dhuhrTs,asrTs,maghribTs,ishaTs;
         public final String fajrStr,sunriseStr,dhuhrStr,asrStr,maghribStr,ishaStr;
+        public final String[] forecastIds,forecastTimes;
+        public final long[] forecastTimestamps;
         public final NativePresentation presentation;
         final PrayerTimeline timeline;
         final Locale numericLocale;
         final WidgetProgress progressStage;
         public WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,long[] localEvents) {
-            this(context,presentation,timeline,now,localEvents,WidgetLocale.resolve(context));
+            this(context,presentation,timeline,now,localEvents,WidgetLocale.resolve(context),null);
+        }
+        WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,
+                            long[] localEvents,PrayerSchedule.Upcoming upcoming) {
+            this(context,presentation,timeline,now,localEvents,WidgetLocale.resolve(context),upcoming);
         }
         WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,
                             long[] localEvents,Locale numericLocale) {
+            this(context,presentation,timeline,now,localEvents,numericLocale,null);
+        }
+        WidgetTimelineState(Context context,NativePresentation presentation,PrayerTimeline timeline,long now,
+                            long[] localEvents,Locale numericLocale,PrayerSchedule.Upcoming upcoming) {
             this.numericLocale=numericLocale;
             this.presentation=presentation;this.timeline=timeline;this.now=now;valid=timeline!=null;
             java.text.SimpleDateFormat clock=valid?presentation.clockFormatter(context,numericLocale):null;
@@ -118,6 +125,44 @@ public final class PrayerWidgetHelper {
                     sunsetToday&&presentation.hijriDateChangeAtMaghrib,now,maghribTs),numericLocale);
             } catch(IllegalArgumentException error) { Log.w("MuajjinWidget","Hijri date outside supported range",error); }
             hijriText=hijri;
+            forecastIds=new String[4];
+            forecastTimestamps=new long[4];
+            forecastTimes=new String[4];
+            if(valid) {
+                if(upcoming!=null && upcoming.ids.length==4 && upcoming.timestamps[0]>0) {
+                    for(int i=0;i<4;i++) {
+                        forecastIds[i]=upcoming.ids[i];
+                        forecastTimestamps[i]=upcoming.timestamps[i];
+                        forecastTimes[i]=formatWidgetClock(clock,upcoming.timestamps[i]);
+                    }
+                } else {
+                    String[] order={"fajr","sunrise","dhuhr","asr","maghrib","isha"};
+                    long[] dayTimes={timeline.day.fajr,timeline.day.sunrise,timeline.day.dhuhr,
+                        timeline.day.asr,timeline.day.maghrib,timeline.day.isha};
+                    int count=0;
+                    for(int i=0;i<dayTimes.length && count<4;i++) {
+                        if(dayTimes[i]>now) {
+                            forecastIds[count]=order[i];
+                            forecastTimestamps[count]=dayTimes[i];
+                            forecastTimes[count]=formatWidgetClock(clock,dayTimes[i]);
+                            count++;
+                        }
+                    }
+                    for(int i=0;i<order.length && count<4;i++) {
+                        long ts=(i==0 && timeline.day.nextFajr>now) ? timeline.day.nextFajr : 0L;
+                        forecastIds[count]=order[i];
+                        forecastTimestamps[count]=ts;
+                        forecastTimes[count]=formatWidgetClock(clock,ts);
+                        count++;
+                    }
+                }
+            } else {
+                for(int i=0;i<4;i++) {
+                    forecastIds[i]="";
+                    forecastTimestamps[i]=0L;
+                    forecastTimes[i]="--:--";
+                }
+            }
         }
         private String formatWidgetClock(java.text.SimpleDateFormat formatter,long timestamp) {
             String text=presentation.clock(formatter,timestamp);
@@ -258,19 +303,17 @@ public final class PrayerWidgetHelper {
         }
         int variant = layout.variant;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout.layoutId());
-        if (variant != 4) {
-            int label = variant < 4 && state.isWarm ? WARM_LABELS[variant] : LABELS[variant];
-            views.setTextViewText(label, state.label);
-            views.setInt(label, "setMaxLines", state.valid ? 1 : 4);
-            setSize(views, label, layout.labelSize());
-            float labelWidth = layout.textWidth(state.label, layout.labelSize(), true) + 2;
-            if (widthDp > 0) labelWidth = Math.min(labelWidth, layout.contentWidth());
-            views.setInt(label, "setMinWidth", layout.px(labelWidth));
-            if (variant < 4) {
-                views.setViewVisibility(LABELS[variant], state.isWarm ? View.GONE : View.VISIBLE);
-                views.setViewVisibility(WARM_LABELS[variant], state.isWarm ? View.VISIBLE : View.GONE);
-                setSize(views, state.isWarm ? LABELS[variant] : WARM_LABELS[variant], layout.labelSize());
-            }
+        int label = variant < 5 && state.isWarm ? WARM_LABELS[variant] : LABELS[variant];
+        views.setTextViewText(label, state.label);
+        views.setInt(label, "setMaxLines", state.valid ? 1 : 4);
+        setSize(views, label, layout.labelSize());
+        float labelWidth = layout.textWidth(state.label, layout.labelSize(), true) + 2;
+        if (widthDp > 0) labelWidth = Math.min(labelWidth, layout.contentWidth());
+        views.setInt(label, "setMinWidth", layout.px(labelWidth));
+        if (variant < 5) {
+            views.setViewVisibility(LABELS[variant], state.isWarm ? View.GONE : View.VISIBLE);
+            views.setViewVisibility(WARM_LABELS[variant], state.isWarm ? View.VISIBLE : View.GONE);
+            setSize(views, state.isWarm ? LABELS[variant] : WARM_LABELS[variant], layout.labelSize());
         }
         setupChronometer(views, COUNTDOWNS[variant], state);
         views.setViewVisibility(COUNTDOWNS[variant], state.valid ? View.VISIBLE : View.GONE);
@@ -319,6 +362,8 @@ public final class PrayerWidgetHelper {
                 bindText(views, R.id.tv_square_footer_left, state.footerText, layout.contextSize());
                 bindText(views, R.id.tv_square_footer_right, state.currentStartTime, layout.contextSize());
                 views.setViewPadding(R.id.widget_square_footer, 0, layout.px(layout.footerGap()), 0, 0);
+                views.setViewVisibility(R.id.widget_square_top_spacer, state.valid ? View.VISIBLE : View.GONE);
+                views.setViewVisibility(R.id.widget_square_spacer, state.valid ? View.VISIBLE : View.GONE);
                 views.setViewVisibility(R.id.widget_square_footer, state.valid ? View.VISIBLE : View.GONE);
                 break;
             case 2:
@@ -335,11 +380,11 @@ public final class PrayerWidgetHelper {
                 bindText(views, R.id.tv_large_hijri, state.hijriText, layout.contextSize());
                 bindText(views, R.id.tv_large_current_pill, state.footerText, layout.contextSize());
                 bindText(views, R.id.tv_large_summary, state.summaryText, layout.timeSize());
-                views.setInt(R.id.tv_large_summary, "setMaxLines", state.valid ? 1 : 4);
                 views.setViewVisibility(R.id.tv_large_current_pill, state.valid ? View.VISIBLE : View.GONE);
-                views.setViewVisibility(R.id.widget_primary_group, state.valid ? View.VISIBLE : View.GONE);
-                views.setViewVisibility(R.id.widget_schedule_container, layout.summaryOnly ? View.GONE : View.VISIBLE);
-                if (!layout.summaryOnly) renderSchedule(context, views, state, layout, true);
+                views.setViewVisibility(R.id.widget_primary_group, View.VISIBLE);
+                views.setViewVisibility(R.id.widget_schedule_container,
+                    !state.valid || layout.summaryOnly ? View.GONE : View.VISIBLE);
+                if (state.valid && !layout.summaryOnly) renderForecast(context, views, state, layout);
                 break;
             case 5:
                 bindText(views, R.id.tv_lock_small_time, state.lockTime, layout.contextSize());
@@ -352,7 +397,7 @@ public final class PrayerWidgetHelper {
             default:
                 break;
         }
-        if (variant == 2 || variant == 3 || variant == 6)
+        if (variant == 2 || variant == 3 || variant == 4 || variant == 6)
             views.setViewVisibility(R.id.widget_context_group, state.valid ? View.VISIBLE : View.GONE);
         int horizontal = layout.px(layout.horizontalInset());
         int vertical = layout.px(layout.verticalInset());
@@ -382,37 +427,51 @@ public final class PrayerWidgetHelper {
         setSize(views, id, pixels);
     }
 
-    private static void renderSchedule(Context context, RemoteViews views, WidgetTimelineState state,
-                                        WidgetLayout layout, boolean table) {
-        int[] cells = table ? TABLE_CELLS : CHIPS;
-        int[] names = table ? TABLE_NAMES : CHIP_NAMES;
-        int[] clocks = table ? TABLE_TIMES : CHIP_TIMES;
+    private static void renderForecast(Context context, RemoteViews views, WidgetTimelineState state,
+                                       WidgetLayout layout) {
         views.setViewPadding(R.id.widget_schedule_container, 0, layout.px(layout.scheduleGap()), 0, 0);
-        if (table || layout.columns == 3)
-            views.setViewPadding(R.id.widget_schedule_second_row, 0, layout.px(layout.rowGap()), 0, 0);
         int clockMinimum = layout.px(layout.cellHeight() - layout.nameLineHeight - 2 * layout.cellVerticalInset());
-        for (int i = 0; i < cells.length; i++) {
-            String prayerId = WidgetLayout.PRAYERS[i];
-            bindText(views, names[i], state.presentation.label(prayerId), layout.nameSize());
-            bindText(views, clocks[i], state.chipClock(prayerId), layout.timeSize());
-            views.setInt(names[i], "setMinHeight", layout.px(layout.nameLineHeight));
-            views.setInt(clocks[i], "setMaxLines", layout.wrapClocks ? 2 : 1);
-            views.setViewPadding(clocks[i], 0, layout.px(layout.cellLabelGap()), 0, 0);
-            views.setInt(clocks[i], "setMinHeight", clockMinimum);
+        String theme = state.presentation.theme;
+        String effectiveTheme = effectiveTheme(context, theme);
+        for (int i = 0; i < TABLE_CELLS.length; i++) {
+            String prayerId = state.forecastIds[i];
+            bindText(views, TABLE_NAMES[i], state.presentation.label(prayerId), layout.nameSize());
+            bindText(views, TABLE_TIMES[i], state.forecastTimes[i], layout.timeSize());
+            views.setInt(TABLE_NAMES[i], "setMinHeight", layout.px(layout.nameLineHeight));
+            views.setInt(TABLE_TIMES[i], "setMaxLines", layout.wrapClocks ? 2 : 1);
+            views.setViewPadding(TABLE_TIMES[i], 0, layout.px(layout.cellLabelGap()), 0, 0);
+            views.setInt(TABLE_TIMES[i], "setMinHeight", clockMinimum);
             int x = layout.px(layout.cellHorizontalInset());
             int y = layout.px(layout.cellVerticalInset());
-            views.setViewPadding(cells[i], x, y, x, y);
-            if (table) {
-                boolean current = prayerId.equalsIgnoreCase(state.activePrayerId)
-                    && (i != 5 || state.ishaTs == state.startTimestamp);
-                String effectiveTheme = effectiveTheme(context, state.presentation.theme);
-                views.setInt(cells[i], "setBackgroundResource", current ? themeResource(effectiveTheme,
-                    R.drawable.widget_active_row, R.drawable.widget_active_row_light, R.drawable.widget_active_row_dark) : 0);
-                setTextColorResource(context, views, names[i], current ? R.color.w_accent : R.color.w_text_secondary, state.presentation.theme);
-                setTextColorResource(context, views, clocks[i], current ? R.color.w_accent : R.color.w_text_primary, state.presentation.theme);
-            } else {
-                renderSingleChip(context, views, cells[i], names[i], clocks[i], prayerId, eventTimestamp(state, i), state);
-            }
+            views.setViewPadding(TABLE_CELLS[i], x, y, x, y);
+            boolean next = i == 0 || (state.forecastTimestamps[i] == state.targetTimestamp && prayerId.equals(state.nextPrayerId));
+            views.setInt(TABLE_CELLS[i], "setBackgroundResource", next
+                ? themeResource(effectiveTheme, R.drawable.widget_chip_next,
+                    R.drawable.widget_chip_next_light, R.drawable.widget_chip_next_dark)
+                : R.drawable.widget_chip_transparent);
+            setTextColorResource(context, views, TABLE_NAMES[i], next ? R.color.w_accent : R.color.w_text_secondary, theme);
+            setTextColorResource(context, views, TABLE_TIMES[i], R.color.w_text_primary, theme);
+        }
+    }
+
+    private static void renderSchedule(Context context, RemoteViews views, WidgetTimelineState state,
+                                        WidgetLayout layout, boolean table) {
+        views.setViewPadding(R.id.widget_schedule_container, 0, layout.px(layout.scheduleGap()), 0, 0);
+        if (layout.columns == 3)
+            views.setViewPadding(R.id.widget_schedule_second_row, 0, layout.px(layout.rowGap()), 0, 0);
+        int clockMinimum = layout.px(layout.cellHeight() - layout.nameLineHeight - 2 * layout.cellVerticalInset());
+        for (int i = 0; i < CHIPS.length; i++) {
+            String prayerId = WidgetLayout.PRAYERS[i];
+            bindText(views, CHIP_NAMES[i], state.presentation.label(prayerId), layout.nameSize());
+            bindText(views, CHIP_TIMES[i], state.chipClock(prayerId), layout.timeSize());
+            views.setInt(CHIP_NAMES[i], "setMinHeight", layout.px(layout.nameLineHeight));
+            views.setInt(CHIP_TIMES[i], "setMaxLines", layout.wrapClocks ? 2 : 1);
+            views.setViewPadding(CHIP_TIMES[i], 0, layout.px(layout.cellLabelGap()), 0, 0);
+            views.setInt(CHIP_TIMES[i], "setMinHeight", clockMinimum);
+            int x = layout.px(layout.cellHorizontalInset());
+            int y = layout.px(layout.cellVerticalInset());
+            views.setViewPadding(CHIPS[i], x, y, x, y);
+            renderSingleChip(context, views, CHIPS[i], CHIP_NAMES[i], CHIP_TIMES[i], prayerId, eventTimestamp(state, i), state);
         }
     }
 
@@ -481,10 +540,9 @@ public final class PrayerWidgetHelper {
         views.setInt(ROOTS[variant], "setBackgroundResource", themeResource(effectiveTheme,
             R.drawable.widget_card_bg, R.drawable.widget_card_bg_light, R.drawable.widget_card_bg_dark));
         setTextColorResource(context, views, COUNTDOWNS[variant], R.color.w_text_primary, theme);
-        if (variant < 4) {
-            setTextColorResource(context, views, LABELS[variant], R.color.w_accent, theme);
-            setTextColorResource(context, views, WARM_LABELS[variant], R.color.w_warm_text, theme);
-        } else {
+        setTextColorResource(context, views, LABELS[variant], R.color.w_accent, theme);
+        setTextColorResource(context, views, WARM_LABELS[variant], R.color.w_warm_text, theme);
+        if (variant == 4) {
             setTextColorResource(context, views, R.id.tv_large_summary, R.color.w_text_primary, theme);
         }
         for (int id : CONTEXT_TEXT[variant])

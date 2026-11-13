@@ -247,4 +247,14 @@ public class PrayerTimelineTest {
             assertThrows(IllegalArgumentException.class, () -> candidate.validateOuterBoundaries(config));
         }
     }
+    @Test
+    public void upcomingEventsRollForwardIntoFollowingDayAtNight() {
+        PrayerSchedule sched = schedule();
+        PrayerSchedule.Day today = sched.days()[10];
+        PrayerSchedule.Day tomorrow = sched.days()[11];
+        long afterMaghrib = today.maghrib + 60000L;
+        PrayerSchedule.Upcoming up = sched.upcomingEvents(afterMaghrib);
+        assertArrayEquals(new String[]{"isha", "fajr", "sunrise", "dhuhr"}, up.ids);
+        assertArrayEquals(new long[]{today.isha, tomorrow.fajr, tomorrow.sunrise, tomorrow.dhuhr}, up.timestamps);
+    }
 }

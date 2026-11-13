@@ -16,8 +16,8 @@
     <dimen name="w_progress_height">4dp</dimen>
     <dimen name="w_label_size">13sp</dimen>
     <dimen name="w_label_size_compact">12sp</dimen>
-    <dimen name="w_countdown_small_size">24sp</dimen>
-    <dimen name="w_countdown_small_size_compact">22sp</dimen>
+    <dimen name="w_countdown_small_size">25sp</dimen>
+    <dimen name="w_countdown_small_size_compact">23sp</dimen>
     <dimen name="w_countdown_size">32sp</dimen>
     <dimen name="w_countdown_size_compact">26sp</dimen>
     <dimen name="w_countdown_table_size">28sp</dimen>

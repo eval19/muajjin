@@ -23,6 +23,14 @@ public final class PrayerSchedule {
             this.latitude=latitude; this.longitude=longitude; this.method=method; this.madhab=madhab;
         }
     }
+    public static final class Upcoming {
+        public final String[] ids;
+        public final long[] timestamps;
+        public Upcoming(String[] ids, long[] timestamps) {
+            this.ids = ids;
+            this.timestamps = timestamps;
+        }
+    }
     public static final class Day {
         public final String date;
         public final long previousIsha,fajr,sunrise,dhuhr,asr,maghrib,isha,nextFajr;
@@ -91,6 +99,34 @@ public final class PrayerSchedule {
             if(d.isha>=from&&d.isha<until) result[5]=d.isha;
         }
         return result;
+    }
+    public Upcoming upcomingEvents(long now) {
+        String[] ids = new String[4];
+        long[] timestamps = new long[4];
+        String[] names = {"fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"};
+        int count = 0;
+        for (int i = 0; i < entries.length && count < 4; i++) {
+            Day d = entries[i];
+            long[] times = {d.fajr, d.sunrise, d.dhuhr, d.asr, d.maghrib, d.isha};
+            for (int j = 0; j < times.length && count < 4; j++) {
+                if (times[j] > now) {
+                    ids[count] = names[j];
+                    timestamps[count] = times[j];
+                    count++;
+                }
+            }
+            if (i == entries.length - 1 && count < 4 && d.nextFajr > now) {
+                ids[count] = "fajr";
+                timestamps[count] = d.nextFajr;
+                count++;
+            }
+        }
+        while (count < 4) {
+            ids[count] = "";
+            timestamps[count] = 0L;
+            count++;
+        }
+        return new Upcoming(ids, timestamps);
     }
     public boolean needsRenewal(long now,TimeZone zone) {
         Calendar threshold=midnight(validUntil,TimeZone.getTimeZone(timezone));threshold.add(Calendar.DATE,-2);

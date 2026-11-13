@@ -11,6 +11,10 @@
         <item name="android:ellipsize">end</item>
         <item name="android:textAlignment">viewStart</item>
     </style>
+    <style name="WidgetText.LabelWarm" parent="WidgetText.Label">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textColor">@color/w_warm_text</item>
+    </style>
     <style name="WidgetText.Countdown" parent="WidgetText">
         <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
         <item name="android:textColor">@color/w_text_primary</item>
@@ -19,6 +23,14 @@
         <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:maxLines">1</item>
         <item name="android:textDirection">ltr</item>
+    </style>
+    <style name="WidgetText.CountdownSmall" parent="WidgetText.Countdown">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textSize">@dimen/w_countdown_small_size</item>
+    </style>
+    <style name="WidgetText.CountdownTable" parent="WidgetText.Countdown">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textSize">@dimen/w_countdown_table_size</item>
     </style>
     <style name="WidgetText.ScheduleTime" parent="WidgetText">
         <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>

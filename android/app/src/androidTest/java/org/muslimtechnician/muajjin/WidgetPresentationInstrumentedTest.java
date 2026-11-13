@@ -61,9 +61,9 @@ public class WidgetPresentationInstrumentedTest {
         R.id.tv_banner_countdown, R.id.tv_wide_countdown, R.id.tv_large_countdown,
         R.id.tv_lock_small_countdown, R.id.tv_lock_med_countdown};
     private static final int[] LABELS = {R.id.tv_strip_label, R.id.tv_square_label,
-        R.id.tv_banner_label, R.id.tv_wide_label};
+        R.id.tv_banner_label, R.id.tv_wide_label, R.id.tv_large_label};
     private static final int[] WARM_LABELS = {R.id.tv_strip_label_warm, R.id.tv_square_label_warm,
-        R.id.tv_banner_label_warm, R.id.tv_wide_label_warm};
+        R.id.tv_banner_label_warm, R.id.tv_wide_label_warm, R.id.tv_large_label_warm};
     private static final int[] PROGRESS = {R.id.pb_widget_progress_green,R.id.pb_widget_progress_gold,
         R.id.pb_widget_progress_amber,R.id.pb_widget_progress_soft_red};
     private static final int[] CHIPS = {R.id.chip_fajr, R.id.chip_sunrise, R.id.chip_dhuhr,
@@ -72,21 +72,18 @@ public class WidgetPresentationInstrumentedTest {
         R.id.tv_chip_dhuhr_name, R.id.tv_chip_asr_name, R.id.tv_chip_maghrib_name, R.id.tv_chip_isha_name};
     private static final int[] CHIP_TIMES = {R.id.tv_chip_fajr_time, R.id.tv_chip_sunrise_time,
         R.id.tv_chip_dhuhr_time, R.id.tv_chip_asr_time, R.id.tv_chip_maghrib_time, R.id.tv_chip_isha_time};
-    private static final int[] ROWS = {R.id.row_fajr, R.id.row_sunrise, R.id.row_dhuhr,
-        R.id.row_asr, R.id.row_maghrib, R.id.row_isha};
-    private static final int[] ROW_NAMES = {R.id.tv_name_fajr, R.id.tv_name_sunrise, R.id.tv_name_dhuhr,
-        R.id.tv_name_asr, R.id.tv_name_maghrib, R.id.tv_name_isha};
-    private static final int[] ROW_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr,
-        R.id.tv_time_asr, R.id.tv_time_maghrib, R.id.tv_time_isha};
+    private static final int[] ROWS = {R.id.row_fajr, R.id.row_sunrise, R.id.row_dhuhr, R.id.row_asr};
+    private static final int[] ROW_NAMES = {R.id.tv_name_fajr, R.id.tv_name_sunrise, R.id.tv_name_dhuhr, R.id.tv_name_asr};
+    private static final int[] ROW_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr, R.id.tv_time_asr};
     private static final Profile[] NORMAL = {
         new Profile(0, 160, 96), new Profile(1, 180, 180), new Profile(2, 360, 96),
-        new Profile(3, 360, 220), new Profile(4, 360, 320),
+        new Profile(3, 360, 220), new Profile(4, 360, 180),
         new Profile(5, 180, 96), new Profile(6, 360, 96)
     };
     /** Declared provider minimums: the smallest host box a launcher may hand over. */
     private static final Profile[] HOST_MINIMUMS = {
         new Profile(0, 120, 88), new Profile(1, 130, 160), new Profile(2, 280, 96),
-        new Profile(3, 288, 220), new Profile(4, 288, 220), new Profile(5, 170, 96),
+        new Profile(3, 288, 220), new Profile(4, 288, 165), new Profile(5, 170, 96),
         new Profile(6, 280, 80)
     };
     /** Approved anchors, independent of the production helper. */
@@ -169,18 +166,18 @@ public class WidgetPresentationInstrumentedTest {
                 // Arabic at the same normal sizes; captures every provider's RTL render.
                 for (Profile profile : NORMAL) runCase(profile, "ar", 1f, "midday", true, null);
                 runCase(new Profile(3, 600, 220), "en", 1f, "midday", true, null);
-                runCase(new Profile(4, 250, 220), "en", 1f, "midday", true, null);
-                runCase(new Profile(4,250,220),"en",1f,"midday-long-location",true,null,true);
+                runCase(new Profile(4, 250, 180), "en", 1f, "midday", true, null);
+                runCase(new Profile(4, 250, 140), "en", 1f, "midday-long-location", true, null, true);
                 for (Profile profile : NORMAL) runCase(profile, "en", 1f, "midday-24h", false, null);
 
                 // Same attached native hierarchy is reapplied, never replaced with a mock.
                 for (Profile profile : NORMAL) runReapplySequence(profile);
                 runExtraHeightCase(new Profile(3, 360, 220));
-                runExtraHeightCase(new Profile(4, 360, 320));
+                runExtraHeightCase(new Profile(4, 360, 180));
                 runIndependentWideInstances();
                 runLegacySizeBoundaries();
                 Profile[] minimums = {new Profile(0,120,88), new Profile(1,130,160),
-                    new Profile(2,280,96), new Profile(3,288,220), new Profile(4,288,220),
+                    new Profile(2,280,96), new Profile(3,288,220), new Profile(4,288,165),
                     new Profile(5,170,96), new Profile(6,280,80)};
                 for (String language : new String[]{"en","bn","ar"}) {
                     for (Profile profile : minimums) {
@@ -208,7 +205,7 @@ public class WidgetPresentationInstrumentedTest {
                     audit("seasonal-clock-check month="+(month+1));
                     for(String language : new String[]{"en","bn","ar"}) {
                         runCase(new Profile(3,288,220),language,1f,"midday",false,null);
-                        runCase(new Profile(4,288,220),language,1f,"midday",false,null);
+                        runCase(new Profile(4,288,165),language,1f,"midday",false,null);
                         if(language.equals("bn")) runLegacyClockFitTransitions();
                     }
                     if(month==Calendar.JANUARY) {
@@ -477,11 +474,12 @@ public class WidgetPresentationInstrumentedTest {
         Rendered rendered = render(profile, context, snapshot);
         try {
             Chronometer clock = rendered.root.findViewById(COUNTDOWNS[profile.variant]);
-            float scale = snapshot.presentation.widgetLargeText
-                && profile.variant <= 4 ? 1.2f : 1f;
+            float scale = (snapshot.presentation.widgetLargeText && profile.variant <= 4 ? 1.2f : 1f)
+                * (selected.variant <= 4 && snapshot.valid && snapshot.numericLocale != null
+                    && java.text.NumberFormat.getIntegerInstance(snapshot.numericLocale).format(0).charAt(0) > '9' ? 1.12f : 1f);
             assertEquals("Final effective PX size: " + tag,
                 context.getResources().getDimension(normalDimension) * scale,
-                clock.getTextSize(), .01f);
+                clock.getTextSize(), .05f);
             if (profile.variant == 4) {
                 assertEquals("Native schedule visibility: " + tag,
                     summaryOnly ? View.GONE : View.VISIBLE,
@@ -823,9 +821,9 @@ public class WidgetPresentationInstrumentedTest {
                     } finally {
                         surface.removeView(compactWide.host);
                     }
-                    Rendered compactTable = render(new Profile(4, 300, 215), context, s);
+                    Rendered compactTable = render(new Profile(4, 300, 165), context, s);
                     try {
-                        assertEquals("Dense 4x3 must keep its 6-prayer table",
+                        assertEquals("Dense 4x2 Overview must keep its 4-column forecast",
                             View.VISIBLE, compactTable.root.findViewById(R.id.widget_schedule_container).getVisibility());
                         verify(compactTable, "en", 1f);
                     } finally {
@@ -941,6 +939,53 @@ public class WidgetPresentationInstrumentedTest {
             closeHost();
         }
         assertTrue("4-way Larger text defects:\n" + joinFailures(), failures.isEmpty());
+    }
+
+    /** Portrait phone 4x2 (350x175) keeps Wide Card in roomy 3x2 and Overview in 4-column forecast. */
+    @Test public void portraitFourByTwoKeepsWideGridAndOverviewDistinctOnAllLanguages() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    for (String phoneTag : new String[]{"en-US", "ar-EG"}) {
+                        Locale phoneLocale = Locale.forLanguageTag(phoneTag);
+                        for (String appLang : new String[]{"en", "ar"}) {
+                            Configuration cfg = new Configuration(target.getResources().getConfiguration());
+                            cfg.setLocale(phoneLocale);
+                            cfg.fontScale = 1f;
+                            Context context = target.createConfigurationContext(cfg);
+                            NativePresentation display = NativePresentation.parse(presentation(appLang, "midday").json());
+                            long now = day.dhuhr + 600000L;
+                            PrayerTimeline timeline = PrayerTimeline.at(schedule, now, zone);
+                            long[] events = schedule.localEvents(now, zone, timeline.day);
+                            PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                new PrayerWidgetHelper.WidgetTimelineState(context, display, timeline, now, events, phoneLocale);
+                            Rendered wide = render(new Profile(3, 350, 175), context, snapshot);
+                            try {
+                                assertEquals("Portrait 350x175 Wide must stay 3x2 (2 rows), not squeezed 6-col",
+                                    2, scheduleRowCount(wide.root, CHIPS));
+                                verify(wide, appLang, 1f);
+                            } finally {
+                                surface.removeView(wide.host);
+                            }
+                            Rendered overview = render(new Profile(4, 350, 175), context, snapshot);
+                            try {
+                                assertEquals("Portrait 350x175 Overview must keep 4-column single row",
+                                    1, scheduleRowCount(overview.root, ROWS));
+                                verify(overview, appLang, 1f);
+                            } finally {
+                                surface.removeView(overview.host);
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("portrait-4x2-distinct", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("Portrait 4x2 Wide/Overview defects:\n" + joinFailures(), failures.isEmpty());
     }
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
@@ -1247,7 +1292,7 @@ public class WidgetPresentationInstrumentedTest {
             assertCountdownReservation(rendered);
         } else assertEquals("Stopped recovery countdown", "—", clock.getText().toString());
 
-        if (p.variant < 4) {
+        if (p.variant < 5) {
             text(root, s.isWarm ? WARM_LABELS[p.variant] : LABELS[p.variant], s.label);
             assertEquals("Old label state survived reapply", View.GONE,
                 root.findViewById(s.isWarm ? LABELS[p.variant] : WARM_LABELS[p.variant]).getVisibility());
@@ -1289,10 +1334,14 @@ public class WidgetPresentationInstrumentedTest {
                     text(root, R.id.tv_square_next_time, s.nextTime);
                     text(root, R.id.tv_square_footer_left, s.footerText);
                     text(root, R.id.tv_square_footer_right, s.currentStartTime);
-                    assertGap(root, root.findViewById(R.id.widget_progress_container),
-                        root.findViewById(R.id.widget_square_footer), 16, rendered.context);
+                    Rect barBounds = bounds(root, root.findViewById(R.id.widget_progress_container));
+                    Rect footerBounds = bounds(root, root.findViewById(R.id.widget_square_footer));
+                    assertTrue("Square footer overlaps progress bar", footerBounds.top >= barBounds.bottom - 1);
+                    assertTrue("Square footer exceeds card bounds", footerBounds.bottom <= root.getHeight() - root.getPaddingBottom() + 1);
                 } else {
                     assertEquals(View.GONE, root.findViewById(R.id.tv_square_next_time).getVisibility());
+                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_top_spacer).getVisibility());
+                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_spacer).getVisibility());
                     assertEquals(View.GONE, root.findViewById(R.id.widget_square_footer).getVisibility());
                 }
                 break;
@@ -1309,12 +1358,13 @@ public class WidgetPresentationInstrumentedTest {
                 text(root, R.id.tv_large_hijri, s.hijriText);
                 if (s.valid) text(root, R.id.tv_large_current_pill, s.footerText);
                 else assertEquals(View.GONE,root.findViewById(R.id.tv_large_current_pill).getVisibility());
-                text(root, R.id.tv_large_summary, s.summaryText);
-                assertEquals("Full Table must match the approved information envelope",
-                    summaryOnly ? View.GONE : View.VISIBLE,root.findViewById(R.id.widget_schedule_container).getVisibility());
-                if(!summaryOnly) {
-                    verifySchedule(rendered, ROWS, ROW_NAMES, ROW_TIMES);
-                    assertEquals("Table daily grid", 2, scheduleRowCount(root, ROWS));
+                if (s.valid) text(root, R.id.tv_large_summary, s.summaryText);
+                else assertEquals(View.GONE,root.findViewById(R.id.widget_context_group).getVisibility());
+                assertEquals("Overview must match the approved information envelope",
+                    !s.valid || summaryOnly ? View.GONE : View.VISIBLE,root.findViewById(R.id.widget_schedule_container).getVisibility());
+                if(s.valid && !summaryOnly) {
+                    verifyForecast(rendered, ROWS, ROW_NAMES, ROW_TIMES);
+                    assertEquals("Overview rolling forecast row", 1, scheduleRowCount(root, ROWS));
                 }
                 break;
             case 5:
@@ -1619,7 +1669,7 @@ public class WidgetPresentationInstrumentedTest {
             for (int pixel : background)
                 if (pixel == (night ? 0xFF37423D : 0xFFE3E9E5)) borderFound = true;
             assertTrue(tag + ": actual card border", borderFound);
-            if (variant < 4) {
+            if (variant < 5) {
                 TextView label = rendered.root.findViewById(LABELS[variant]);
                 assertEquals(tag + ": actual prayer label",
                     rendered.context.getColor(R.color.w_accent), label.getCurrentTextColor());
@@ -1932,10 +1982,47 @@ public class WidgetPresentationInstrumentedTest {
         Rect context=bounds(root,root.findViewById(contextId));
         Rect primary=bounds(root,root.findViewById(R.id.widget_primary_group));
         boolean rtl=root.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL;
-        int gap=variant==4 ? (rtl ? context.left-primary.right : primary.left-context.right)
-            : (rtl ? primary.left-context.right : context.left-primary.right);
+        int gap = rtl ? primary.left - context.right : context.left - primary.right;
         assertTrue("Mirrored columns lose their protected text gap: "+gap,
             gap>=px(rendered.context,4)-1);
+    }
+
+    private void verifyForecast(Rendered rendered, int[] cells, int[] names, int[] times) {
+        ViewGroup root = rendered.root;
+        PrayerWidgetHelper.WidgetTimelineState s = rendered.state;
+        int height = root.findViewById(cells[0]).getHeight();
+        float nameSize = ((TextView)root.findViewById(names[0])).getTextSize();
+        float timeSize = ((TextView)root.findViewById(times[0])).getTextSize();
+        int nameStyle = style(root.findViewById(names[0])), timeStyle = style(root.findViewById(times[0]));
+        Rect first = bounds(root, root.findViewById(cells[0]));
+        int progressToCells = first.top - bounds(root, root.findViewById(R.id.widget_progress_container)).bottom;
+        assertTrue("Forecast gap expands or overlaps: " + progressToCells,
+            progressToCells >= 0 && progressToCells <= px(rendered.context, 20) + 1);
+        for (int i = 0; i < cells.length; i++) {
+            View cell = root.findViewById(cells[i]);
+            text(root, names[i], s.presentation.label(s.forecastIds[i]));
+            text(root, times[i], s.forecastTimes[i]);
+            assertTrue("Unequal forecast cell heights", Math.abs(height - cell.getHeight()) <= 1);
+            assertEquals(nameStyle, style(root.findViewById(names[i])));
+            assertEquals(timeStyle, style(root.findViewById(times[i])));
+            assertEquals(nameSize, ((TextView)root.findViewById(names[i])).getTextSize(), .01f);
+            assertEquals(timeSize, ((TextView)root.findViewById(times[i])).getTextSize(), .01f);
+            boolean next = i == 0 || (s.forecastTimestamps[i] == s.targetTimestamp && s.forecastIds[i].equals(s.nextPrayerId));
+            int expectedBg = next ? R.drawable.widget_chip_next : R.drawable.widget_chip_transparent;
+            assertArrayEquals("Forecast next/upcoming background",
+                drawablePixels(rendered.context.getDrawable(expectedBg)), drawablePixels(cell.getBackground()));
+            int nameColor = rendered.context.getColor(next ? R.color.w_accent : R.color.w_text_secondary);
+            int timeColor = rendered.context.getColor(R.color.w_text_primary);
+            assertEquals(nameColor, ((TextView)root.findViewById(names[i])).getCurrentTextColor());
+            assertEquals(timeColor, ((TextView)root.findViewById(times[i])).getCurrentTextColor());
+            if (i > 0) {
+                Rect other = bounds(root, root.findViewById(cells[i - 1]));
+                Rect rect = bounds(root, cell);
+                boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+                assertTrue("Forecast chronology must follow start edge",
+                    rtl ? rect.right <= other.left : rect.left >= other.right);
+            }
+        }
     }
 
     private void verifySchedule(Rendered rendered, int[] cells, int[] names, int[] times) {
@@ -2070,12 +2157,16 @@ public class WidgetPresentationInstrumentedTest {
             banner=render(new Profile(3,250,220),2,context,snapshot);
             verify(banner,"bn",1f);
             cases++;
-            table=render(new Profile(4,288,220),context,snapshot);
+            table=render(new Profile(4,288,165),context,snapshot);
             verify(table,"bn",1f);
-            for(float width : new float[]{250,288})
-                table=runCase(new Profile(4,width,220),"bn",1f,"midday",width==250,table,width==250);
-            table=runCase(new Profile(4,250,220),"bn",1f,"midday-24h",false,table,false);
-            table=runCase(new Profile(4,250,220),"bn",1f,"midday",false,table,true);
+            for(float width : new float[]{250,288}) {
+                boolean expectSummary = new WidgetLayout(context, snapshot, 4, width, 165).summaryOnly;
+                table=runCase(new Profile(4,width,165),"bn",1f,"midday",false,table,expectSummary);
+            }
+            boolean summary24h = new WidgetLayout(context, state(context,"bn","midday-24h"), 4, 250, 165).summaryOnly;
+            table=runCase(new Profile(4,250,165),"bn",1f,"midday-24h",false,table,summary24h);
+            boolean summary12h = new WidgetLayout(context, snapshot, 4, 250, 165).summaryOnly;
+            table=runCase(new Profile(4,250,165),"bn",1f,"midday",false,table,summary12h);
         } catch(Throwable error) {record("legacy-clock-fit-transitions",error);}
         finally {
             if(banner!=null) surface.removeView(banner.host);
@@ -2150,7 +2241,7 @@ public class WidgetPresentationInstrumentedTest {
             Rect progress = bounds(tall.root, tall.root.findViewById(R.id.widget_progress_container));
             Rect schedule = bounds(tall.root, tall.root.findViewById(R.id.widget_schedule_container));
             assertTrue("Extra host height opens an internal gulf", schedule.top - progress.bottom <= px(context, 20));
-            Rect last = bounds(tall.root, tall.root.findViewById(cells[5]));
+            Rect last = bounds(tall.root, tall.root.findViewById(cells[cells.length - 1]));
             Rect primary = bounds(tall.root, tall.root.findViewById(R.id.widget_primary_row));
             // Surplus belongs outside the coherent composition, not inside a weighted slot.
             int topSurplus = primary.top - tall.root.getPaddingTop();

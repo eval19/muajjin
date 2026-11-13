@@ -20,7 +20,7 @@
             android:layout_weight="1"
             android:maxLines="1"
             android:ellipsize="end"
-            android:text="RIYADH GOVERNORATE" />
+            android:text="Riyadh" />
 
         <TextView
             android:id="@+id/tv_large_hijri"
@@ -32,41 +32,17 @@
             android:textAlignment="viewEnd"
             android:maxLines="1"
             android:ellipsize="end"
-            android:text="19 Rabi al-Thani 1448" />
+            android:text="3 Jumada al-Akhirah 1448" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/widget_primary_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/w_gap_footer"
+        android:layout_marginTop="@dimen/w_gap_label"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:baselineAligned="false">
-
-        <LinearLayout
-            android:id="@+id/widget_context_group"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:paddingEnd="@dimen/w_gap_columns"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tv_large_current_pill"
-                style="@style/WidgetText.Context"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Current: Dhuhr · 11:43 AM" />
-
-            <TextView
-                android:id="@+id/tv_large_summary"
-                style="@style/WidgetText.Summary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/w_gap_label"
-                android:text="Asr · 03:06 PM" />
-        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/widget_primary_group"
@@ -74,12 +50,59 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <TextView
+                android:id="@+id/tv_large_label"
+                style="@style/WidgetText.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="Maghrib in" />
+
+            <TextView
+                android:id="@+id/tv_large_label_warm"
+                style="@style/WidgetText.LabelWarm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="Maghrib in"
+                android:visibility="gone" />
+
             <Chronometer
                 android:id="@+id/tv_large_countdown"
                 style="@style/WidgetText.CountdownTable"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:singleLine="true" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_context_group"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="@dimen/w_gap_columns"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/tv_large_current_pill"
+                style="@style/WidgetText.Context"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textAlignment="viewEnd"
+                android:text="Now: Asr" />
+
+            <TextView
+                android:id="@+id/tv_large_summary"
+                style="@style/WidgetText.Summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/w_gap_label"
+                android:gravity="end"
+                android:textAlignment="viewEnd"
+                android:text="Maghrib · 5:06 PM" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

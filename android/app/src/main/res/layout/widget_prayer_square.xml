@@ -11,7 +11,9 @@
     <LinearLayout
         android:id="@+id/widget_primary_group"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
         android:orientation="vertical">
         <LinearLayout
             android:id="@+id/widget_square_header"
@@ -51,14 +53,24 @@
                 android:textAlignment="viewEnd"
                 android:gravity="end" />
         </LinearLayout>
+        <FrameLayout
+            android:id="@+id/widget_square_top_spacer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
         <Chronometer
             android:id="@+id/tv_square_countdown"
             style="@style/WidgetText.Countdown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/w_gap_label" />
+            android:paddingTop="@dimen/w_gap_label" />
     </LinearLayout>
     <include layout="@layout/widget_progress" />
+    <FrameLayout
+        android:id="@+id/widget_square_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
     <LinearLayout
         android:id="@+id/widget_square_footer"
         android:layout_width="match_parent"

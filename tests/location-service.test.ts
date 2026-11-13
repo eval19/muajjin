@@ -64,3 +64,17 @@ test('denied GPS and unavailable IP providers report the permission error, not a
   await expect(detectLocation()).rejects.toThrow('errors.locationPermissionDenied');
   expect(stopped).toEqual([43]);
 });
+
+test('gps acquisition uses bounded 10s timeout and 30s fresh cache window', async () => {
+  let capturedOptions: PositionOptions | undefined;
+  const stopped = installGps((success, _failure, options) => {
+    capturedOptions = options;
+    success(zeroPosition);
+    return 44;
+  });
+  fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async () => { throw new TypeError('Offline'); });
+  const result = await detectLocation();
+  expect(result.method).toBe('gps');
+  expect(capturedOptions).toEqual({ enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  expect(stopped).toEqual([44]);
+});

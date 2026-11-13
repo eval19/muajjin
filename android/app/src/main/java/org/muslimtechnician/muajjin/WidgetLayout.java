@@ -25,6 +25,7 @@ final class WidgetLayout {
     private static final float SIX_COLUMN_INSET = 1f;
     boolean compact, tight, stacked, metadataStacked, wrapClocks, summaryOnly;
     private boolean largeText;
+    private final boolean nonAsciiDigits;
     private float textScale = 1f;
     int columns = 3;
     float minimumHeight;
@@ -60,6 +61,7 @@ final class WidgetLayout {
         } else {
             countdownSample=countdownHourSample=countdownMinuteSample="—";
         }
+        nonAsciiDigits = state.valid && countdownSample.length() > 0 && countdownSample.charAt(0) > '9';
         chooseScale();
         if (variant == 3 && !stacked && columns == 3 && height > 0 && minimumHeight > height
                 && canWrapSixClocks()) {
@@ -84,6 +86,10 @@ final class WidgetLayout {
         compact = variant == 5 || variant == 6;
         tight = compact;
         chooseComposition();
+        if (!tight && height > 0 && minimumHeight > height) {
+            tight = true;
+            chooseComposition();
+        }
         if (!compact && ((height > 0 && minimumHeight > height) || !fitsWidth())) {
             compact = true;
             tight = true;
@@ -128,17 +134,35 @@ final class WidgetLayout {
     float labelSize() { return state.valid ? textSize(R.dimen.w_label_size, R.dimen.w_label_size_compact) : contextSize(); }
     float contextSize() { return textSize(R.dimen.w_context_size, R.dimen.w_context_size_compact); }
     float nameSize() { return textSize(R.dimen.w_schedule_name_size, R.dimen.w_schedule_name_size_compact); }
-    float timeSize() { return textSize(R.dimen.w_schedule_time_size, R.dimen.w_schedule_time_size_compact); }
+    float timeSize() {
+        float opticalScale = nonAsciiDigits && variant <= 4 ? 1.08f : 1f;
+        return textSize(R.dimen.w_schedule_time_size, R.dimen.w_schedule_time_size_compact) * opticalScale;
+    }
     float countdownSize() {
+        float opticalScale = nonAsciiDigits && variant <= 4 ? 1.12f : 1f;
         if (variant == 0 || variant == 2 || variant == 5)
-            return textSize(R.dimen.w_countdown_small_size, R.dimen.w_countdown_small_size_compact);
+            return textSize(R.dimen.w_countdown_small_size, R.dimen.w_countdown_small_size_compact) * opticalScale;
         if (variant == 4 || variant == 6)
-            return textSize(R.dimen.w_countdown_table_size, R.dimen.w_countdown_table_size_compact);
-        return textSize(R.dimen.w_countdown_size, R.dimen.w_countdown_size_compact);
+            return textSize(R.dimen.w_countdown_table_size, R.dimen.w_countdown_table_size_compact) * opticalScale;
+        return textSize(R.dimen.w_countdown_size, R.dimen.w_countdown_size_compact) * opticalScale;
     }
 
+    private boolean isTallCell() {
+        if (tight || compact || height <= 0) return false;
+        if (variant == 0 || variant == 2) return height >= 106 && height <= 145;
+        if (variant == 3) return height >= 275 && height <= 320;
+        if (variant == 4) return height >= 205 && height <= 260;
+        return false;
+    }
+    private boolean isMediumTightWide() {
+        return tight && variant == 3 && height >= 210;
+    }
     float horizontalInset() { return variant == 0 || tight ? 12 : 16; }
-    float verticalInset() { return variant == 0 ? (tight ? 6 : 8) : tight ? 6 : 16; }
+    float verticalInset() {
+        if (variant == 0) return tight ? (largeText ? 5 : 6) : (isTallCell() ? 12 : 8);
+        if (isMediumTightWide()) return 10;
+        return tight ? 6 : 16;
+    }
     float cellHorizontalInset() {
         if (columns == 6) return sixColumnInset();
         return tight ? compactCellInset : 8;
@@ -146,13 +170,25 @@ final class WidgetLayout {
     private float sixColumnInset() {
         return Math.min(tight ? compactCellInset : 8f, SIX_COLUMN_INSET);
     }
-    float cellVerticalInset() { return tight ? (variant == 3 || variant == 4 ? 3 : 6) : 8; }
+    float cellVerticalInset() { return tight ? (isMediumTightWide() ? 7 : (variant == 3 || variant == 4 ? 3 : 6)) : (isTallCell() ? 10 : 8); }
     float cellLabelGap() { return tight ? 2 : 4; }
-    float progressGap() { return variant == 0 ? (tight ? 3 : 4) : tight ? 4 : variant == 2 ? 8 : 12; }
+    float progressGap() {
+        if (variant == 0) return tight ? 3 : (isTallCell() ? 10 : 4);
+        if (isMediumTightWide()) return 8;
+        if (tight) return 4;
+        if (variant == 2) return isTallCell() ? 12 : 8;
+        return isTallCell() ? 14 : 12;
+    }
     float footerGap() { return tight ? 4 : 8; }
-    float scheduleGap() { return tight ? (variant == 3 || variant == 4 ? 4 : 8) : 16; }
+    float scheduleGap() {
+        if (isMediumTightWide()) return 10;
+        return tight ? (variant == 3 || variant == 4 ? 4 : 8) : (isTallCell() ? 18 : 16);
+    }
     float columnGap() { return dimension(R.dimen.w_gap_cells); }
-    float rowGap() { return tight ? (variant == 3 || variant == 4 ? 4 : 6) : 8; }
+    float rowGap() {
+        if (isMediumTightWide()) return 6;
+        return tight ? (variant == 3 || variant == 4 ? 4 : 6) : (isTallCell() ? 10 : 8);
+    }
     float contentWidth() { return width > 0 ? Math.max(0, width - 2 * horizontalInset()) : 0; }
 
     private void font(float size, boolean bold) {
@@ -244,11 +280,22 @@ final class WidgetLayout {
             nameLineHeight = lineHeight(nameSize(), false);
             clockLineHeight = lineHeight(timeSize(), true);
             float widest = 0;
-            for (String id : PRAYERS) {
-                nameLineHeight = Math.max(nameLineHeight, textHeight(state.presentation.label(id), nameSize(), false));
-                clockLineHeight = Math.max(clockLineHeight, textHeight(state.chipClock(id), timeSize(), true));
-                widest = Math.max(widest, textWidth(state.presentation.label(id), nameSize(), false));
-                widest = Math.max(widest, textWidth(state.chipClock(id), timeSize(), true));
+            if (variant == 4 && state.valid) {
+                for (int i = 0; i < state.forecastIds.length; i++) {
+                    String id = state.forecastIds[i];
+                    String clock = state.forecastTimes[i];
+                    nameLineHeight = Math.max(nameLineHeight, textHeight(state.presentation.label(id), nameSize(), false));
+                    clockLineHeight = Math.max(clockLineHeight, textHeight(clock, timeSize(), true));
+                    widest = Math.max(widest, textWidth(state.presentation.label(id), nameSize(), false));
+                    widest = Math.max(widest, textWidth(clock, timeSize(), true));
+                }
+            } else {
+                for (String id : PRAYERS) {
+                    nameLineHeight = Math.max(nameLineHeight, textHeight(state.presentation.label(id), nameSize(), false));
+                    clockLineHeight = Math.max(clockLineHeight, textHeight(state.chipClock(id), timeSize(), true));
+                    widest = Math.max(widest, textWidth(state.presentation.label(id), nameSize(), false));
+                    widest = Math.max(widest, textWidth(state.chipClock(id), timeSize(), true));
+                }
             }
             // Weighted rows allocate whole pixels; do not round a fractional text width down.
             scheduleTextPixels = (int)Math.ceil(widest * context.getResources().getDisplayMetrics().density) + 1;
@@ -268,12 +315,15 @@ final class WidgetLayout {
             } else if (variant == 4) {
                 float metadata = textWidth(state.presentation.locationName, contextSize(), true)
                     + textWidth(state.hijriText, contextSize(), false) + 8;
-                stacked = contextWidth() + countdownWidth() + 8 > available;
+                stacked = !state.valid || heroWidth() + contextWidth() + 8 > available;
                 metadataStacked = stacked || metadata > available;
             }
         }
+        columns = variant == 4 ? 4
+            : variant == 3 && !stacked && state.valid && width > 0
+                && (width >= 440 || (height > 0 && height < 140)) && sixColumnsFit() ? 6 : 3;
         if ((variant == 3 || variant == 4) && tight && width > 0) {
-            int fittingInset = (cellWidthPixels(3) - scheduleTextPixels) / 2;
+            int fittingInset = (cellWidthPixels(variant == 4 ? 4 : 3) - scheduleTextPixels) / 2;
             compactCellInset = Math.max(px(1), Math.min(px(4), fittingInset))
                 / context.getResources().getDisplayMetrics().density;
         }
@@ -283,7 +333,10 @@ final class WidgetLayout {
         float contextAllocation = width <= 0 ? -1 : Math.max(0, stacked ? available : available - heroWidth() - 8);
         contextBlockHeight = textHeight(state.footerText, contextSize(), false, contextAllocation) + 4
             + textHeight(state.contextLine2, contextSize(), false, contextAllocation);
-        columns = variant == 3 && !stacked && state.valid && width > 0 && sixColumnsFit() ? 6 : 3;
+        if (variant == 4 && state.valid && !summaryOnly && width > 0
+                && cellWidthPixels(4) < requiredCellWidthPixels() && canWrapFourClocks()) {
+            wrapClocks = true;
+        }
         minimumHeight = requiredHeight();
     }
 
@@ -303,12 +356,35 @@ final class WidgetLayout {
         if (width <= 0) return true;
         if (state.valid && countdownWidth() > contentWidth()) return false;
         if (summaryOnly || (variant != 3 && variant != 4)) return true;
+        if (variant == 4) {
+            return wrapClocks ? canWrapFourClocks()
+                : cellWidthPixels(4) >= requiredCellWidthPixels();
+        }
         return wrapClocks ? canWrapSixClocks()
             : cellWidthPixels(columns) >= requiredCellWidthPixels();
     }
 
     boolean fitsWithinBounds() {
         return (height <= 0 || minimumHeight <= height) && fitsWidth();
+    }
+
+    private boolean canWrapFourClocks() {
+        if (width <= 0 || !state.valid) return false;
+        int cellWidth = cellWidthPixels(4) - 2 * px(cellHorizontalInset()) - 1;
+        if (cellWidth <= 0) return false;
+        float density = context.getResources().getDisplayMetrics().density;
+        for (int i = 0; i < state.forecastIds.length; i++) {
+            String id = state.forecastIds[i];
+            if (Math.ceil(textWidth(state.presentation.label(id), nameSize(), false) * density) > cellWidth) return false;
+            String clock = state.forecastTimes[i];
+            font(timeSize(), true);
+            StaticLayout lines = StaticLayout.Builder.obtain(clock, 0, clock.length(), paint, cellWidth)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).build();
+            if (lines.getLineCount() > 2) return false;
+            for (int line = 0; line < lines.getLineCount(); line++)
+                if (lines.getLineWidth(line) > cellWidth) return false;
+        }
+        return true;
     }
 
     private boolean canWrapSixClocks() {
@@ -332,7 +408,8 @@ final class WidgetLayout {
     float cellHeight() {
         float text = nameLineHeight + cellLabelGap()
             + clockLineHeight * (wrapClocks ? 2 : 1) + 2 * cellVerticalInset();
-        return Math.max(tight ? (variant == 3 || variant == 4 ? 36 : 48) : 64, text);
+        float floor = isMediumTightWide() ? 52 : tight ? (variant == 3 || variant == 4 ? 36 : 48) : (isTallCell() ? 70 : 64);
+        return Math.max(floor, text);
     }
 
     private float tableMetadataHeight() {
@@ -360,8 +437,8 @@ final class WidgetLayout {
             else if (variant == 1)
                 recovery = label;
             else if (variant == 4)
-                recovery = tableMetadataHeight() + 8 + tableSummaryHeight();
-            if (variant == 3 || (variant == 4 && !summaryOnly))
+                recovery = tableMetadataHeight() + 4 + label;
+            if (variant == 3)
                 recovery += scheduleGap() + 2 * cellHeight() + rowGap();
             return recovery + 2 * verticalInset();
         }
@@ -389,10 +466,10 @@ final class WidgetLayout {
                 break;
             case 4:
                 float summary = tableSummaryHeight();
-                body = tableMetadataHeight() + 8
-                    + (stacked ? summary + 4 + digits : Math.max(summary, digits))
+                body = tableMetadataHeight() + (tight ? 4 : 8)
+                    + (stacked ? primary + 4 + summary : Math.max(primary, summary))
                     + progressGap() + 4
-                    + (summaryOnly ? 0 : scheduleGap() + 2 * cellHeight() + rowGap());
+                    + (summaryOnly ? 0 : scheduleGap() + cellHeight());
                 break;
             case 5:
                 body = primary + 4 + contextLine;

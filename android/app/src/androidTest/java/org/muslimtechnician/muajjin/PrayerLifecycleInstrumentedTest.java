@@ -325,7 +325,7 @@ public class PrayerLifecycleInstrumentedTest {
                     assertEquals("Host must allocate its advertised content height",Math.round(220*density),content.getHeight());
                     assertEquals("Host must allocate its advertised content width",Math.round((i==4?250:360)*density),content.getWidth());
                 }
-                int[] labels={R.id.tv_name_fajr,R.id.tv_name_sunrise,R.id.tv_name_dhuhr,R.id.tv_name_asr,R.id.tv_name_maghrib,R.id.tv_name_isha};
+                int[] labels={R.id.tv_name_fajr,R.id.tv_name_sunrise,R.id.tv_name_dhuhr,R.id.tv_name_asr};
                 for(int id:labels) {
                     TextView text=views[4].findViewById(id);
                     View row=(View)text.getParent();
@@ -380,7 +380,7 @@ public class PrayerLifecycleInstrumentedTest {
                     if(Math.abs(item.getHeight()-firstHeight)>1)
                         defects.append("Wide prayer cells have unequal heights: ").append(firstHeight).append("/").append(item.getHeight()).append("; ");
                 }
-                int[] tableCells={R.id.row_fajr,R.id.row_sunrise,R.id.row_dhuhr,R.id.row_asr,R.id.row_maghrib,R.id.row_isha};
+                int[] tableCells={R.id.row_fajr,R.id.row_sunrise,R.id.row_dhuhr,R.id.row_asr};
                 for(int cell:tableCells) {
                     View item=views[4].findViewById(cell);
                     if(item.getHeight()>80*density*context.getResources().getConfiguration().fontScale)

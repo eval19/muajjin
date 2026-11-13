@@ -84,7 +84,7 @@
         <receiver
             android:name=".PrayerWidgetLargeProvider"
             android:exported="true"
-            android:label="Prayer Times (Full Table)">
+            android:label="Prayer Times (4x2 Overview)">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

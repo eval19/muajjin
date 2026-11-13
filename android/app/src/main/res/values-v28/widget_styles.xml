@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="WidgetText.Label" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textColor">@color/w_accent</item>
+        <item name="android:textSize">@dimen/w_label_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+    <style name="WidgetText.Countdown" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_countdown_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textDirection">ltr</item>
+    </style>
+    <style name="WidgetText.CountdownSmall" parent="WidgetText.Countdown">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textSize">@dimen/w_countdown_small_size</item>
+    </style>
+    <style name="WidgetText.CountdownTable" parent="WidgetText.Countdown">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textSize">@dimen/w_countdown_table_size</item>
+    </style>
+    <style name="WidgetText.ScheduleTime" parent="WidgetText">
+        <item name="android:fontFamily">@font/ibm_plex_sans_arabic_bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textColor">@color/w_text_primary</item>
+        <item name="android:textSize">@dimen/w_schedule_time_size</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:paddingTop">@dimen/w_gap_label</item>
+        <item name="android:textDirection">ltr</item>
+        <item name="android:textAlignment">viewStart</item>
+    </style>
+</resources>

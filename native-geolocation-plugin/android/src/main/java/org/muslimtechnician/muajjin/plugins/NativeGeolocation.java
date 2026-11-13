@@ -6,6 +6,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.hardware.GeomagneticField;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -71,8 +72,12 @@ public class NativeGeolocation extends Plugin {
         });
     }
 
+    private boolean hasFineLocationPermission() {
+        return getContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private boolean hasLocationPermission() {
-        return getContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        return hasFineLocationPermission() ||
             getContext().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -96,39 +101,129 @@ public class NativeGeolocation extends Plugin {
         });
     }
 
+    static final long GRACE_WINDOW_MS = 2500L;
+    static final float IMMEDIATE_FINE_ACCURACY_M = 50f;
+    static final float GRACE_FINE_ACCURACY_M = 250f;
+    static final float COARSE_ACCURACY_M = 3000f;
+    static final float FRESH_CACHE_FINE_ACCURACY_M = 100f;
+    static final long STALE_THRESHOLD_MS = 120_000L;
+
+    public static boolean isFreshCacheHit(boolean hasAccuracy, float accuracy, long locationTimeMs,
+                                          long nowMs, long maximumAgeMs, boolean hasFine, boolean highAccuracy) {
+        if (maximumAgeMs <= 0L || !hasAccuracy) return false;
+        long age = nowMs - locationTimeMs;
+        if (age < 0L || age > maximumAgeMs) return false;
+        float maxAccuracy = (hasFine && highAccuracy) ? FRESH_CACHE_FINE_ACCURACY_M : COARSE_ACCURACY_M;
+        return accuracy <= maxAccuracy;
+    }
+
+    static boolean isFreshCacheHit(Location location, long nowMs, long maximumAgeMs, boolean hasFine, boolean highAccuracy) {
+        return location != null && Double.isFinite(location.getLatitude()) && Double.isFinite(location.getLongitude())
+            && isFreshCacheHit(location.hasAccuracy(), location.getAccuracy(), location.getTime(),
+                nowMs, maximumAgeMs, hasFine, highAccuracy);
+    }
+
+    public static boolean shouldPreferCandidate(double candidateLat, double candidateLon,
+                                                boolean candidateHasAccuracy, float candidateAccuracy, long candidateTimeMs,
+                                                boolean bestHasAccuracy, float bestAccuracy, long bestTimeMs) {
+        if (!Double.isFinite(candidateLat) || !Double.isFinite(candidateLon)) return false;
+        long timeDelta = candidateTimeMs - bestTimeMs;
+        if (timeDelta > STALE_THRESHOLD_MS && (!candidateHasAccuracy || candidateAccuracy <= GRACE_FINE_ACCURACY_M)) {
+            return true;
+        }
+        if (timeDelta < -STALE_THRESHOLD_MS && (!bestHasAccuracy || bestAccuracy <= GRACE_FINE_ACCURACY_M)) {
+            return false;
+        }
+        if (candidateHasAccuracy && !bestHasAccuracy) return true;
+        if (!candidateHasAccuracy && bestHasAccuracy) return false;
+        if (candidateHasAccuracy && bestHasAccuracy) {
+            int cmp = Float.compare(candidateAccuracy, bestAccuracy);
+            if (cmp < 0) return true;
+            if (cmp > 0) return false;
+        }
+        return candidateTimeMs >= bestTimeMs;
+    }
+
+    static Location selectBetterLocation(Location currentBest, Location candidate) {
+        if (candidate == null) return currentBest;
+        if (!Double.isFinite(candidate.getLatitude()) || !Double.isFinite(candidate.getLongitude())) return currentBest;
+        if (currentBest == null) return candidate;
+        return shouldPreferCandidate(
+            candidate.getLatitude(), candidate.getLongitude(),
+            candidate.hasAccuracy(), candidate.getAccuracy(), candidate.getTime(),
+            currentBest.hasAccuracy(), currentBest.getAccuracy(), currentBest.getTime())
+            ? candidate : currentBest;
+    }
+
+    public static boolean isImmediateFix(boolean hasAccuracy, float accuracy, boolean hasFine, boolean highAccuracy) {
+        if (!hasAccuracy) return false;
+        float threshold = (hasFine && highAccuracy) ? IMMEDIATE_FINE_ACCURACY_M : COARSE_ACCURACY_M;
+        return accuracy <= threshold;
+    }
+
+    static boolean isImmediateFix(Location location, boolean hasFine, boolean highAccuracy) {
+        return location != null && isImmediateFix(location.hasAccuracy(), location.getAccuracy(), hasFine, highAccuracy);
+    }
+
+    public static boolean isGraceEligibleFix(boolean hasAccuracy, float accuracy, boolean hasFine, boolean highAccuracy) {
+        return hasFine && highAccuracy && hasAccuracy && accuracy <= GRACE_FINE_ACCURACY_M;
+    }
+
+    static boolean isGraceEligibleFix(Location location, boolean hasFine, boolean highAccuracy) {
+        return location != null && isGraceEligibleFix(location.hasAccuracy(), location.getAccuracy(), hasFine, highAccuracy);
+    }
+
     private final class PositionRequest implements LocationListener {
         final String id;
         final PluginCall call;
         final boolean highAccuracy;
+        final boolean hasFine;
         final Runnable deadline;
+        final Runnable graceFinish;
         Location best;
+        boolean graceScheduled;
         PositionRequest(String id, PluginCall call) {
             this.id = id; this.call = call;
-            highAccuracy = call.getBoolean("enableHighAccuracy", true);
-            deadline = () -> finish(best, "Location request timed out", "LOCATION_TIMEOUT");
+            this.highAccuracy = call.getBoolean("enableHighAccuracy", true);
+            this.hasFine = hasFineLocationPermission();
+            this.deadline = () -> finish(best, "Location request timed out", "LOCATION_TIMEOUT");
+            this.graceFinish = () -> {
+                if (best != null) finish(best, null, null);
+            };
         }
         void start() {
             try {
                 if (locationManager == null) {
                     finish(null, "Location manager unavailable", "POSITION_UNAVAILABLE"); return;
                 }
-                boolean gps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-                boolean network = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-                if (!gps && !network) {
+                boolean gps = hasFine && isProviderUsable(LocationManager.GPS_PROVIDER);
+                boolean network = isProviderUsable(LocationManager.NETWORK_PROVIDER);
+                boolean fused = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isProviderUsable(LocationManager.FUSED_PROVIDER);
+                if (!gps && !network && !fused) {
                     finish(null, "Location services are disabled", "POSITION_UNAVAILABLE"); return;
                 }
                 long maximumAge = call.getLong("maximumAge", 0L);
-                if (maximumAge > 0) {
+                if (maximumAge > 0L) {
                     long now = System.currentTimeMillis();
-                    Location cachedGps = gps ? locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER) : null;
-                    Location cachedNetwork = network ? locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) : null;
-                    if (cachedGps != null && now >= cachedGps.getTime() && now - cachedGps.getTime() <= maximumAge) best = cachedGps;
-                    if (cachedNetwork != null && now >= cachedNetwork.getTime() && now - cachedNetwork.getTime() <= maximumAge &&
-                        (best == null || cachedNetwork.getTime() > best.getTime())) best = cachedNetwork;
-                    if (best != null) { finish(best, null, null); return; }
+                    Location cached = null;
+                    String[] cacheProviders = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        ? new String[]{LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER}
+                        : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER};
+                    for (String provider : cacheProviders) {
+                        Location candidate = safeLastKnown(provider);
+                        if (isFreshCacheHit(candidate, now, maximumAge, hasFine, highAccuracy)) {
+                            cached = selectBetterLocation(cached, candidate);
+                        }
+                    }
+                    if (cached != null) { finish(cached, null, null); return; }
                 }
-                if (gps && (highAccuracy || !network)) locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this, Looper.getMainLooper());
-                if (network) locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this, Looper.getMainLooper());
+                int registered = 0;
+                if (fused) registered += requestProvider(LocationManager.FUSED_PROVIDER);
+                if (gps && (highAccuracy || (!network && !fused))) registered += requestProvider(LocationManager.GPS_PROVIDER);
+                if (network) registered += requestProvider(LocationManager.NETWORK_PROVIDER);
+                if (registered == 0) {
+                    finish(null, "Location provider unavailable", "POSITION_UNAVAILABLE"); return;
+                }
                 mainHandler.postDelayed(deadline, Math.max(1L, Math.min(30000L, call.getLong("timeout", 15000L))));
             } catch (SecurityException error) {
                 finish(null, "Location permission denied", "PERMISSION_DENIED");
@@ -136,20 +231,40 @@ public class NativeGeolocation extends Plugin {
                 finish(null, "Location provider unavailable", "POSITION_UNAVAILABLE");
             }
         }
+        private boolean isProviderUsable(String provider) {
+            try { return locationManager.isProviderEnabled(provider); }
+            catch (IllegalArgumentException | SecurityException ignored) { return false; }
+        }
+        private Location safeLastKnown(String provider) {
+            try { return locationManager.getLastKnownLocation(provider); }
+            catch (IllegalArgumentException | SecurityException ignored) { return null; }
+        }
+        private int requestProvider(String provider) {
+            try {
+                locationManager.requestLocationUpdates(provider, 0, 0, this, Looper.getMainLooper());
+                return 1;
+            } catch (IllegalArgumentException | SecurityException ignored) {
+                return 0;
+            }
+        }
         @Override public void onLocationChanged(Location location) {
             if (positionRequests.get(id) != this) return;
-            if (best == null || location.getAccuracy() < best.getAccuracy() ||
-                (location.getAccuracy() == best.getAccuracy() && location.getTime() > best.getTime())) best = location;
-            float desiredAccuracy = highAccuracy ? 25f : 100f;
-            if (location.hasAccuracy() && (location.getAccuracy() <= desiredAccuracy ||
-                (highAccuracy && LocationManager.GPS_PROVIDER.equals(location.getProvider()) && location.getAccuracy() <= 50f)))
+            best = selectBetterLocation(best, location);
+            if (isImmediateFix(best, hasFine, highAccuracy)) {
                 finish(best, null, null);
+                return;
+            }
+            if (!graceScheduled && isGraceEligibleFix(best, hasFine, highAccuracy)) {
+                graceScheduled = true;
+                mainHandler.postDelayed(graceFinish, GRACE_WINDOW_MS);
+            }
         }
         @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
         @Override public void onProviderEnabled(String provider) {}
         @Override public void onProviderDisabled(String provider) {}
         void cleanup() {
             mainHandler.removeCallbacks(deadline);
+            mainHandler.removeCallbacks(graceFinish);
             if (locationManager != null) {
                 try { locationManager.removeUpdates(this); }
                 catch (SecurityException error) { Log.w(TAG, "Permission revoked during location cleanup"); }
@@ -197,6 +312,21 @@ public class NativeGeolocation extends Plugin {
         super.handleOnResume();
     }
 
+    private Location getBestLastKnownLocation() {
+        if (locationManager == null) return null;
+        Location best = null;
+        String[] providers = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            ? new String[]{LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER}
+            : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER};
+        for (String provider : providers) {
+            try {
+                Location candidate = locationManager.getLastKnownLocation(provider);
+                best = selectBetterLocation(best, candidate);
+            } catch (IllegalArgumentException | SecurityException ignored) {}
+        }
+        return best;
+    }
+
     private JSObject createPositionResult(Location location) {
         JSObject coords = new JSObject();
         coords.put("latitude", location.getLatitude());
@@ -217,28 +347,6 @@ public class NativeGeolocation extends Plugin {
         result.put("timestamp", location.getTime());
 
         return result;
-    }
-
-    private Location getBestLastKnownLocation() {
-        Location bestLocation = null;
-
-        try {
-            Location gpsLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            Location networkLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-            if (gpsLocation != null) {
-                bestLocation = gpsLocation;
-            }
-
-            if (networkLocation != null &&
-                (bestLocation == null || networkLocation.getTime() > bestLocation.getTime())) {
-                bestLocation = networkLocation;
-            }
-        } catch (SecurityException ignored) {
-            return null;
-        }
-
-        return bestLocation;
     }
 
 

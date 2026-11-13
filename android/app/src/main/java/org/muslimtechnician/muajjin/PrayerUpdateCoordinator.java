@@ -51,7 +51,8 @@ public final class PrayerUpdateCoordinator {
             NativePresentation presentation=NativeScheduleStore.loadPresentation(prefs);
             PrayerTimeline timeline=PrayerTimeline.at(schedule,now,zone);
             long[] localEvents=timeline==null?null:schedule.localEvents(now,zone,timeline.day);
-            PrayerWidgetHelper.WidgetTimelineState snapshot=new PrayerWidgetHelper.WidgetTimelineState(context,presentation,timeline,now,localEvents);
+            PrayerSchedule.Upcoming upcoming=timeline==null?null:schedule.upcomingEvents(now);
+            PrayerWidgetHelper.WidgetTimelineState snapshot=new PrayerWidgetHelper.WidgetTimelineState(context,presentation,timeline,now,localEvents,upcoming);
             if(widgets) PrayerWidgetHelper.updateAllWidgets(context,snapshot,ids);
             if(notification) PrayerNotificationHelper.updateLiveUpdateNotification(context,snapshot,force);
             else PrayerNotificationHelper.cancelLiveUpdateNotification(context);

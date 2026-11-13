@@ -75,7 +75,7 @@ async function readGps(signal: AbortSignal): Promise<Position> {
         reject(new Error('errors.locationCancelled'));
       };
       signal.addEventListener('abort', cancel, { once: true });
-      NativeGeolocation.getCurrentPosition({ requestId, enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
+      NativeGeolocation.getCurrentPosition({ requestId, enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 })
         .then(resolve, (error: unknown) => reject(gpsError(error)))
         .finally(() => signal.removeEventListener('abort', cancel));
     });
@@ -97,7 +97,7 @@ async function readGps(signal: AbortSignal): Promise<Position> {
     watch = navigator.geolocation.watchPosition(
       (position) => finish(position),
       (error) => finish(undefined, gpsError(error)),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
     // Also handle adapters that deliver their first result synchronously.
     if (finished) navigator.geolocation.clearWatch(watch);
