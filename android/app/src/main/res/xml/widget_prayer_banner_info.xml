@@ -7,5 +7,7 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_prayer_banner"
     android:previewImage="@drawable/widget_preview_banner"
-    android:resizeMode="none"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
+    android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

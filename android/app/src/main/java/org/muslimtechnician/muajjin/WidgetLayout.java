@@ -150,8 +150,9 @@ final class WidgetLayout {
     private boolean isTallCell() {
         if (tight || compact || height <= 0) return false;
         if (variant == 0 || variant == 2) return height >= 106 && height <= 145;
+        if (variant == 1) return height >= 195 && height <= 280;
         if (variant == 3) return height >= 275 && height <= 320;
-        if (variant == 4) return height >= 205 && height <= 260;
+        if (variant == 4) return height >= 205 && height <= 310;
         return false;
     }
     private boolean isMediumTightWide() {
@@ -179,7 +180,7 @@ final class WidgetLayout {
         if (variant == 2) return isTallCell() ? 12 : 8;
         return isTallCell() ? 14 : 12;
     }
-    float footerGap() { return tight ? 4 : 8; }
+    float footerGap() { return tight ? 4 : (variant == 1 && isTallCell() ? 12 : 8); }
     float scheduleGap() {
         if (isMediumTightWide()) return 10;
         return tight ? (variant == 3 || variant == 4 ? 4 : 8) : (isTallCell() ? 18 : 16);

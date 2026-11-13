@@ -19,11 +19,15 @@ import static org.junit.Assert.assertNotNull;
 /** Installed provider metadata is the launcher-visible size and resize contract. */
 @RunWith(AndroidJUnit4.class)
 public class WidgetProviderInfoInstrumentedTest {
-    // Strip, Square, Banner, Wide, Full Table, Lock Small, Lock Medium.
+    // Strip, Square, Banner, Wide, Overview, Lock Small, Lock Medium.
     private static final int[][] CELL_HINTS = {
-        {110, 40}, {110, 110}, {250, 40}, {250, 110}, {250, 110}, {110, 40}, {250, 40}
+        {110, 40}, {110, 100}, {250, 40}, {250, 100}, {250, 100}, {110, 40}, {250, 40}
     };
-    @Test public void everyPrayerWidgetDeclaresAFixedCanonicalFootprint() {
+    private static final int[][] RESIZE_MINIMUMS = {
+        {110, 40}, {110, 100}, {180, 40}, {250, 100}, {250, 100}, {110, 40}, {250, 40}
+    };
+
+    @Test public void everyPrayerWidgetDeclaresExpectedFootprintAndResizeBounds() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         String packageName = context.getPackageName();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -36,10 +40,14 @@ public class WidgetProviderInfoInstrumentedTest {
             Class<?> provider = PrayerWidgetHelper.PROVIDERS[i];
             AppWidgetProviderInfo info = installed.get(provider.getName());
             assertNotNull("Missing installed provider info for " + provider.getName(), info);
-            assertEquals(provider.getName() + " must not be resizable",
-                AppWidgetProviderInfo.RESIZE_NONE, info.resizeMode);
+            int expectedResize = i < 5
+                ? AppWidgetProviderInfo.RESIZE_BOTH
+                : AppWidgetProviderInfo.RESIZE_NONE;
+            assertEquals(provider.getName() + " resizeMode", expectedResize, info.resizeMode);
             assertEquals(provider.getName() + " minWidth", CELL_HINTS[i][0], info.minWidth);
             assertEquals(provider.getName() + " minHeight", CELL_HINTS[i][1], info.minHeight);
+            assertEquals(provider.getName() + " minResizeWidth", RESIZE_MINIMUMS[i][0], info.minResizeWidth);
+            assertEquals(provider.getName() + " minResizeHeight", RESIZE_MINIMUMS[i][1], info.minResizeHeight);
         }
     }
 }

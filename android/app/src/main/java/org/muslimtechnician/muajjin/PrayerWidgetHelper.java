@@ -362,8 +362,6 @@ public final class PrayerWidgetHelper {
                 bindText(views, R.id.tv_square_footer_left, state.footerText, layout.contextSize());
                 bindText(views, R.id.tv_square_footer_right, state.currentStartTime, layout.contextSize());
                 views.setViewPadding(R.id.widget_square_footer, 0, layout.px(layout.footerGap()), 0, 0);
-                views.setViewVisibility(R.id.widget_square_top_spacer, state.valid ? View.VISIBLE : View.GONE);
-                views.setViewVisibility(R.id.widget_square_spacer, state.valid ? View.VISIBLE : View.GONE);
                 views.setViewVisibility(R.id.widget_square_footer, state.valid ? View.VISIBLE : View.GONE);
                 break;
             case 2:

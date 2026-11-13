@@ -1334,14 +1334,10 @@ public class WidgetPresentationInstrumentedTest {
                     text(root, R.id.tv_square_next_time, s.nextTime);
                     text(root, R.id.tv_square_footer_left, s.footerText);
                     text(root, R.id.tv_square_footer_right, s.currentStartTime);
-                    Rect barBounds = bounds(root, root.findViewById(R.id.widget_progress_container));
-                    Rect footerBounds = bounds(root, root.findViewById(R.id.widget_square_footer));
-                    assertTrue("Square footer overlaps progress bar", footerBounds.top >= barBounds.bottom - 1);
-                    assertTrue("Square footer exceeds card bounds", footerBounds.bottom <= root.getHeight() - root.getPaddingBottom() + 1);
+                    assertGap(root, root.findViewById(R.id.widget_progress_container),
+                        root.findViewById(R.id.widget_square_footer), 16, rendered.context);
                 } else {
                     assertEquals(View.GONE, root.findViewById(R.id.tv_square_next_time).getVisibility());
-                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_top_spacer).getVisibility());
-                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_spacer).getVisibility());
                     assertEquals(View.GONE, root.findViewById(R.id.widget_square_footer).getVisibility());
                 }
                 break;
