@@ -310,6 +310,9 @@ public final class PrayerWidgetHelper {
             }
         }
         switch (variant) {
+            case 0:
+                views.setViewPadding(R.id.tv_strip_countdown, 0, layout.px(layout.tight ? 0 : 2), 0, 0);
+                break;
             case 1:
                 bindText(views, R.id.tv_square_next_time, state.nextTime, layout.contextSize());
                 views.setViewVisibility(R.id.tv_square_next_time, state.valid ? View.VISIBLE : View.GONE);

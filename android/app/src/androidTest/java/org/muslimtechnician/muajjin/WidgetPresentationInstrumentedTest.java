@@ -891,6 +891,57 @@ public class WidgetPresentationInstrumentedTest {
         }
         assertTrue("4-way language/numeral matrix defects:\n" + joinFailures(), failures.isEmpty());
     }
+
+    /** Larger widget text fits 83dp Strip and dense grids across all 4 language combinations. */
+    @Test public void largerWidgetTextFitsAllFourLanguageCombinationsWithoutClipping() throws Exception {
+        openHost();
+        try {
+            instrumentation.runOnMainSync(() -> {
+                try {
+                    Profile[] compactBounds = {
+                        new Profile(0, 160, 83),
+                        new Profile(1, 160, 155),
+                        new Profile(2, 320, 88),
+                        new Profile(3, 320, 168)
+                    };
+                    for (String phoneTag : new String[]{"en-US", "ar-EG"}) {
+                        Locale phoneLocale = Locale.forLanguageTag(phoneTag);
+                        for (String appLang : new String[]{"en", "ar"}) {
+                            Configuration cfg = new Configuration(target.getResources().getConfiguration());
+                            cfg.setLocale(phoneLocale);
+                            cfg.fontScale = 1f;
+                            Context context = target.createConfigurationContext(cfg);
+                            JSONObject json = presentation(appLang, "midday").json();
+                            json.put("widgetLargeText", true);
+                            NativePresentation display = NativePresentation.parse(json);
+                            long now = day.dhuhr + 600000L;
+                            PrayerTimeline timeline = PrayerTimeline.at(schedule, now, zone);
+                            long[] events = schedule.localEvents(now, zone, timeline.day);
+                            PrayerWidgetHelper.WidgetTimelineState snapshot =
+                                new PrayerWidgetHelper.WidgetTimelineState(context, display, timeline, now, events, phoneLocale);
+                            for (Profile profile : compactBounds) {
+                                Rendered rendered = render(profile, context, snapshot);
+                                try {
+                                    View bar = rendered.root.findViewById(R.id.pb_widget_progress_green);
+                                    Rect barRect = bounds(rendered.root, bar);
+                                    assertTrue("Bar clipped on Larger text " + phoneTag + "/" + appLang + " " + profile.name(),
+                                        barRect.bottom <= rendered.root.getHeight() - rendered.root.getPaddingBottom() + 1);
+                                    verifyTextGeometry(rendered.root, rendered.root);
+                                } finally {
+                                    surface.removeView(rendered.host);
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable error) {
+                    record("four-language-larger", error);
+                }
+            });
+        } finally {
+            closeHost();
+        }
+        assertTrue("4-way Larger text defects:\n" + joinFailures(), failures.isEmpty());
+    }
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
         Calendar date = Calendar.getInstance(zone);
