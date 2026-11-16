@@ -19,12 +19,12 @@ import static org.junit.Assert.assertNotNull;
 /** Installed provider metadata is the launcher-visible size and resize contract. */
 @RunWith(AndroidJUnit4.class)
 public class WidgetProviderInfoInstrumentedTest {
-    // Strip, Square, Banner, Wide, Overview, Lock Small, Lock Medium.
+    // Strip.
     private static final int[][] CELL_HINTS = {
-        {110, 40}, {110, 100}, {250, 40}, {250, 100}, {250, 100}, {110, 40}, {250, 40}
+        {110, 40}
     };
     private static final int[][] RESIZE_MINIMUMS = {
-        {110, 40}, {110, 100}, {180, 40}, {250, 100}, {250, 100}, {110, 40}, {250, 40}
+        {110, 40}
     };
 
     @Test public void everyPrayerWidgetDeclaresExpectedFootprintAndResizeBounds() {
@@ -40,10 +40,7 @@ public class WidgetProviderInfoInstrumentedTest {
             Class<?> provider = PrayerWidgetHelper.PROVIDERS[i];
             AppWidgetProviderInfo info = installed.get(provider.getName());
             assertNotNull("Missing installed provider info for " + provider.getName(), info);
-            int expectedResize = i < 5
-                ? AppWidgetProviderInfo.RESIZE_BOTH
-                : AppWidgetProviderInfo.RESIZE_NONE;
-            assertEquals(provider.getName() + " resizeMode", expectedResize, info.resizeMode);
+            assertEquals(provider.getName() + " resizeMode", AppWidgetProviderInfo.RESIZE_BOTH, info.resizeMode);
             assertEquals(provider.getName() + " minWidth", CELL_HINTS[i][0], info.minWidth);
             assertEquals(provider.getName() + " minHeight", CELL_HINTS[i][1], info.minHeight);
             assertEquals(provider.getName() + " minResizeWidth", RESIZE_MINIMUMS[i][0], info.minResizeWidth);

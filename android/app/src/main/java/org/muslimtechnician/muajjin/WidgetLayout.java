@@ -484,14 +484,6 @@ final class WidgetLayout {
     int layoutId() {
         switch (variant) {
             case 0: return R.layout.widget_prayer_strip;
-            case 1: return stacked ? R.layout.widget_prayer_square_stacked : R.layout.widget_prayer_square;
-            case 2: return stacked ? R.layout.widget_prayer_banner_stacked : R.layout.widget_prayer_banner;
-            case 3: return columns == 6 ? R.layout.widget_prayer_wide
-                : stacked ? R.layout.widget_prayer_wide_grid_stacked : R.layout.widget_prayer_wide_grid;
-            case 4: return stacked ? R.layout.widget_prayer_large_stacked
-                : metadataStacked ? R.layout.widget_prayer_large_metadata_stacked : R.layout.widget_prayer_large;
-            case 5: return R.layout.widget_lock_small;
-            case 6: return stacked ? R.layout.widget_lock_medium_stacked : R.layout.widget_lock_medium;
             default: throw new IllegalArgumentException("Unknown widget variant");
         }
     }

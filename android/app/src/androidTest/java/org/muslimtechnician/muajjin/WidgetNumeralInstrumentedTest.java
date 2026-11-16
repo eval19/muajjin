@@ -40,11 +40,8 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class WidgetNumeralInstrumentedTest {
     private static final String[] PRAYERS = {"fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"};
-    private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown,R.id.tv_square_countdown,
-        R.id.tv_banner_countdown,R.id.tv_wide_countdown,R.id.tv_large_countdown,
-        R.id.tv_lock_small_countdown,R.id.tv_lock_med_countdown};
-    private static final int[][] BOUNDS = {{160,96},{180,180},{360,96},{360,220},
-        {360,320},{180,96},{360,96}};
+    private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown};
+    private static final int[][] BOUNDS = {{160,96}};
 
     private Locale deviceLocale(Context context) {
         if (Build.VERSION.SDK_INT >= 33) {
@@ -132,7 +129,7 @@ public class WidgetNumeralInstrumentedTest {
 
     private void assertVisibleNumericText(View view,Locale locale) {
         if(view.getVisibility()!=View.VISIBLE)return;
-        if(view instanceof TextView && !(view instanceof Chronometer) && view.getId()!=R.id.tv_large_location) {
+        if(view instanceof TextView && !(view instanceof Chronometer)) {
             String text=((TextView)view).getText().toString();
             if(text.codePoints().anyMatch(value->Character.getType(value)==Character.DECIMAL_DIGIT_NUMBER))
                 assertDigitSet("Rendered numeric field",text,locale);
@@ -171,7 +168,7 @@ public class WidgetNumeralInstrumentedTest {
                 JSONObject json=presentation(pair[1]).json();json.put("timeFormat",format);
                 NativePresentation display=NativePresentation.parse(json);
                 PrayerWidgetHelper.WidgetTimelineState snapshot=state(context,display,numbers);
-                for(int variant:new int[]{0,1,2,3,4,5,6})instrumentation.runOnMainSync(()->{
+                for(int variant:new int[]{0})instrumentation.runOnMainSync(()->{
                     FrameLayout host=new FrameLayout(activity);
                     activity.setContentView(host);
                     View root=PrayerWidgetHelper.createWidgetViews(context,snapshot,variant,
@@ -185,92 +182,11 @@ public class WidgetNumeralInstrumentedTest {
                     assertVisibleNumericText(root,numbers);
                     assertEquals("Imported direction follows labels, not numeric script",
                         pair[1].equals("ar")?View.LAYOUT_DIRECTION_RTL:View.LAYOUT_DIRECTION_LTR,root.getLayoutDirection());
-                    if(variant==4)assertEquals("User location digits must not be transformed","Synthetic district 12",
-                        ((TextView)root.findViewById(R.id.tv_large_location)).getText().toString());
                     assertTrue("Imported prayer name must remain visible",containsVisibleText(root,snapshot.nextName));
-                    if(variant!=0)assertTrue("Rendered clock must preserve every digit and selected day period",
-                        containsVisibleText(root,expectedClock(display,numbers,snapshot.targetTimestamp)));
                 });
                 }
             }
         } finally {instrumentation.runOnMainSync(activity::finish);}
-    }
-
-    @Test public void squareFooterClocksKeepAnLtrRunAcrossArabicAndLatinDigits() throws Exception {
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-        Context target = instrumentation.getTargetContext();
-        assertTrue(target.getPackageName().endsWith(".debug"));
-        Activity activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        try {
-            for (String numericTag : new String[]{"en-US", "ar-EG"}) {
-                Locale numbers = Locale.forLanguageTag(numericTag);
-                Configuration configuration = new Configuration(target.getResources().getConfiguration());
-                configuration.setLocale(numbers);
-                configuration.fontScale = 1f;
-                Context context = target.createConfigurationContext(configuration);
-                JSONObject json = presentation("ar").json();
-                json.getJSONObject("labels").put("now", "الصلاة الحالية حسب التوقيت المحلي المعتمد");
-                NativePresentation display = NativePresentation.parse(json);
-                PrayerWidgetHelper.WidgetTimelineState snapshot = state(context, display, numbers);
-                for (int widthDp : new int[]{180, 600}) instrumentation.runOnMainSync(() -> {
-                    FrameLayout host = new FrameLayout(activity);
-                    activity.setContentView(host);
-                    RemoteViews remote = PrayerWidgetHelper.createWidgetViews(context, snapshot, 1, widthDp, 360);
-                    assertEquals("Exercise both existing Square compositions",
-                        widthDp == 180 ? R.layout.widget_prayer_square_stacked : R.layout.widget_prayer_square,
-                        remote.getLayoutId());
-                    ViewGroup root = (ViewGroup)remote.apply(context, host);
-                    host.addView(root, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-                    int width = Math.round(widthDp * context.getResources().getDisplayMetrics().density);
-                    int height = Math.round(360 * context.getResources().getDisplayMetrics().density);
-                    host.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-                        View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
-                    host.layout(0, 0, width, height);
-                    assertEquals(View.LAYOUT_DIRECTION_RTL, root.getLayoutDirection());
-                    TextView clock = root.findViewById(R.id.tv_square_footer_right);
-                    String expected = expectedClock(display, numbers, snapshot.startTimestamp);
-                    String rendered = clock.getText().toString();
-                    assertEquals("Footer preserves the complete clock and Arabic day period", expected,
-                        rendered.replace("\u200E", ""));
-                    assertDigitSet("Square footer clock", rendered, numbers);
-                    Layout layout = clock.getLayout();
-                    assertNotNull("Footer must have a real native text layout", layout);
-                    assertEquals("Standalone clocks must remain one complete line", 1, layout.getLineCount());
-                    assertEquals(rendered.length(), layout.getLineEnd(0));
-                    assertEquals(0, layout.getEllipsisCount(0));
-                    assertEquals("Arabic day period must not turn the clock into an RTL paragraph",
-                        Layout.DIR_LEFT_TO_RIGHT, layout.getParagraphDirection(0));
-                    int periodStart = rendered.lastIndexOf(' ') + 1;
-                    assertTrue("Fixture requires a complete Arabic day period", periodStart > 0);
-                    Path selection = new Path();
-                    RectF numericBounds = new RectF(), periodBounds = new RectF();
-                    layout.getSelectionPath(0, periodStart - 1, selection);
-                    selection.computeBounds(numericBounds, true);
-                    selection.reset();
-                    layout.getSelectionPath(periodStart, rendered.length(), selection);
-                    selection.computeBounds(periodBounds, true);
-                    assertTrue("Rendered day period must follow, not precede, the numeric clock: "
-                        + numericBounds + " / " + periodBounds, numericBounds.right <= periodBounds.left + 1);
-                    assertTrue("Footer clock must fit horizontally",
-                        layout.getLineLeft(0) >= -1 && layout.getLineRight(0)
-                            <= clock.getWidth() - clock.getCompoundPaddingLeft() - clock.getCompoundPaddingRight() + 1);
-                    assertTrue("Footer clock must fit vertically", layout.getHeight()
-                        <= clock.getHeight() - clock.getCompoundPaddingTop() - clock.getCompoundPaddingBottom() + 1);
-                    if (widthDp == 180) {
-                        for (int id : new int[]{R.id.tv_square_next_time, R.id.tv_square_footer_right}) {
-                            TextView field = root.findViewById(id);
-                            assertEquals("Stacked clocks share the Arabic label's right edge",
-                                field.getWidth() - field.getCompoundPaddingRight(),
-                                field.getCompoundPaddingLeft() + field.getLayout().getLineRight(0), 1f);
-                        }
-                    }
-                });
-            }
-        } finally {
-            instrumentation.runOnMainSync(activity::finish);
-        }
     }
 
     @Test public void liveCountdownAndClockFieldsUseDeviceDigitsIndependentlyOfImportedLabels() throws Exception {
@@ -286,7 +202,7 @@ public class WidgetNumeralInstrumentedTest {
             for (String language : new String[]{"en", "ar", "bn"}) {
                 NativePresentation presentation = presentation(language);
                 PrayerWidgetHelper.WidgetTimelineState snapshot = state(context, presentation);
-                for(int variant:new int[]{0,1,2,3,4,5,6}) {
+                for(int variant:new int[]{0}) {
                 AtomicReference<Chronometer> countdown = new AtomicReference<>();
                 AtomicReference<String> firstTick = new AtomicReference<>();
                 AtomicReference<View> widget = new AtomicReference<>();
@@ -318,11 +234,6 @@ public class WidgetNumeralInstrumentedTest {
                     Log.i("MuajjinNumerals", "device=" + locale.toLanguageTag() + " app=" + language
                         + " live=" + live + " next=" + snapshot.nextTime + " digits=" + digits(locale));
                     assertVisibleNumericText(widget.get(),locale);
-                    if(variant==1) {
-                        TextView nextClock=widget.get().findViewById(R.id.tv_square_next_time);
-                        assertEquals("Complete clock must use device numbers and imported day period",
-                            expectedClock(presentation,locale,snapshot.targetTimestamp),nextClock.getText().toString().replace("\u200E",""));
-                    }
                     assertDigitSet("Current prayer clock", snapshot.currentStartTime, locale);
                     assertDigitSet("Hijri day/year", snapshot.hijriText, locale);
                     assertEquals(language.equals("ar") ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR,

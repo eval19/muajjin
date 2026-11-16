@@ -46,23 +46,16 @@ import static org.junit.Assert.*;
 public class PrayerLifecycleInstrumentedTest {
     private static final class ObservedHostView extends AppWidgetHostView {
         private volatile CountDownLatch layoutReady=new CountDownLatch(0);
-        private int expectedRoot,expectedRows,expectedWidth;
+        private int expectedRoot,expectedWidth;
         ObservedHostView(Context context) { super(context); }
-        void expectLayout(int root,int rows,int width) {
-            expectedRoot=root;expectedRows=rows;expectedWidth=width;
+        void expectLayout(int root,int width) {
+            expectedRoot=root;expectedWidth=width;
             layoutReady=new CountDownLatch(1);
         }
         boolean awaitLayout() throws InterruptedException { return layoutReady.await(30,TimeUnit.SECONDS); }
         @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
             super.onLayout(changed,left,top,right,bottom);
             if(expectedRoot==0 || getWidth()!=expectedWidth || findViewById(expectedRoot)==null)return;
-            if(expectedRows!=0) {
-                View first=findViewById(R.id.chip_fajr),last=findViewById(R.id.chip_isha);
-                if(first==null || last==null)return;
-                Rect a=new Rect(),b=new Rect();first.getDrawingRect(a);last.getDrawingRect(b);
-                offsetDescendantRectToMyCoords(first,a);offsetDescendantRectToMyCoords(last,b);
-                if((Math.abs(a.top-b.top)<=1?1:2)!=expectedRows)return;
-            }
             layoutReady.countDown();
         }
     }
@@ -102,50 +95,50 @@ public class PrayerLifecycleInstrumentedTest {
         return count;
     }
     private void checkHostSizeDelivery(Instrumentation instrumentation,Context context,AppWidgetManager manager,
-                                       AppWidgetHost host,int id,ObservedHostView wide,ScrollView scroll,long deadline) throws Exception {
+                                       AppWidgetHost host,int id,ObservedHostView strip,ScrollView scroll,long deadline) throws Exception {
         float density=context.getResources().getDisplayMetrics().density;
         Rect padding=AppWidgetHostView.getDefaultPaddingForWidget(context,
-            new ComponentName(context,PrayerWidgetMediumProvider.class),null);
+            new ComponentName(context,PrayerWidgetStripProvider.class),null);
         int horizontal=padding.left+padding.right,vertical=padding.top+padding.bottom;
         LinearLayout column=(LinearLayout)scroll.getChildAt(0);
         if(Build.VERSION.SDK_INT>=31) {
             // Host API takes outer bounds and subtracts its default padding before provider callbacks.
             // https://developer.android.com/reference/android/appwidget/AppWidgetHostView#updateAppWidgetSize(android.os.Bundle,java.util.List)
             ArrayList<SizeF> sizes=new ArrayList<>(2);
-            sizes.add(new SizeF(250+horizontal/density,220+vertical/density));
-            sizes.add(new SizeF(600+horizontal/density,220+vertical/density));
-            instrumentation.runOnMainSync(() -> wide.updateAppWidgetSize(new Bundle(),sizes));
-            for(int width:new int[]{250,600,250}) {
+            sizes.add(new SizeF(160+horizontal/density,96+vertical/density));
+            sizes.add(new SizeF(250+horizontal/density,96+vertical/density));
+            instrumentation.runOnMainSync(() -> strip.updateAppWidgetSize(new Bundle(),sizes));
+            for(int width:new int[]{160,250,160}) {
                 int pixels=Math.round(width*density)+horizontal;
                 instrumentation.runOnMainSync(() -> {
-                    wide.expectLayout(R.id.widget_wide_root,width==600?1:2,pixels);
-                    wide.setLayoutParams(new LinearLayout.LayoutParams(pixels,Math.round(220*density)+vertical));
-                    wide.requestLayout();
+                    strip.expectLayout(R.id.widget_strip_root,pixels);
+                    strip.setLayoutParams(new LinearLayout.LayoutParams(pixels,Math.round(96*density)+vertical));
+                    strip.requestLayout();
                 });
-                assertTrue("Host never applied its responsive size alternative at "+width+"dp",wide.awaitLayout());
-                instrumentation.runOnMainSync(() -> assertTrue("Host alternative lost its real deadline",checkChronometers(wide,deadline)>0));
+                assertTrue("Host never applied its responsive size alternative at "+width+"dp",strip.awaitLayout());
+                instrumentation.runOnMainSync(() -> assertTrue("Host alternative lost its real deadline",checkChronometers(strip,deadline)>0));
             }
         }
         Configuration orientation=new Configuration(context.getResources().getConfiguration());
         orientation.orientation=Configuration.ORIENTATION_LANDSCAPE;
         Context landscapeContext=context.createConfigurationContext(orientation);
         AtomicReference<ObservedHostView> landscape=new AtomicReference<>();
-        int width=Math.round(600*density)+horizontal,height=Math.round(96*density)+vertical;
+        int width=Math.round(250*density)+horizontal,height=Math.round(96*density)+vertical;
         instrumentation.runOnMainSync(() -> {
             ObservedHostView view=(ObservedHostView)host.createView(landscapeContext,id,manager.getAppWidgetInfo(id));
-            landscape.set(view);view.expectLayout(R.id.widget_banner_root,0,width);
+            landscape.set(view);view.expectLayout(R.id.widget_strip_root,width);
             column.addView(view,new LinearLayout.LayoutParams(width,height));
             Bundle range=manager.getAppWidgetOptions(id);
             if(Build.VERSION.SDK_INT>=31) range.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,null);
-            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,250);
-            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,600);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,160);
+            range.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,250);
             range.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,96);
             range.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,220);
             manager.updateAppWidgetOptions(id,range);
         });
         assertTrue("Provider callback did not deliver the distinct legacy landscape alternative",landscape.get().awaitLayout());
         instrumentation.runOnMainSync(() -> {
-            assertNotNull(landscape.get().findViewById(R.id.tv_banner_countdown));
+            assertNotNull(landscape.get().findViewById(R.id.tv_strip_countdown));
             assertTrue("Legacy orientation alternative lost its real deadline",checkChronometers(landscape.get(),deadline)>0);
             column.removeView(landscape.get());
         });
@@ -189,13 +182,13 @@ public class PrayerLifecycleInstrumentedTest {
             for(int i=0;i<ids.length;i++) {
                 ids[i]=host.allocateAppWidgetId();
                 int provider=i%PrayerWidgetHelper.PROVIDERS.length;
-                int width=provider==4?250:360;
+                int width=360;
                 Bundle options=new Bundle();
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,width);
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,width);
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,220);
                 options.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,220);
-                options.putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY,provider>=5?AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD:AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN);
+                options.putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY,AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN);
                 assertTrue("Authorize test-host widget binding",manager.bindAppWidgetIdIfAllowed(ids[i],new ComponentName(context,PrayerWidgetHelper.PROVIDERS[provider]),options));
             }
             TimeZone zone=TimeZone.getDefault();
@@ -280,7 +273,7 @@ public class PrayerLifecycleInstrumentedTest {
                 assertTrue("Notification must retain app-owned digits: "+title,title.contains(appClock));
                 assertFalse("Device-owned widget clock must not leak into notification",title.contains(mixed.nextTime));
             });
-            int[] roots={R.id.widget_strip_root,R.id.widget_square_root,R.id.widget_banner_root,R.id.widget_wide_root,R.id.widget_large_root,R.id.widget_lock_small_root,R.id.widget_lock_medium_root};
+            int[] roots={R.id.widget_strip_root};
             for(int height:new int[]{80,220}) {
                 for(int id:ids) {
                     Bundle resized=manager.getAppWidgetOptions(id);
@@ -311,7 +304,7 @@ public class PrayerLifecycleInstrumentedTest {
                 for(int i=0;i<views.length;i++) {
                     TextView title=new TextView(surface);title.setText(PrayerWidgetHelper.PROVIDERS[i%PrayerWidgetHelper.PROVIDERS.length].getSimpleName());title.setTextColor(0xffffffff);column.addView(title);
                     float density=surface.getResources().getDisplayMetrics().density;
-                    int width=(int)((i==4?250:360)*density)+views[i].getPaddingLeft()+views[i].getPaddingRight();
+                    int width=(int)(360*density)+views[i].getPaddingLeft()+views[i].getPaddingRight();
                     int height=(int)(220*density)+views[i].getPaddingTop()+views[i].getPaddingBottom();
                     column.addView(views[i],new LinearLayout.LayoutParams(width,height));
                 }
@@ -323,25 +316,7 @@ public class PrayerLifecycleInstrumentedTest {
                     View content=views[i].getChildAt(0);
                     float density=context.getResources().getDisplayMetrics().density;
                     assertEquals("Host must allocate its advertised content height",Math.round(220*density),content.getHeight());
-                    assertEquals("Host must allocate its advertised content width",Math.round((i==4?250:360)*density),content.getWidth());
-                }
-                int[] labels={R.id.tv_name_fajr,R.id.tv_name_sunrise,R.id.tv_name_dhuhr,R.id.tv_name_asr};
-                for(int id:labels) {
-                    TextView text=views[4].findViewById(id);
-                    View row=(View)text.getParent();
-                    assertTrue("Prayer glyphs clipped: top="+text.getTop()+" height="+text.getHeight()+" row="+row.getHeight(),
-                        text.getHeight()>0 && text.getTop()>=0 && text.getTop()+text.getHeight()<=row.getHeight());
-                    assertTrue("Prayer glyph layout clipped: layout="+text.getLayout().getHeight()+" view="+text.getHeight(),
-                        text.getLayout().getHeight()<=text.getHeight()-text.getCompoundPaddingTop()-text.getCompoundPaddingBottom());
-                    assertEquals("Minimum-width widget truncates a supported prayer label",0,text.getLayout().getEllipsisCount(0));
-                }
-            });
-            instrumentation.runOnMainSync(() -> {
-                int[] clocks={R.id.tv_chip_fajr_time,R.id.tv_chip_sunrise_time,R.id.tv_chip_dhuhr_time,R.id.tv_chip_asr_time,R.id.tv_chip_maghrib_time,R.id.tv_chip_isha_time};
-                for(int id:clocks) {
-                    TextView text=views[3].findViewById(id);
-                    for(int line=0;line<text.getLayout().getLineCount();line++)
-                        assertEquals("Wide widget hides part of the selected clock: "+text.getText(),0,text.getLayout().getEllipsisCount(line));
+                    assertEquals("Host must allocate its advertised content width",Math.round(360*density),content.getWidth());
                 }
             });
             ScrollView scroll=overlay.get();
@@ -354,41 +329,7 @@ public class PrayerLifecycleInstrumentedTest {
                 try(FileOutputStream output=new FileOutputStream(new File(context.getCacheDir(),"widget-smoke-"+page+".png"))) {image.compress(Bitmap.CompressFormat.PNG,100,output);}
                 image.recycle();
             }
-            instrumentation.runOnMainSync(() -> {
-                float density=context.getResources().getDisplayMetrics().density;
-                StringBuilder defects=new StringBuilder();
-                TextView squareClock=views[1].findViewById(R.id.tv_square_countdown);
-                View squareProgress=null;
-                for(int progressId:new int[]{R.id.pb_widget_progress_green,R.id.pb_widget_progress_gold,
-                        R.id.pb_widget_progress_amber,R.id.pb_widget_progress_soft_red}) {
-                    View candidate=views[1].findViewById(progressId);
-                    if(candidate.getVisibility()==View.VISIBLE) squareProgress=candidate;
-                }
-                assertNotNull("Square lost its active progress stage",squareProgress);
-                android.graphics.Rect clockBounds=new android.graphics.Rect();
-                android.graphics.Rect progressBounds=new android.graphics.Rect();
-                squareClock.getDrawingRect(clockBounds);
-                squareProgress.getDrawingRect(progressBounds);
-                views[1].offsetDescendantRectToMyCoords(squareClock,clockBounds);
-                views[1].offsetDescendantRectToMyCoords(squareProgress,progressBounds);
-                int squareGap=progressBounds.top-clockBounds.bottom;
-                if(squareGap>20*density) defects.append("Square separates countdown/progress by ").append(squareGap/density).append("dp; ");
-                int[] cells={R.id.chip_fajr,R.id.chip_sunrise,R.id.chip_dhuhr,R.id.chip_asr,R.id.chip_maghrib,R.id.chip_isha};
-                int firstHeight=views[3].findViewById(cells[0]).getHeight();
-                for(int cell:cells) {
-                    View item=views[3].findViewById(cell);
-                    if(Math.abs(item.getHeight()-firstHeight)>1)
-                        defects.append("Wide prayer cells have unequal heights: ").append(firstHeight).append("/").append(item.getHeight()).append("; ");
-                }
-                int[] tableCells={R.id.row_fajr,R.id.row_sunrise,R.id.row_dhuhr,R.id.row_asr};
-                for(int cell:tableCells) {
-                    View item=views[4].findViewById(cell);
-                    if(item.getHeight()>80*density*context.getResources().getConfiguration().fontScale)
-                        defects.append("Table decoration stretches to ").append(item.getHeight()/density).append("dp; ");
-                }
-                assertEquals(defects.toString(),"",defects.toString());
-            });
-            checkHostSizeDelivery(instrumentation,context,manager,host,ids[3],(ObservedHostView)views[3],scroll,expected);
+            checkHostSizeDelivery(instrumentation,context,manager,host,ids[0],(ObservedHostView)views[0],scroll,expected);
         } finally {
             if(activity!=null) {
                 Activity closing=activity;

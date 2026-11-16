@@ -53,38 +53,19 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(AndroidJUnit4.class)
 public class WidgetPresentationInstrumentedTest {
     private static final String[] PRAYERS = {"fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"};
-    private static final String[] VARIANTS = {"strip", "square", "banner", "wide", "table", "lock-small", "lock-medium"};
-    private static final int[] ROOTS = {R.id.widget_strip_root, R.id.widget_square_root,
-        R.id.widget_banner_root, R.id.widget_wide_root, R.id.widget_large_root,
-        R.id.widget_lock_small_root, R.id.widget_lock_medium_root};
-    private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown, R.id.tv_square_countdown,
-        R.id.tv_banner_countdown, R.id.tv_wide_countdown, R.id.tv_large_countdown,
-        R.id.tv_lock_small_countdown, R.id.tv_lock_med_countdown};
-    private static final int[] LABELS = {R.id.tv_strip_label, R.id.tv_square_label,
-        R.id.tv_banner_label, R.id.tv_wide_label, R.id.tv_large_label};
-    private static final int[] WARM_LABELS = {R.id.tv_strip_label_warm, R.id.tv_square_label_warm,
-        R.id.tv_banner_label_warm, R.id.tv_wide_label_warm, R.id.tv_large_label_warm};
+    private static final String[] VARIANTS = {"strip"};
+    private static final int[] ROOTS = {R.id.widget_strip_root};
+    private static final int[] COUNTDOWNS = {R.id.tv_strip_countdown};
+    private static final int[] LABELS = {R.id.tv_strip_label};
+    private static final int[] WARM_LABELS = {R.id.tv_strip_label_warm};
     private static final int[] PROGRESS = {R.id.pb_widget_progress_green,R.id.pb_widget_progress_gold,
         R.id.pb_widget_progress_amber,R.id.pb_widget_progress_soft_red};
-    private static final int[] CHIPS = {R.id.chip_fajr, R.id.chip_sunrise, R.id.chip_dhuhr,
-        R.id.chip_asr, R.id.chip_maghrib, R.id.chip_isha};
-    private static final int[] CHIP_NAMES = {R.id.tv_chip_fajr_name, R.id.tv_chip_sunrise_name,
-        R.id.tv_chip_dhuhr_name, R.id.tv_chip_asr_name, R.id.tv_chip_maghrib_name, R.id.tv_chip_isha_name};
-    private static final int[] CHIP_TIMES = {R.id.tv_chip_fajr_time, R.id.tv_chip_sunrise_time,
-        R.id.tv_chip_dhuhr_time, R.id.tv_chip_asr_time, R.id.tv_chip_maghrib_time, R.id.tv_chip_isha_time};
-    private static final int[] ROWS = {R.id.row_fajr, R.id.row_sunrise, R.id.row_dhuhr, R.id.row_asr};
-    private static final int[] ROW_NAMES = {R.id.tv_name_fajr, R.id.tv_name_sunrise, R.id.tv_name_dhuhr, R.id.tv_name_asr};
-    private static final int[] ROW_TIMES = {R.id.tv_time_fajr, R.id.tv_time_sunrise, R.id.tv_time_dhuhr, R.id.tv_time_asr};
     private static final Profile[] NORMAL = {
-        new Profile(0, 160, 96), new Profile(1, 180, 180), new Profile(2, 360, 96),
-        new Profile(3, 360, 220), new Profile(4, 360, 180),
-        new Profile(5, 180, 96), new Profile(6, 360, 96)
+        new Profile(0, 160, 96)
     };
     /** Declared provider minimums: the smallest host box a launcher may hand over. */
     private static final Profile[] HOST_MINIMUMS = {
-        new Profile(0, 120, 88), new Profile(1, 130, 160), new Profile(2, 280, 96),
-        new Profile(3, 288, 220), new Profile(4, 288, 165), new Profile(5, 170, 96),
-        new Profile(6, 280, 80)
+        new Profile(0, 120, 88)
     };
     /** Approved anchors, independent of the production helper. */
     private static final int[] LIGHT_PALETTE = {
@@ -129,7 +110,7 @@ public class WidgetPresentationInstrumentedTest {
         String name() { return VARIANTS[variant] + "-" + Math.round(width) + "x" + Math.round(height); }
     }
 
-    private final int[] compatibleReapplies = new int[7];
+    private final int[] compatibleReapplies = new int[1];
 
     private static final class Rendered {
         final Context context;
@@ -161,34 +142,23 @@ public class WidgetPresentationInstrumentedTest {
             instrumentation.runOnMainSync(() -> {
                 surface = new FrameLayout(activity);
                 activity.setContentView(surface);
-                // English family + independently selected narrow/grid and six-column Wide.
+                // English + Arabic at normal Strip size.
                 for (Profile profile : NORMAL) runCase(profile, "en", 1f, "midday", true, null);
-                // Arabic at the same normal sizes; captures every provider's RTL render.
                 for (Profile profile : NORMAL) runCase(profile, "ar", 1f, "midday", true, null);
-                runCase(new Profile(3, 600, 220), "en", 1f, "midday", true, null);
-                runCase(new Profile(4, 250, 180), "en", 1f, "midday", true, null);
-                runCase(new Profile(4, 250, 140), "en", 1f, "midday-long-location", true, null, true);
                 for (Profile profile : NORMAL) runCase(profile, "en", 1f, "midday-24h", false, null);
 
                 // Same attached native hierarchy is reapplied, never replaced with a mock.
                 for (Profile profile : NORMAL) runReapplySequence(profile);
-                runExtraHeightCase(new Profile(3, 360, 220));
-                runExtraHeightCase(new Profile(4, 360, 180));
-                runIndependentWideInstances();
-                runLegacySizeBoundaries();
-                Profile[] minimums = {new Profile(0,120,88), new Profile(1,130,160),
-                    new Profile(2,280,96), new Profile(3,288,220), new Profile(4,288,165),
-                    new Profile(5,170,96), new Profile(6,280,80)};
+                Profile[] minimums = {new Profile(0,120,88)};
                 for (String language : new String[]{"en","bn","ar"}) {
                     for (Profile profile : minimums) {
-                        runCase(profile,language,1f,"midday",profile.variant==3 || profile.variant==4,null);
+                        runCase(profile,language,1f,"midday",false,null);
                         runCase(profile,language,1f,"invalid",false,null);
                     }
                 }
                 if (capture) {
                     captureOverview();
                     capturePickerPreviews();
-                    captureTransparentBackgrounds();
                 }
 
                 // Grouped risk matrix, not a full Cartesian product. uiMode is never overridden.
@@ -204,12 +174,10 @@ public class WidgetPresentationInstrumentedTest {
                     prepareSchedule(month,1);
                     audit("seasonal-clock-check month="+(month+1));
                     for(String language : new String[]{"en","bn","ar"}) {
-                        runCase(new Profile(3,288,220),language,1f,"midday",false,null);
-                        runCase(new Profile(4,288,165),language,1f,"midday",false,null);
-                        if(language.equals("bn")) runLegacyClockFitTransitions();
+                        runCase(new Profile(0,120,88),language,1f,"midday",false,null);
                     }
                     if(month==Calendar.JANUARY) {
-                        runCase(NORMAL[1],"en",1f,"night-start",false,null);
+                        runCase(NORMAL[0],"en",1f,"night-start",false,null);
                         runCase(new Profile(0,120,88),"en",1f,"night-start",false,null);
                     }
                 }
@@ -230,72 +198,6 @@ public class WidgetPresentationInstrumentedTest {
     }
 
 
-
-    @Test public void longArabicWideHeaderKeepsMeasuredStackingAndEveryPrayerCell() throws Exception {
-        target = instrumentation.getTargetContext();
-        assertTrue(target.getPackageName().endsWith(".debug"));
-        Locale originalLocale = Locale.getDefault();
-        Locale originalDisplay = Locale.getDefault(Locale.Category.DISPLAY);
-        Locale originalFormat = Locale.getDefault(Locale.Category.FORMAT);
-        prepareSchedule(Calendar.OCTOBER, 13);
-        activity = instrumentation.startActivitySync(new Intent(target, WidgetTestActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        try {
-            instrumentation.runOnMainSync(() -> {
-                surface = new FrameLayout(activity);
-                activity.setContentView(surface);
-                try {
-                    Context context = configured("ar", 1f);
-                    PrayerWidgetHelper.WidgetTimelineState base = state(context, "ar", "midday");
-                    assertEquals("Fixture width must support the normal six-column schedule", 6,
-                        new WidgetLayout(context, base, 3, 720, 600).columns);
-                    JSONObject json = base.presentation.json();
-                    String current = "الصلاة الحالية حسب التوقيت المحلي";
-                    PrayerWidgetHelper.WidgetTimelineState snapshot = base;
-                    WidgetLayout measured = null;
-                    for (int count = 0; count < 32; count++) {
-                        json.getJSONObject("labels").put("now", current);
-                        snapshot = new PrayerWidgetHelper.WidgetTimelineState(context,
-                            NativePresentation.parse(json), base.timeline, base.now,
-                            new long[]{base.fajrTs, base.sunriseTs, base.dhuhrTs,
-                                base.asrTs, base.maghribTs, base.ishaTs}, base.numericLocale);
-                        measured = new WidgetLayout(context, snapshot, 3, 720, 600);
-                        if (measured.stacked) break;
-                        current += " المعتمد";
-                    }
-                    assertNotNull(measured);
-                    assertTrue("Long contextual Arabic must exercise a measured stacked header", measured.stacked);
-                    for (float height : new float[]{600, (float)Math.ceil(measured.minimumHeight)}) {
-                        Rendered rendered = render(new Profile(3, 720, height), context, snapshot);
-                        try {
-                            Rect primary = bounds(rendered.root,
-                                rendered.root.findViewById(R.id.widget_primary_group));
-                            Rect contextBounds = bounds(rendered.root,
-                                rendered.root.findViewById(R.id.widget_context_group));
-                            assertTrue("Inflated header contradicts the measured vertical composition: primary="
-                                + primary + " context=" + contextBounds, contextBounds.top >= primary.bottom);
-                            assertEquals("Stacked header must retain all six cells in the existing grid", 2,
-                                scheduleRowCount(rendered.root, CHIPS));
-                            verifySchedule(rendered, CHIPS, CHIP_NAMES, CHIP_TIMES);
-                            verifyTextGeometry(rendered.root, rendered.root);
-                        } finally {
-                            surface.removeView(rendered.host);
-                        }
-                    }
-                } catch (Exception error) {
-                    throw new AssertionError("Arabic stacked-header fixture failed", error);
-                }
-            });
-        } finally {
-            instrumentation.runOnMainSync(() -> {
-                surface.removeAllViews();
-                activity.finish();
-            });
-            Locale.setDefault(originalLocale);
-            Locale.setDefault(Locale.Category.DISPLAY, originalDisplay);
-            Locale.setDefault(Locale.Category.FORMAT, originalFormat);
-        }
-    }
 
     /** Normal is the shipped scale; Larger is one fixed step and never shrinks below Normal. */
     @Test public void normalAndLargerKeepTypeAndEveryVariantAtTheSameBounds() throws Exception {
@@ -323,9 +225,7 @@ public class WidgetPresentationInstrumentedTest {
                                 big = render(profile, context, larger);
                                 assertTrue("Larger must keep every displayed value: " + profile.name(),
                                     texts(big.root).containsAll(texts(base.root)));
-                                // Keyguard hosts stay Normal: their fixed one-row stack
-                                // cannot hold a larger three-line composition.
-                                float expectedScale = profile.variant <= 4 ? WidgetLayout.LARGE_TEXT_SCALE : 1f;
+                                float expectedScale = WidgetLayout.LARGE_TEXT_SCALE;
                                 boolean compared = false;
                                 for (TextView small : textViews(base.root)) {
                                     TextView large = big.root.findViewById(small.getId());
@@ -374,7 +274,6 @@ public class WidgetPresentationInstrumentedTest {
                     for (String language : new String[]{"en", "ar", "bn"}) {
                         for (float fontScale : new float[]{1f, 1.3f, 1.5f, 2f}) {
                             Context context = configured(language, fontScale);
-                            float density = context.getResources().getDisplayMetrics().density;
                             float width = 720f * fontScale;
                             float height = 600f * fontScale;
                             for (String fixture : new String[]{"midday", "night-start"}) {
@@ -382,28 +281,13 @@ public class WidgetPresentationInstrumentedTest {
                                     state(context, language, fixture);
                                 PrayerWidgetHelper.WidgetTimelineState larger =
                                     state(context, language, fixture, true);
-                                Rendered square = null, bigSquare = null;
-                                Rendered table = null, bigTable = null;
+                                Rendered strip = null, bigStrip = null;
                                 try {
-                                    Profile squareProfile = new Profile(1, width, height);
-                                    square = checkedCountdown(squareProfile, context, normal,
-                                        false, false, R.dimen.w_countdown_size);
-                                    bigSquare = checkedCountdown(squareProfile, context, larger,
-                                        false, false, R.dimen.w_countdown_size);
-
-                                    Profile tableProfile = new Profile(4, width, height);
-                                    table = checkedCountdown(tableProfile, context, normal,
-                                        false, false, R.dimen.w_countdown_table_size);
-                                    bigTable = checkedCountdown(tableProfile, context, larger,
-                                        false, false, R.dimen.w_countdown_table_size);
-
-                                    // Derive a header-only host from actual inflated geometry,
-                                    // not WidgetLayout.requiredHeight().
-                                    float summaryHeight = (float)Math.ceil(Math.max(
-                                        nativeTableHeaderHeight(table),
-                                        nativeTableHeaderHeight(bigTable)) / density) + 2f;
-                                    Profile summaryProfile =
-                                        new Profile(4, width, summaryHeight);
+                                    Profile stripProfile = new Profile(0, width, height);
+                                    strip = checkedCountdown(stripProfile, context, normal,
+                                        false, R.dimen.w_countdown_small_size);
+                                    bigStrip = checkedCountdown(stripProfile, context, larger,
+                                        false, R.dimen.w_countdown_small_size);
 
                                     for (int pass = 0; pass < 2; pass++) {
                                         PrayerWidgetHelper.WidgetTimelineState snapshot =
@@ -411,31 +295,14 @@ public class WidgetPresentationInstrumentedTest {
                                         // Two dp inside this snapshot's own checked regular
                                         // reservation forces the real width-based compact selection.
                                         Profile compactProfile = compactProfile(
-                                            pass == 0 ? square : bigSquare, height);
+                                            pass == 0 ? strip : bigStrip, height);
                                         Rendered compact = checkedCountdown(
-                                            compactProfile, context, snapshot, true, false,
-                                            R.dimen.w_countdown_size_compact);
-                                        surface.removeView(compact.host);
-                                        Rendered summary = checkedCountdown(
-                                            summaryProfile, context, snapshot, false, true,
-                                            R.dimen.w_countdown_table_size);
-                                        surface.removeView(summary.host);
-
-                                        // Larger must still leave both keyguard sizes Normal.
-                                        Rendered smallLock = checkedCountdown(
-                                            new Profile(5, width, height), context, snapshot,
-                                            true, false,
+                                            compactProfile, context, snapshot, true,
                                             R.dimen.w_countdown_small_size_compact);
-                                        surface.removeView(smallLock.host);
-                                        Rendered mediumLock = checkedCountdown(
-                                            new Profile(6, width, height), context, snapshot,
-                                            true, false,
-                                            R.dimen.w_countdown_table_size_compact);
-                                        surface.removeView(mediumLock.host);
+                                        surface.removeView(compact.host);
                                     }
                                 } finally {
-                                    for (Rendered rendered :
-                                            new Rendered[]{square, bigSquare, table, bigTable}) {
+                                    for (Rendered rendered : new Rendered[]{strip, bigStrip}) {
                                         if (rendered != null) surface.removeView(rendered.host);
                                     }
                                 }
@@ -457,7 +324,7 @@ public class WidgetPresentationInstrumentedTest {
 
     private Rendered checkedCountdown(Profile profile, Context context,
             PrayerWidgetHelper.WidgetTimelineState snapshot, boolean compact,
-            boolean summaryOnly, int normalDimension) {
+            int normalDimension) {
         WidgetLayout selected = new WidgetLayout(context, snapshot, profile.variant,
             profile.width, profile.height);
         String tag = profile.name() + "/"
@@ -466,26 +333,18 @@ public class WidgetPresentationInstrumentedTest {
             + "/larger=" + snapshot.presentation.widgetLargeText;
         assertEquals("Fixture must reach the intended native profile: " + tag,
             compact, selected.compact);
-        assertEquals("Fixture must reach real summary re-entry: " + tag,
-            summaryOnly, selected.summaryOnly);
         assertTrue("Fixture must fit without a simpler variant: " + tag,
             selected.fitsWithinBounds());
 
         Rendered rendered = render(profile, context, snapshot);
         try {
             Chronometer clock = rendered.root.findViewById(COUNTDOWNS[profile.variant]);
-            float scale = (snapshot.presentation.widgetLargeText && profile.variant <= 4 ? 1.2f : 1f)
-                * (selected.variant <= 4 && snapshot.valid && snapshot.numericLocale != null
+            float scale = (snapshot.presentation.widgetLargeText ? 1.2f : 1f)
+                * (snapshot.valid && snapshot.numericLocale != null
                     && java.text.NumberFormat.getIntegerInstance(snapshot.numericLocale).format(0).charAt(0) > '9' ? 1.12f : 1f);
             assertEquals("Final effective PX size: " + tag,
                 context.getResources().getDimension(normalDimension) * scale,
                 clock.getTextSize(), .05f);
-            if (profile.variant == 4) {
-                assertEquals("Native schedule visibility: " + tag,
-                    summaryOnly ? View.GONE : View.VISIBLE,
-                    rendered.root.findViewById(R.id.widget_schedule_container)
-                        .getVisibility());
-            }
             assertCountdownReservation(rendered);
             verifyTextGeometry(rendered.root, clock);
             return rendered;
@@ -493,15 +352,6 @@ public class WidgetPresentationInstrumentedTest {
             surface.removeView(rendered.host);
             throw error;
         }
-    }
-
-    private static int nativeTableHeaderHeight(Rendered rendered) {
-        Rect metadata = bounds(rendered.root,
-            rendered.root.findViewById(R.id.widget_metadata));
-        Rect progress = bounds(rendered.root,
-            rendered.root.findViewById(R.id.widget_progress_container));
-        return progress.bottom - metadata.top
-            + rendered.root.getPaddingTop() + rendered.root.getPaddingBottom();
     }
 
     private static Profile compactProfile(Rendered rendered, float height) {
@@ -786,7 +636,7 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    /** One UI tall 2x1 cells center Strip vertically; dense 5x6 grids keep Square/Wide/Table intact. */
+    /** One UI tall 2x1 cells center Strip vertically. */
     @Test public void oneUiAndDenseGridSizesPreserveVariantsAndCenterStrip() throws Exception {
         openHost();
         try {
@@ -806,28 +656,6 @@ public class WidgetPresentationInstrumentedTest {
                             bar.top >= primary.bottom && bar.top - primary.bottom <= px(context, 8));
                     } finally {
                         surface.removeView(tallStrip.host);
-                    }
-                    Rendered compactSquare = render(new Profile(1, 150, 145), context, s);
-                    try {
-                        assertNotNull("Dense 2x2 must not drop to Strip", compactSquare.root.findViewById(R.id.widget_square_footer));
-                        verify(compactSquare, "en", 1f);
-                    } finally {
-                        surface.removeView(compactSquare.host);
-                    }
-                    Rendered compactWide = render(new Profile(3, 300, 155), context, s);
-                    try {
-                        assertNotNull("Dense 4x2 must keep all 6 prayer chips", compactWide.root.findViewById(R.id.chip_fajr));
-                        verify(compactWide, "en", 1f);
-                    } finally {
-                        surface.removeView(compactWide.host);
-                    }
-                    Rendered compactTable = render(new Profile(4, 300, 165), context, s);
-                    try {
-                        assertEquals("Dense 4x2 Overview must keep its 4-column forecast",
-                            View.VISIBLE, compactTable.root.findViewById(R.id.widget_schedule_container).getVisibility());
-                        verify(compactTable, "en", 1f);
-                    } finally {
-                        surface.removeView(compactTable.host);
                     }
                 } catch (Throwable error) {
                     record("oneui-dense-grid", error);
@@ -861,7 +689,7 @@ public class WidgetPresentationInstrumentedTest {
                             PrayerWidgetHelper.WidgetTimelineState snapshot =
                                 new PrayerWidgetHelper.WidgetTimelineState(context, display, timeline, now, events, phoneLocale);
                             boolean rtl = "ar".equals(appLang);
-                            for (Profile profile : new Profile[]{NORMAL[0], NORMAL[1], NORMAL[3], NORMAL[4]}) {
+                            for (Profile profile : new Profile[]{NORMAL[0]}) {
                                 Rendered rendered = render(profile, context, snapshot);
                                 try {
                                     assertEquals("Direction must follow app language: " + phoneTag + "/" + appLang,
@@ -890,17 +718,14 @@ public class WidgetPresentationInstrumentedTest {
         assertTrue("4-way language/numeral matrix defects:\n" + joinFailures(), failures.isEmpty());
     }
 
-    /** Larger widget text fits 83dp Strip and dense grids across all 4 language combinations. */
+    /** Larger widget text fits 83dp Strip across all 4 language combinations. */
     @Test public void largerWidgetTextFitsAllFourLanguageCombinationsWithoutClipping() throws Exception {
         openHost();
         try {
             instrumentation.runOnMainSync(() -> {
                 try {
                     Profile[] compactBounds = {
-                        new Profile(0, 160, 83),
-                        new Profile(1, 160, 155),
-                        new Profile(2, 320, 88),
-                        new Profile(3, 320, 168)
+                        new Profile(0, 160, 83)
                     };
                     for (String phoneTag : new String[]{"en-US", "ar-EG"}) {
                         Locale phoneLocale = Locale.forLanguageTag(phoneTag);
@@ -939,53 +764,6 @@ public class WidgetPresentationInstrumentedTest {
             closeHost();
         }
         assertTrue("4-way Larger text defects:\n" + joinFailures(), failures.isEmpty());
-    }
-
-    /** Portrait phone 4x2 (350x175) keeps Wide Card in roomy 3x2 and Overview in 4-column forecast. */
-    @Test public void portraitFourByTwoKeepsWideGridAndOverviewDistinctOnAllLanguages() throws Exception {
-        openHost();
-        try {
-            instrumentation.runOnMainSync(() -> {
-                try {
-                    for (String phoneTag : new String[]{"en-US", "ar-EG"}) {
-                        Locale phoneLocale = Locale.forLanguageTag(phoneTag);
-                        for (String appLang : new String[]{"en", "ar"}) {
-                            Configuration cfg = new Configuration(target.getResources().getConfiguration());
-                            cfg.setLocale(phoneLocale);
-                            cfg.fontScale = 1f;
-                            Context context = target.createConfigurationContext(cfg);
-                            NativePresentation display = NativePresentation.parse(presentation(appLang, "midday").json());
-                            long now = day.dhuhr + 600000L;
-                            PrayerTimeline timeline = PrayerTimeline.at(schedule, now, zone);
-                            long[] events = schedule.localEvents(now, zone, timeline.day);
-                            PrayerWidgetHelper.WidgetTimelineState snapshot =
-                                new PrayerWidgetHelper.WidgetTimelineState(context, display, timeline, now, events, phoneLocale);
-                            Rendered wide = render(new Profile(3, 350, 175), context, snapshot);
-                            try {
-                                assertEquals("Portrait 350x175 Wide must stay 3x2 (2 rows), not squeezed 6-col",
-                                    2, scheduleRowCount(wide.root, CHIPS));
-                                verify(wide, appLang, 1f);
-                            } finally {
-                                surface.removeView(wide.host);
-                            }
-                            Rendered overview = render(new Profile(4, 350, 175), context, snapshot);
-                            try {
-                                assertEquals("Portrait 350x175 Overview must keep 4-column single row",
-                                    1, scheduleRowCount(overview.root, ROWS));
-                                verify(overview, appLang, 1f);
-                            } finally {
-                                surface.removeView(overview.host);
-                            }
-                        }
-                    }
-                } catch (Throwable error) {
-                    record("portrait-4x2-distinct", error);
-                }
-            });
-        } finally {
-            closeHost();
-        }
-        assertTrue("Portrait 4x2 Wide/Overview defects:\n" + joinFailures(), failures.isEmpty());
     }
     private void prepareSchedule(int month,int dayOfMonth) {
         zone = TimeZone.getDefault();
@@ -1107,7 +885,7 @@ public class WidgetPresentationInstrumentedTest {
                             PrayerWidgetHelper.WidgetTimelineState state) {
         Profile profile = new Profile(expectedVariant, request.width, request.height);
         FrameLayout host = new FrameLayout(context);
-        host.setBackgroundColor(profile.variant >= 5 || theme(context).equals("dark") ? 0xff182030 : 0xffe0d6c2);
+        host.setBackgroundColor(theme(context).equals("dark") ? 0xff182030 : 0xffe0d6c2);
         RemoteViews remote = PrayerWidgetHelper.createWidgetViews(context, state, request.variant, profile.width, profile.height);
         View applied = remote.apply(context, host);
         assertNotNull("RemoteViews did not inflate", applied);
@@ -1186,8 +964,7 @@ public class WidgetPresentationInstrumentedTest {
             rendered = render(profile, context, state(context, "en", "midday"));
             for (String fixture : new String[]{"gold","amber","soft-red","midday","warm","midday",
                     "asr","maghrib","isha","fajr","no-current","overnight","invalid","midday"}) {
-                boolean stageCapture=profile.variant<5
-                    && (fixture.equals("gold")||fixture.equals("amber")||fixture.equals("soft-red"));
+                boolean stageCapture=fixture.equals("gold")||fixture.equals("amber")||fixture.equals("soft-red");
                 rendered = runCase(profile, "en", 1f, fixture, stageCapture, rendered);
                 // Compare visible presentation against a fresh application of the same state.
                 PrayerWidgetHelper.WidgetTimelineState next = state(context, "en", fixture);
@@ -1317,8 +1094,7 @@ public class WidgetPresentationInstrumentedTest {
             assertEquals(1000,progress.getMax());assertEquals(s.progress,progress.getProgress());
             verifyProgressPixels(rendered,progress);
             Rect bar = bounds(root, progress), countdown = bounds(root, clock);
-            View primaryView = root.findViewById(R.id.widget_primary_row);
-            if (primaryView == null) primaryView = root.findViewById(R.id.widget_primary_group);
+            View primaryView = root.findViewById(R.id.widget_primary_group);
             Rect primary = bounds(root, primaryView);
             assertTrue("Progress overlaps the live countdown", bar.top >= countdown.bottom);
             assertTrue("Primary/progress gap expands or overlaps: " + (bar.top - primary.bottom),
@@ -1328,52 +1104,6 @@ public class WidgetPresentationInstrumentedTest {
             assertTrue("Progress geometry changed by state", Math.abs(bar.height() - px(rendered.context, 4)) <= 1);
             }
         }
-        switch (p.variant) {
-            case 1:
-                if (s.valid) {
-                    text(root, R.id.tv_square_next_time, s.nextTime);
-                    text(root, R.id.tv_square_footer_left, s.footerText);
-                    text(root, R.id.tv_square_footer_right, s.currentStartTime);
-                    assertGap(root, root.findViewById(R.id.widget_progress_container),
-                        root.findViewById(R.id.widget_square_footer), 16, rendered.context);
-                } else {
-                    assertEquals(View.GONE, root.findViewById(R.id.tv_square_next_time).getVisibility());
-                    assertEquals(View.GONE, root.findViewById(R.id.widget_square_footer).getVisibility());
-                }
-                break;
-            case 2:
-                text(root, R.id.tv_banner_footer_top, s.footerText);
-                text(root, R.id.tv_banner_footer_bottom, s.contextLine2); break;
-            case 3:
-                text(root, R.id.tv_wide_footer_top, s.footerText);
-                text(root, R.id.tv_wide_footer_bottom, s.contextLine2);
-                verifySchedule(rendered, CHIPS, CHIP_NAMES, CHIP_TIMES);
-                break;
-            case 4:
-                text(root, R.id.tv_large_location, s.presentation.locationName);
-                text(root, R.id.tv_large_hijri, s.hijriText);
-                if (s.valid) text(root, R.id.tv_large_current_pill, s.footerText);
-                else assertEquals(View.GONE,root.findViewById(R.id.tv_large_current_pill).getVisibility());
-                if (s.valid) text(root, R.id.tv_large_summary, s.summaryText);
-                else assertEquals(View.GONE,root.findViewById(R.id.widget_context_group).getVisibility());
-                assertEquals("Overview must match the approved information envelope",
-                    !s.valid || summaryOnly ? View.GONE : View.VISIBLE,root.findViewById(R.id.widget_schedule_container).getVisibility());
-                if(s.valid && !summaryOnly) {
-                    verifyForecast(rendered, ROWS, ROW_NAMES, ROW_TIMES);
-                    assertEquals("Overview rolling forecast row", 1, scheduleRowCount(root, ROWS));
-                }
-                break;
-            case 5:
-                text(root, R.id.tv_lock_small_label, s.label);
-                text(root, R.id.tv_lock_small_time, s.lockTime); break;
-            case 6:
-                text(root, R.id.tv_lock_med_label, s.label);
-                text(root, R.id.tv_lock_med_current, s.footerText);
-                text(root, R.id.tv_lock_med_next, s.contextLine2); break;
-            default: break;
-        }
-        if (s.valid && (p.variant==2 || p.variant==3 || p.variant==4 || p.variant==6))
-            verifyColumnSeparation(rendered);
         verifyTextGeometry(root, root);
     }
 
@@ -1428,7 +1158,7 @@ public class WidgetPresentationInstrumentedTest {
                                 : expectedFill(context, rendered.state), 1);
                             surface.removeView(rendered.host);
                         }
-                        for (int variant = 0; variant < 5; variant++) {
+                        for (int variant : new int[]{0}) {
                             for (String language : new String[]{"en", "ar"}) {
                                 Rendered rendered = renderVariant(context, variant, 6.5 / 11.0, language);
                                 assertProgressFill(rendered, expectedFill(context, rendered.state), 1);
@@ -1645,33 +1375,18 @@ public class WidgetPresentationInstrumentedTest {
         int variant = rendered.profile.variant;
         int[] background = drawablePixels(rendered.root.getBackground());
         TextView countdown = rendered.root.findViewById(COUNTDOWNS[variant]);
-        if (variant >= 5) {
-            assertTrue(tag + ": keyguard root must remain transparent", isTransparent(background));
-            assertLockContrast(countdown, 0xFFFFFFFF, tag);
-            assertLockContrast(rendered.root.findViewById(variant == 5
-                ? R.id.tv_lock_small_label : R.id.tv_lock_med_label), 0xFFFFFFFF, tag);
-            if (variant == 5) {
-                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_small_time), 0xE6FFFFFF, tag);
-            } else {
-                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_med_current), 0xE6FFFFFF, tag);
-                assertLockContrast(rendered.root.findViewById(R.id.tv_lock_med_next), 0xE6FFFFFF, tag);
-            }
-        } else {
-            assertEquals(tag + ": actual countdown text", night ? 0xFFEEF3F0 : 0xFF14201B,
-                countdown.getCurrentTextColor());
-            assertEquals(tag + ": actual card surface", night ? 0xFF1B211E : 0xFFFBFCFB,
-                background[32 * 64 + 32]);
-            boolean borderFound = false;
-            for (int pixel : background)
-                if (pixel == (night ? 0xFF37423D : 0xFFE3E9E5)) borderFound = true;
-            assertTrue(tag + ": actual card border", borderFound);
-            if (variant < 5) {
-                TextView label = rendered.root.findViewById(LABELS[variant]);
-                assertEquals(tag + ": actual prayer label",
-                    rendered.context.getColor(R.color.w_accent), label.getCurrentTextColor());
-            }
-            assertThemeProgress(rendered, night);
-        }
+        assertEquals(tag + ": actual countdown text", night ? 0xFFEEF3F0 : 0xFF14201B,
+            countdown.getCurrentTextColor());
+        assertEquals(tag + ": actual card surface", night ? 0xFF1B211E : 0xFFFBFCFB,
+            background[32 * 64 + 32]);
+        boolean borderFound = false;
+        for (int pixel : background)
+            if (pixel == (night ? 0xFF37423D : 0xFFE3E9E5)) borderFound = true;
+        assertTrue(tag + ": actual card border", borderFound);
+        TextView label = rendered.root.findViewById(LABELS[variant]);
+        assertEquals(tag + ": actual prayer label",
+            rendered.context.getColor(R.color.w_accent), label.getCurrentTextColor());
+        assertThemeProgress(rendered, night);
         // Compare all visible text/decorations with a native system-mode render
         // in the requested palette, not with renderer action IDs or wiring.
         Context expectedContext = themed(night);
@@ -1701,15 +1416,6 @@ public class WidgetPresentationInstrumentedTest {
             for (int i = 0; i < group.getChildCount(); i++)
                 assertThemeDecorations(group.getChildAt(i), referenceRoot);
         }
-    }
-
-    private void assertLockContrast(TextView text, int color, String tag) {
-        assertNotNull(tag + ": missing keyguard text", text);
-        assertEquals(tag + ": wallpaper-safe text", color, text.getCurrentTextColor());
-        assertEquals(tag + ": wallpaper-safe shadow", 0xB3000000, text.getShadowColor());
-        assertEquals(tag + ": shadow radius", 3f, text.getShadowRadius(), .01f);
-        assertEquals(tag + ": shadow x", 0f, text.getShadowDx(), .01f);
-        assertEquals(tag + ": shadow y", 1f, text.getShadowDy(), .01f);
     }
 
     private void assertThemeProgress(Rendered rendered, boolean night) {
@@ -1968,136 +1674,6 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    private void verifyColumnSeparation(Rendered rendered) {
-        ViewGroup root = rendered.root;
-        LinearLayout row = root.findViewById(R.id.widget_primary_row);
-        if (row.getOrientation()!=LinearLayout.HORIZONTAL) return;
-        int variant=rendered.profile.variant;
-        int contextId=variant==2 ? R.id.tv_banner_footer_top : variant==3 ? R.id.tv_wide_footer_top
-            : variant==4 ? R.id.tv_large_current_pill : R.id.tv_lock_med_current;
-        Rect context=bounds(root,root.findViewById(contextId));
-        Rect primary=bounds(root,root.findViewById(R.id.widget_primary_group));
-        boolean rtl=root.getLayoutDirection()==View.LAYOUT_DIRECTION_RTL;
-        int gap = rtl ? primary.left - context.right : context.left - primary.right;
-        assertTrue("Mirrored columns lose their protected text gap: "+gap,
-            gap>=px(rendered.context,4)-1);
-    }
-
-    private void verifyForecast(Rendered rendered, int[] cells, int[] names, int[] times) {
-        ViewGroup root = rendered.root;
-        PrayerWidgetHelper.WidgetTimelineState s = rendered.state;
-        int height = root.findViewById(cells[0]).getHeight();
-        float nameSize = ((TextView)root.findViewById(names[0])).getTextSize();
-        float timeSize = ((TextView)root.findViewById(times[0])).getTextSize();
-        int nameStyle = style(root.findViewById(names[0])), timeStyle = style(root.findViewById(times[0]));
-        Rect first = bounds(root, root.findViewById(cells[0]));
-        int progressToCells = first.top - bounds(root, root.findViewById(R.id.widget_progress_container)).bottom;
-        assertTrue("Forecast gap expands or overlaps: " + progressToCells,
-            progressToCells >= 0 && progressToCells <= px(rendered.context, 20) + 1);
-        for (int i = 0; i < cells.length; i++) {
-            View cell = root.findViewById(cells[i]);
-            text(root, names[i], s.presentation.label(s.forecastIds[i]));
-            text(root, times[i], s.forecastTimes[i]);
-            assertTrue("Unequal forecast cell heights", Math.abs(height - cell.getHeight()) <= 1);
-            assertEquals(nameStyle, style(root.findViewById(names[i])));
-            assertEquals(timeStyle, style(root.findViewById(times[i])));
-            assertEquals(nameSize, ((TextView)root.findViewById(names[i])).getTextSize(), .01f);
-            assertEquals(timeSize, ((TextView)root.findViewById(times[i])).getTextSize(), .01f);
-            boolean next = i == 0 || (s.forecastTimestamps[i] == s.targetTimestamp && s.forecastIds[i].equals(s.nextPrayerId));
-            int expectedBg = next ? R.drawable.widget_chip_next : R.drawable.widget_chip_transparent;
-            assertArrayEquals("Forecast next/upcoming background",
-                drawablePixels(rendered.context.getDrawable(expectedBg)), drawablePixels(cell.getBackground()));
-            int nameColor = rendered.context.getColor(next ? R.color.w_accent : R.color.w_text_secondary);
-            int timeColor = rendered.context.getColor(R.color.w_text_primary);
-            assertEquals(nameColor, ((TextView)root.findViewById(names[i])).getCurrentTextColor());
-            assertEquals(timeColor, ((TextView)root.findViewById(times[i])).getCurrentTextColor());
-            if (i > 0) {
-                Rect other = bounds(root, root.findViewById(cells[i - 1]));
-                Rect rect = bounds(root, cell);
-                boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
-                assertTrue("Forecast chronology must follow start edge",
-                    rtl ? rect.right <= other.left : rect.left >= other.right);
-            }
-        }
-    }
-
-    private void verifySchedule(Rendered rendered, int[] cells, int[] names, int[] times) {
-        ViewGroup root = rendered.root;
-        PrayerWidgetHelper.WidgetTimelineState s = rendered.state;
-        int height = root.findViewById(cells[0]).getHeight();
-        float nameSize = ((TextView)root.findViewById(names[0])).getTextSize();
-        float timeSize = ((TextView)root.findViewById(times[0])).getTextSize();
-        int nameStyle = style(root.findViewById(names[0])), timeStyle = style(root.findViewById(times[0]));
-        Rect first = bounds(root, root.findViewById(cells[0]));
-        View anchor=root.findViewById(s.valid ? R.id.widget_progress_container : R.id.widget_primary_row);
-        int progressToCells=first.top-bounds(root,anchor).bottom;
-        assertTrue("Primary/progress-to-schedule gap expands or overlaps: "+progressToCells,
-            progressToCells>=0 && progressToCells<=px(rendered.context,20)+1);
-        int rowOneBottom = 0, rowTwoTop = Integer.MAX_VALUE;
-        for (int i = 0; i < cells.length; i++) {
-            View cell = root.findViewById(cells[i]);
-            text(root, names[i], s.presentation.label(PRAYERS[i]));
-            text(root, times[i], s.chipClock(PRAYERS[i]));
-            assertTrue("Unequal prayer-cell heights: " + height + "/" + cell.getHeight(), Math.abs(height - cell.getHeight()) <= 1);
-            assertEquals("ID-specific prayer-name weight (including Dhuhr)", nameStyle, style(root.findViewById(names[i])));
-            assertEquals("ID-specific clock weight", timeStyle, style(root.findViewById(times[i])));
-            assertEquals(nameSize, ((TextView)root.findViewById(names[i])).getTextSize(), .01f);
-            assertEquals(timeSize, ((TextView)root.findViewById(times[i])).getTextSize(), .01f);
-            for (int textId : new int[]{names[i], times[i]}) {
-                TextView text = root.findViewById(textId);
-                Layout lines = text.getLayout();
-                boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
-                for (int line = 0; line < lines.getLineCount(); line++) {
-                    float edge = text.getCompoundPaddingLeft()
-                        + (rtl ? lines.getLineRight(line) : lines.getLineLeft(line));
-                    float expected = rtl ? text.getWidth() - text.getCompoundPaddingRight()
-                        : text.getCompoundPaddingLeft();
-                    assertTrue("Prayer name and clock must share the cell's logical start edge: "
-                        + resourceName(text) + " edge=" + edge + " expected=" + expected,
-                        Math.abs(edge - expected) <= 1);
-                }
-            }
-            assertTrue("Active fill stretches into spare host height", cell.getHeight() <= px(rendered.context,
-                96 * rendered.context.getResources().getConfiguration().fontScale));
-            Rect rect = bounds(root, cell);
-            if (Math.abs(rect.top - first.top) <= 1) rowOneBottom = Math.max(rowOneBottom, rect.bottom);
-            else rowTwoTop = Math.min(rowTwoTop, rect.top);
-            long event = event(s, i);
-            boolean current = s.valid && PRAYERS[i].equals(s.activePrayerId) && event == s.startTimestamp;
-            boolean next = s.valid && PRAYERS[i].equals(s.nextPrayerId) && event == s.targetTimestamp;
-            if (rendered.profile.variant == 3) {
-                int expected = current ? R.drawable.widget_chip_current : next ? R.drawable.widget_chip_next : R.drawable.widget_chip_transparent;
-                assertArrayEquals("Current/next/passed background: " + PRAYERS[i],
-                    drawablePixels(rendered.context.getDrawable(expected)), drawablePixels(cell.getBackground()));
-                boolean past = !next && event < s.now && event < s.startTimestamp;
-                int nameColor = rendered.context.getColor(current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_secondary);
-                int timeColor = rendered.context.getColor(current ? R.color.w_accent : past ? R.color.w_text_muted : R.color.w_text_primary);
-                assertEquals("Current/next/passed name color", nameColor, ((TextView)root.findViewById(names[i])).getCurrentTextColor());
-                assertEquals("Current/next/passed clock color", timeColor, ((TextView)root.findViewById(times[i])).getCurrentTextColor());
-            } else {
-                // Table intentionally has only current decoration, never a Wide next outline.
-                int[] actual = drawablePixels(cell.getBackground());
-                if (current) assertArrayEquals("Active Table decoration", drawablePixels(rendered.context.getDrawable(R.drawable.widget_active_row)), actual);
-                else assertTrue("Stale Table active decoration: " + PRAYERS[i], isTransparent(actual));
-            }
-            for (int j = 0; j < i; j++) {
-                Rect other = bounds(root, root.findViewById(cells[j]));
-                if (Math.abs(other.top - rect.top) <= 1) {
-                    assertTrue("Unequal clock baselines in one schedule row", Math.abs(
-                        baseline(root, root.findViewById(times[j])) - baseline(root, root.findViewById(times[i]))) <= 1);
-                    assertTrue("Unequal name baselines in one schedule row", Math.abs(
-                        baseline(root, root.findViewById(names[j])) - baseline(root, root.findViewById(names[i]))) <= 1);
-                    boolean rtl = root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
-                    assertTrue("Prayer chronology must follow the rendered start edge: "
-                        + PRAYERS[j] + " / " + PRAYERS[i],
-                        rtl ? rect.right <= other.left : rect.left >= other.right);
-                }
-            }
-        }
-        if (rowTwoTop != Integer.MAX_VALUE) assertTrue("Schedule rows overlap or drift apart",
-            rowTwoTop >= rowOneBottom && rowTwoTop - rowOneBottom <= px(rendered.context, 12));
-    }
-
     private void verifyTextGeometry(ViewGroup root, View view) {
         if (view.getVisibility() != View.VISIBLE) return;
         if (view instanceof TextView) {
@@ -2144,119 +1720,6 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    private void runLegacyClockFitTransitions() {
-        Rendered banner=null,table=null;
-        try {
-            Context context=configured("bn",1f);
-            PrayerWidgetHelper.WidgetTimelineState snapshot=state(context,"bn","midday");
-            cases++;
-            banner=render(new Profile(3,250,220),2,context,snapshot);
-            verify(banner,"bn",1f);
-            cases++;
-            table=render(new Profile(4,288,165),context,snapshot);
-            verify(table,"bn",1f);
-            for(float width : new float[]{250,288}) {
-                boolean expectSummary = new WidgetLayout(context, snapshot, 4, width, 165).summaryOnly;
-                table=runCase(new Profile(4,width,165),"bn",1f,"midday",false,table,expectSummary);
-            }
-            boolean summary24h = new WidgetLayout(context, state(context,"bn","midday-24h"), 4, 250, 165).summaryOnly;
-            table=runCase(new Profile(4,250,165),"bn",1f,"midday-24h",false,table,summary24h);
-            boolean summary12h = new WidgetLayout(context, snapshot, 4, 250, 165).summaryOnly;
-            table=runCase(new Profile(4,250,165),"bn",1f,"midday",false,table,summary12h);
-        } catch(Throwable error) {record("legacy-clock-fit-transitions",error);}
-        finally {
-            if(banner!=null) surface.removeView(banner.host);
-            if(table!=null) surface.removeView(table.host);
-        }
-    }
-
-    private void runLegacySizeBoundaries() {
-        try {
-            Context context = configured("en",1f);
-            PrayerWidgetHelper.WidgetTimelineState snapshot = state(context,"en","midday");
-            for (int variant : new int[]{1,3}) {
-                float width = variant == 1 ? 130 : 250;
-                WidgetLayout compact = new WidgetLayout(context,snapshot,variant,width,110);
-                float threshold = compact.minimumHeight;
-                for (float height : new float[]{99,threshold-1,threshold,threshold+1}) {
-                    cases++;
-                    int expectedVariant = height < threshold ? (variant == 1 ? 0 : 2) : variant;
-                    Rendered rendered = null;
-                    String name = "legacy-"+VARIANTS[variant]+"-"+width+"x"+height;
-                    try {
-                        rendered = render(new Profile(variant,width,height),expectedVariant,context,snapshot);
-                        verify(rendered,"en",1f);
-                    } catch(Throwable error) { record(name,error); }
-                    finally { if(rendered!=null) surface.removeView(rendered.host); }
-                }
-            }
-        } catch(Exception error) { record("legacy-size-boundaries",error); }
-    }
-
-    private void runIndependentWideInstances() {
-        Rendered narrow = null, wide = null;
-        cases++;
-        try {
-            Context context = configured("en", 1f);
-            PrayerWidgetHelper.WidgetTimelineState s = state(context, "en", "midday");
-            narrow = render(new Profile(3, 360, 220), context, s);
-            wide = render(new Profile(3, 600, 220), context, s);
-            verify(narrow, "en", 1f);
-            verify(wide, "en", 1f);
-            assertEquals("A second Wide instance changed the narrow composition", 2, scheduleRowCount(narrow.root, CHIPS));
-            assertEquals("Wide instance did not keep independent bounds", 1, scheduleRowCount(wide.root, CHIPS));
-            assertEquals(((Chronometer)narrow.root.findViewById(COUNTDOWNS[3])).getBase(),
-                ((Chronometer)wide.root.findViewById(COUNTDOWNS[3])).getBase());
-        } catch (Throwable error) {
-            record("independent-wide-instances", error);
-        } finally {
-            if (capture && narrow != null) capture(narrow, "wide-narrow-grid-simultaneous");
-            if (capture && wide != null) capture(wide, "wide-six-columns-simultaneous");
-            if (narrow != null) surface.removeView(narrow.host);
-            if (wide != null) surface.removeView(wide.host);
-        }
-    }
-
-    private void runExtraHeightCase(Profile normal) {
-        Rendered compact = null, tall = null;
-        String name = normal.name() + "-extra-height";
-        cases++;
-        try {
-            Context context = configured("en", 1f);
-            PrayerWidgetHelper.WidgetTimelineState s = state(context, "en", "midday");
-            compact = render(normal, context, s);
-            tall = render(new Profile(normal.variant, normal.width, normal.height + 240), context, s);
-            verify(tall, "en", 1f);
-            int[] cells = normal.variant == 3 ? CHIPS : ROWS;
-            for (int id : cells) {
-                int original = compact.root.findViewById(id).getHeight();
-                int enlarged = tall.root.findViewById(id).getHeight();
-                assertTrue("Extra host height stretches decorated cell: " + original + "/" + enlarged,
-                    enlarged <= Math.max(original, px(context, 80)) + 1);
-            }
-            Rect progress = bounds(tall.root, tall.root.findViewById(R.id.widget_progress_container));
-            Rect schedule = bounds(tall.root, tall.root.findViewById(R.id.widget_schedule_container));
-            assertTrue("Extra host height opens an internal gulf", schedule.top - progress.bottom <= px(context, 20));
-            Rect last = bounds(tall.root, tall.root.findViewById(cells[cells.length - 1]));
-            Rect primary = bounds(tall.root, tall.root.findViewById(R.id.widget_primary_row));
-            // Surplus belongs outside the coherent composition, not inside a weighted slot.
-            int topSurplus = primary.top - tall.root.getPaddingTop();
-            int bottomSurplus = tall.root.getHeight() - tall.root.getPaddingBottom() - last.bottom;
-            // Table metadata precedes the primary block, so include it in the outer-group bound.
-            if (normal.variant == 4) topSurplus = bounds(tall.root,
-                tall.root.findViewById(R.id.widget_metadata)).top - tall.root.getPaddingTop();
-            assertTrue("Surplus does not surround the content group", Math.abs(topSurplus - bottomSurplus) <= px(context, 12));
-        } catch (Throwable error) {
-            record(name, error);
-        } finally {
-            if (tall != null) {
-                if (capture) capture(tall, name);
-                surface.removeView(tall.host);
-            }
-            if (compact != null) surface.removeView(compact.host);
-        }
-    }
-
     private void assertEquivalent(View previous, View fresh) {
         assertEquals("Reapply visibility differs from fresh render", fresh.getVisibility(), previous.getVisibility());
         if (fresh.getVisibility() != View.VISIBLE) return;
@@ -2280,43 +1743,6 @@ public class WidgetPresentationInstrumentedTest {
         }
     }
 
-    private void captureTransparentBackgrounds() {
-        Context context = configured("en",1f);
-        PrayerWidgetHelper.WidgetTimelineState snapshot;
-        try { snapshot = state(context,"en","midday"); }
-        catch(Exception error) { record("transparent-background-fixture",error); return; }
-        Paint wallpaper = new Paint();
-        String[] backgrounds = {"light","dark","busy"};
-        for(int variant=5;variant<=6;variant++) {
-            Rendered rendered = null;
-            Bitmap image = null;
-            try {
-                rendered = render(NORMAL[variant],context,snapshot);
-                image = Bitmap.createBitmap(rendered.root.getWidth(),rendered.root.getHeight(),Bitmap.Config.ARGB_8888);
-                Canvas canvas = new Canvas(image);
-                for(String background : backgrounds) {
-                    canvas.drawColor(background.equals("light") ? 0xffe5e7e3 : 0xff182030);
-                    if(background.equals("busy")) {
-                        int band = px(context,48);
-                        wallpaper.setColor(0xffd9dfd5);
-                        for(int x=0;x<image.getWidth();x+=2*band)
-                            canvas.drawRect(x,0,x+band,image.getHeight(),wallpaper);
-                    }
-                    rendered.root.draw(canvas);
-                    String file = "widget-wallpaper-"+VARIANTS[variant]+"-"+background+"-"+theme(context)+".png";
-                    try(FileOutputStream output = new FileOutputStream(new File(target.getCacheDir(),file))) {
-                        assertTrue("Wallpaper review PNG encoding failed",image.compress(Bitmap.CompressFormat.PNG,100,output));
-                    }
-                    audit("transparent-review variant="+VARIANTS[variant]+" background="+background+" file="+file);
-                }
-            } catch(Throwable error) { record("transparent-background-"+variant,error); }
-            finally {
-                if(image!=null) image.recycle();
-                if(rendered!=null) surface.removeView(rendered.host);
-            }
-        }
-    }
-
     private void capturePickerPreviews() {
         Context context = configured("en",1f);
         PrayerWidgetHelper.WidgetTimelineState snapshot;
@@ -2329,8 +1755,7 @@ public class WidgetPresentationInstrumentedTest {
             try {
                 rendered = render(profile,context,snapshot);
                 // Static picker artwork only; live widgets retain native text and Chronometers.
-                // Transparent keyguard previews need a clearly synthetic sample backdrop.
-                View preview = profile.variant >= 5 ? rendered.host : rendered.root;
+                View preview = rendered.root;
                 image = Bitmap.createBitmap(preview.getWidth(),preview.getHeight(),Bitmap.Config.ARGB_8888);
                 preview.draw(new Canvas(image));
                 try(FileOutputStream output = new FileOutputStream(new File(target.getCacheDir(),file))) {
@@ -2347,18 +1772,16 @@ public class WidgetPresentationInstrumentedTest {
     }
 
     private void captureOverview() {
-        Rendered strip = null, square = null;
+        Rendered strip = null;
         Bitmap image = null;
         try {
             Context context = configured("en",1f);
             PrayerWidgetHelper.WidgetTimelineState snapshot = state(context,"en","midday");
             strip = render(NORMAL[0],context,snapshot);
-            square = render(NORMAL[1],context,snapshot);
-            image = Bitmap.createBitmap(px(context,376),px(context,204),Bitmap.Config.ARGB_8888);
+            image = Bitmap.createBitmap(px(context,184),px(context,120),Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(image);
             canvas.drawColor(theme(context).equals("dark") ? 0xff182030 : 0xffe0d6c2);
             canvas.save(); canvas.translate(px(context,12),px(context,12)); strip.host.draw(canvas); canvas.restore();
-            canvas.save(); canvas.translate(px(context,184),px(context,12)); square.host.draw(canvas); canvas.restore();
             String file = "widget-design-overview-"+theme(context)+".png";
             try(FileOutputStream output = new FileOutputStream(new File(target.getCacheDir(),file))) {
                 assertTrue(image.compress(Bitmap.CompressFormat.PNG,100,output));
@@ -2368,7 +1791,6 @@ public class WidgetPresentationInstrumentedTest {
         finally {
             if(image!=null) image.recycle();
             if(strip!=null) surface.removeView(strip.host);
-            if(square!=null) surface.removeView(square.host);
         }
     }
 
@@ -2441,27 +1863,6 @@ public class WidgetPresentationInstrumentedTest {
         Rect a = bounds(root, before), b = bounds(root, after);
         assertTrue("Incoherent group gap: " + (b.top - a.bottom),
             b.top >= a.bottom - 1 && b.top - a.bottom <= px(context, maxDp) + 1);
-    }
-    private static int scheduleRowCount(ViewGroup root, int[] cells) {
-        List<Integer> rows = new ArrayList<>();
-        for (int id : cells) {
-            int top = bounds(root, root.findViewById(id)).top;
-            boolean found = false;
-            for (int row : rows) if (Math.abs(row - top) <= 1) found = true;
-            if (!found) rows.add(top);
-        }
-        return rows.size();
-    }
-    private static long event(PrayerWidgetHelper.WidgetTimelineState s, int index) {
-        switch(index) {
-            case 0: return s.fajrTs;
-            case 1: return s.sunriseTs;
-            case 2: return s.dhuhrTs;
-            case 3: return s.asrTs;
-            case 4: return s.maghribTs;
-            case 5: return s.ishaTs;
-            default: throw new ArrayIndexOutOfBoundsException(index);
-        }
     }
     private static long parseCountdown(String value) {
         String[] fields = value.trim().split(":");
