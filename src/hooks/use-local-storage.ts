@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { createPersistentStore } from '@/utils/persistent-storage';
 import type { PersistentStore, StorageSnapshot, StorageUpdate } from '@/utils/persistent-storage';
 import { normalizeStorageValue } from '@/utils/settings-storage';

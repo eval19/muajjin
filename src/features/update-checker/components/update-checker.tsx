@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/contexts/translation-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { subscribeUpdateChecks } from '@/features/update-checker/services/update-events';

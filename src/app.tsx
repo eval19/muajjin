@@ -1,6 +1,5 @@
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { UpdateChecker } from '@/features/update-checker';
 import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -38,7 +37,6 @@ function ScrollToTopOnNavigate() {
 
 const App = () => (
     <AppProvider>
-      <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -198,7 +196,6 @@ const App = () => (
             </Routes>
           </CapacitorApp>
         </BrowserRouter>
-      </TooltipProvider>
     </AppProvider>
 );
 

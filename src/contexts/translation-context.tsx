@@ -1,4 +1,4 @@
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import arTemplate from '@/i18n/template-ar.json';
 import bnTemplate from '@/i18n/template-bn.json';
 import enTemplate from '@/i18n/template-en.json';

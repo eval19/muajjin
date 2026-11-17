@@ -8,12 +8,7 @@ import tseslint from 'typescript-eslint';
 // factory. Vite may invalidate their importers instead of retaining local state;
 // the exception names do not exempt any other exports or component modules.
 const colocatedExports = [
-  ['src/components/ui/badge.tsx', ['badgeVariants']],
   ['src/components/ui/button.tsx', ['buttonVariants']],
-  ['src/components/ui/form.tsx', ['useFormField']],
-  ['src/components/ui/navigation-menu.tsx', ['navigationMenuTriggerStyle']],
-  ['src/components/ui/sidebar.tsx', ['useSidebar']],
-  ['src/components/ui/toggle.tsx', ['toggleVariants']],
   ['src/contexts/app-context.tsx', ['useApp']],
   ['src/contexts/translation-context.tsx', ['useTranslation']],
 ];
