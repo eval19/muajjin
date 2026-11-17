@@ -24,6 +24,8 @@ export function SelectionButtonGroup<T extends string>({
   gridClassName = 'grid grid-cols-3 gap-3',
   buttonClassName = 'w-full',
 }: SelectionButtonGroupProps<T>) {
+  const hasIcons = options.some((option) => Boolean(option.icon));
+
   return (
     <div className={gridClassName}>
       {options.map((option) => (
@@ -32,7 +34,13 @@ export function SelectionButtonGroup<T extends string>({
           type="button"
           variant={value === option.value ? 'default' : 'outline'}
           onClick={() => onChange(option.value)}
-          className={cn('h-auto min-w-0 flex-wrap px-2', buttonClassName)}
+          className={cn(
+            'h-auto min-w-0 px-2',
+            hasIcons
+              ? 'flex-col gap-1.5 py-2.5 text-center leading-tight'
+              : 'flex-wrap py-2',
+            buttonClassName,
+          )}
           disabled={option.disabled}>
           {option.icon}
           <span className="min-w-0 break-words">{option.label}</span>

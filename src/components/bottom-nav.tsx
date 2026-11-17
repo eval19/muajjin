@@ -66,7 +66,7 @@ export function BottomNav() {
         closeLabel={t('common.close')}
         aria-describedby={undefined}
         className="w-72 p-0">
-        <header className="border-b border-border px-5 py-5">
+        <header className="border-b border-border px-5 py-4">
           <div className="flex items-center gap-3 pe-12">
             <img src="/icon.png" alt="" className="h-10 w-10 rounded-xl" />
             <SheetTitle className="text-lg font-bold tracking-tight">

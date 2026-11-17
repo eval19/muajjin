@@ -3,7 +3,6 @@ import { useTranslation } from '@/contexts/translation-context';
 import { PrayerTime } from '@/types';
 import { formatTime, getNextSalat, prayerBoundaries } from '@/utils/time-utils';
 import { useBoundaryClock } from '@/hooks/use-visible-clock';
-import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import type { FC } from 'react';
 
@@ -31,16 +30,13 @@ export const NextPrayerContainer: FC<NextPrayerContainerProps> = ({
     <Card>
       <CardContent className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
-          <div className="flex min-w-[6rem] flex-1 items-center gap-1">
-            <div className="min-w-0 text-start">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                {t('salatTimes.next')}
-              </p>
-              <h3 className="break-words text-lg font-bold uppercase">
-                {nextPrayer.name}
-              </h3>
-            </div>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground rtl:rotate-180" />
+          <div className="min-w-[6rem] flex-1 text-start">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              {t('salatTimes.next')}
+            </p>
+            <h3 className="break-words text-lg font-bold uppercase">
+              {nextPrayer.name}
+            </h3>
           </div>
           <div className="ms-auto flex flex-wrap gap-x-3 gap-y-2">
             <div className="text-end">

@@ -488,25 +488,44 @@ const DisplaySettings: FC = () => {
               }}>
               {t('settings.widgetOpenBatterySettings')}
             </Button>
-            <div className="space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
-              <p>
-                {t('settings.widgetNextUpdate')}:{' '}
-                {reliability && reliability.nextTransition > 0
-                  ? <bdi dir="ltr" className="tabular-nums">{new Date(reliability.nextTransition).toLocaleTimeString(
-                      [],
-                      { hour: '2-digit', minute: '2-digit' },
-                    )}</bdi>
-                  : t('settings.widgetNotScheduled')}
-              </p>
-              <p>
-                {t('settings.widgetLastRefresh')}:{' '}
-                {reliability && reliability.lastDispatch > 0
-                  ? <bdi dir="ltr" className="tabular-nums">{new Date(reliability.lastDispatch).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}</bdi>
-                  : t('settings.widgetNotRecorded')}
-              </p>
+            <div className="space-y-2 border-t border-border pt-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="text-muted-foreground">
+                  {t('settings.widgetNextUpdate')}
+                </span>
+                <span className="font-medium text-foreground">
+                  {reliability && reliability.nextTransition > 0 ? (
+                    <bdi dir="ltr" className="tabular-nums">
+                      {new Date(reliability.nextTransition).toLocaleTimeString(
+                        [],
+                        { hour: '2-digit', minute: '2-digit' },
+                      )}
+                    </bdi>
+                  ) : (
+                    t('settings.widgetNotScheduled')
+                  )}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="text-muted-foreground">
+                  {t('settings.widgetLastRefresh')}
+                </span>
+                <span className="font-medium text-foreground">
+                  {reliability && reliability.lastDispatch > 0 ? (
+                    <bdi dir="ltr" className="tabular-nums">
+                      {new Date(reliability.lastDispatch).toLocaleTimeString(
+                        [],
+                        {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        },
+                      )}
+                    </bdi>
+                  ) : (
+                    t('settings.widgetNotRecorded')
+                  )}
+                </span>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               {t('settings.widgetReliabilityNote')}

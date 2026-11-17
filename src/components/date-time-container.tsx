@@ -78,6 +78,7 @@ export const DateTimeContainer: FC<DateTimeContainerProps> = ({
             activeTranslation?.meta.languageCode ?? 'en',
           )}
         </span>
+        <span aria-hidden="true">•</span>
         <span>
           {hijri
             ? `${hijri.day} ${monthLabel} ${hijri.year}`

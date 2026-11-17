@@ -20,7 +20,7 @@
       "menu": "Menu",
       "home": "Home",
       "calendar": "Calendar",
-      "compass": "Compass",
+      "compass": "Qibla",
       "settings": "Settings",
       "qazaTracker": "Qaza Tracker"
     },
@@ -50,7 +50,10 @@
       "nextMeal": "Next Meal"
     },
     "prohibited": {
-      "title": "Prohibited Salat Times"
+      "title": "Prohibited Salat Times",
+      "shuruq": "Shuruq",
+      "ghurub": "Ghurub",
+      "zawal": "Zawal"
     },
     "settings": {
       "title": "Settings",
@@ -204,8 +207,8 @@
       "exactAlarmSkip": "Continue with approximate updates"
     },
     "qibla": {
-      "badge": "Qibla Compass",
-      "title": "Qibla Compass",
+      "badge": "Qibla Direction",
+      "title": "Qibla",
       "description": "Find the direction of the Kaaba from your current location.",
       "enableCompass": "Enable compass access",
       "permissionDenied": "Compass permission was denied. You can still use the bearing shown below.",

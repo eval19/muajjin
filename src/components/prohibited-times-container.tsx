@@ -78,15 +78,19 @@ export const ProhibitedTimesContainer: FC<ProhibitedTimesContainerProps> = ({
                     {time.name}
                   </span>
                 </div>
-                <span className="ms-auto inline-flex items-center gap-1.5 text-sm font-bold">
-                  <bdi dir="ltr" className="whitespace-nowrap tabular-nums">
+                <span className="ms-auto grid shrink-0 grid-cols-[minmax(4.5rem,auto)_auto_minmax(4.5rem,auto)] items-center gap-1.5 text-sm font-bold">
+                  <bdi
+                    dir="ltr"
+                    className="whitespace-nowrap text-end tabular-nums">
                     {formatTime(time.start, timeFormat, t)}
                   </bdi>
                   <ArrowRight
                     aria-hidden="true"
                     className="h-3.5 w-3.5 shrink-0 text-muted-foreground rtl:rotate-180"
                   />
-                  <bdi dir="ltr" className="whitespace-nowrap tabular-nums">
+                  <bdi
+                    dir="ltr"
+                    className="whitespace-nowrap text-start tabular-nums">
                     {formatTime(time.end, timeFormat, t)}
                   </bdi>
                 </span>

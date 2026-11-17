@@ -108,19 +108,19 @@ const SettingsHome: FC = () => {
             options={[
               {
                 value: 'light',
-                icon: <Sun className="me-2 h-4 w-4 shrink-0" />,
+                icon: <Sun className="h-4 w-4 shrink-0" />,
                 label: t('settings.light'),
                 disabled: !mounted,
               },
               {
                 value: 'dark',
-                icon: <Moon className="me-2 h-4 w-4 shrink-0" />,
+                icon: <Moon className="h-4 w-4 shrink-0" />,
                 label: t('settings.dark'),
                 disabled: !mounted,
               },
               {
                 value: 'system',
-                icon: <Monitor className="me-2 h-4 w-4 shrink-0" />,
+                icon: <Monitor className="h-4 w-4 shrink-0" />,
                 label: t('settings.system'),
                 disabled: !mounted,
               },
