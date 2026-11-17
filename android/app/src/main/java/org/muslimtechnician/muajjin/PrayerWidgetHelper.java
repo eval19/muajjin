@@ -165,11 +165,7 @@ public final class PrayerWidgetHelper {
     public static void updateAllWidgets(Context context,WidgetTimelineState state,int[][] ids) {
         context=themeContext(context,state.presentation.theme);
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
-        // One sample pair per dispatch, shared by every bar-bearing variant and
-        // duplicate instance. Keyguard-only dispatches need no color work.
-        WidgetProgressPalette.Fill fill=null;
-        for(int i=0;i<Math.min(5,ids.length)&&fill==null;i++)
-            if(ids[i].length>0) fill=progressFill(context,state);
+        WidgetProgressPalette.Fill fill=ids.length>0&&ids[0].length>0?progressFill(context,state):null;
         for(int i=0;i<ids.length;i++) for(int id:ids[i])
             updateWidget(context,manager,id,state,i,fill);
     }

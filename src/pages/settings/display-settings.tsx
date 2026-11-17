@@ -34,7 +34,9 @@ import { useTranslation } from '@/contexts/translation-context';
 import {
   openBatteryOptimizationSettings,
   openExactAlarmSettings,
+  readLiveUpdateEnabled,
   readWidgetReliability,
+  writeLiveUpdateEnabled,
 } from '@/services/widget-sync-service';
 import type { WidgetReliability } from '@/services/widget-sync-service';
 import { EContainerType } from '@/types/enums';
@@ -125,6 +127,9 @@ const DisplaySettings: FC = () => {
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const [reliability, setReliability] = useState<WidgetReliability | null>(null);
   const [reliabilityError, setReliabilityError] = useState(false);
+  const [liveUpdateEnabled, setLiveUpdateEnabled] = useState<boolean | null>(null);
+  const [liveUpdateBusy, setLiveUpdateBusy] = useState(false);
+  const [liveUpdateError, setLiveUpdateError] = useState(false);
   const refreshReliability = useCallback(async () => {
     if (!nativeAndroid) return;
     try {
@@ -139,6 +144,16 @@ const DisplaySettings: FC = () => {
     if (!nativeAndroid) return;
     let disposed = false;
     void refreshReliability();
+    void readLiveUpdateEnabled()
+      .then((enabled) => {
+        if (!disposed) {
+          setLiveUpdateEnabled(enabled);
+          setLiveUpdateError(false);
+        }
+      })
+      .catch(() => {
+        if (!disposed) setLiveUpdateError(true);
+      });
     const onFocus = () => {
       if (!disposed) void refreshReliability();
     };
@@ -368,6 +383,46 @@ const DisplaySettings: FC = () => {
               }
               className="shrink-0 cursor-pointer"
             />
+          </div>
+        </SettingsSection>
+      )}
+
+      {nativeAndroid && (
+        <SettingsSection
+          title={t('settings.liveNotification')}
+          description={t('settings.liveNotificationDesc')}>
+          <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium">{t('settings.liveNotificationToggle')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {liveUpdateEnabled === null
+                    ? t('settings.widgetChecking')
+                    : liveUpdateEnabled
+                      ? t('settings.liveNotificationOn')
+                      : t('settings.liveNotificationOff')}
+                </p>
+              </div>
+              <Switch
+                aria-label={t('settings.liveNotificationToggle')}
+                checked={liveUpdateEnabled ?? false}
+                disabled={liveUpdateEnabled === null || liveUpdateBusy}
+                onCheckedChange={(checked) => {
+                  setLiveUpdateBusy(true);
+                  setLiveUpdateError(false);
+                  void writeLiveUpdateEnabled(checked)
+                    .then((committed) => setLiveUpdateEnabled(committed))
+                    .catch(() => setLiveUpdateError(true))
+                    .finally(() => setLiveUpdateBusy(false));
+                }}
+                className="shrink-0 cursor-pointer"
+              />
+            </div>
+            {liveUpdateError && (
+              <p className="text-sm text-destructive">
+                {t('settings.liveNotificationUnavailable')}
+              </p>
+            )}
           </div>
         </SettingsSection>
       )}

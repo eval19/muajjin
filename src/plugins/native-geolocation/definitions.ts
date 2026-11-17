@@ -11,6 +11,8 @@ export interface NativeGeolocationPlugin {
    * Get the current compass heading in degrees
    */
   getCurrentHeading(): Promise<HeadingResult>;
+  watchHeading(callback: WatchHeadingCallback): Promise<string>;
+  clearHeadingWatch(options: { id: string }): Promise<void>;
 
   /**
    * Request location permissions
@@ -101,6 +103,11 @@ export interface HeadingResult {
    */
   heading: number;
 }
+
+export type WatchHeadingCallback = (
+  result: HeadingResult | null,
+  error?: unknown,
+) => void;
 
 export type PermissionState =
   | 'granted'

@@ -4,14 +4,12 @@ import android.content.Context;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Build;
-import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import java.text.NumberFormat;
 
-/** Presentation fit only. Dates, formatted values and prayer state belong to the snapshot. */
+/** Presentation fit for the 2x1 Strip widget. Dates and formatted values belong to the snapshot. */
 final class WidgetLayout {
-    static final String[] PRAYERS = {"fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"};
     final int variant;
     final float width, height;
     final Context context;
@@ -21,19 +19,14 @@ final class WidgetLayout {
     private final Typeface regularTypeface, boldTypeface;
     /** Exactly two widget type scales; Normal (1f) preserves the existing resources. */
     static final float LARGE_TEXT_SCALE = 1.2f;
-    /** A six-cell single row is dense; keep complete names at the cost of less padding. */
-    private static final float SIX_COLUMN_INSET = 1f;
-    boolean compact, tight, stacked, metadataStacked, wrapClocks, summaryOnly;
+    boolean compact, tight;
+    final boolean summaryOnly = false;
     private boolean largeText;
     private final boolean nonAsciiDigits;
     private float textScale = 1f;
-    int columns = 3;
     float minimumHeight;
-    float nameLineHeight, clockLineHeight, labelLineHeight, contextLineHeight;
-    float contextBlockHeight, compactCellInset;
-    int scheduleTextPixels;
+    float labelLineHeight;
     private final String countdownSample, countdownHourSample, countdownMinuteSample;
-    // Cache both supported scales: summary fallback can revisit either profile.
     private float regularCountdownWidth, compactCountdownWidth;
     private float regularCountdownHeight, compactCountdownHeight;
     private float largerRegularCountdownWidth, largerCompactCountdownWidth;
@@ -41,50 +34,35 @@ final class WidgetLayout {
 
     WidgetLayout(Context context, PrayerWidgetHelper.WidgetTimelineState state,
                  int requestedVariant, float width, float height) {
+        if (requestedVariant != 0) throw new IllegalArgumentException("Unknown widget variant");
         this.context = context;
         this.state = state;
+        this.variant = 0;
         this.width = width;
         this.height = height;
         regularTypeface = WidgetTypeface.regular(context);
         boldTypeface = WidgetTypeface.bold(context);
-        variant = height > 0 && height < 100 && requestedVariant == 1 ? 0
-            : height > 0 && height < 100 && requestedVariant == 3 ? 2 : requestedVariant;
         paint.setFontFeatureSettings("tnum");
         paint.setTextLocale("rtl".equals(state.presentation.direction)
             ? state.presentation.locale() : state.numericLocale);
-        if(state.valid) {
-            long seconds=Math.max(0,state.targetTimestamp-state.now)/1000;
-            NumberFormat numbers=NumberFormat.getIntegerInstance(state.numericLocale);
-            countdownSample=WidgetLocale.elapsedTime(seconds,numbers);
-            countdownHourSample=WidgetLocale.elapsedTime(seconds/3600*3600+3599,numbers);
-            countdownMinuteSample=WidgetLocale.elapsedTime(3599,numbers);
+        if (state.valid) {
+            long seconds = Math.max(0, state.targetTimestamp - state.now) / 1000;
+            NumberFormat numbers = NumberFormat.getIntegerInstance(state.numericLocale);
+            countdownSample = WidgetLocale.elapsedTime(seconds, numbers);
+            countdownHourSample = WidgetLocale.elapsedTime(seconds / 3600 * 3600 + 3599, numbers);
+            countdownMinuteSample = WidgetLocale.elapsedTime(3599, numbers);
         } else {
-            countdownSample=countdownHourSample=countdownMinuteSample="—";
+            countdownSample = countdownHourSample = countdownMinuteSample = "—";
         }
         nonAsciiDigits = state.valid && countdownSample.length() > 0 && countdownSample.charAt(0) > '9';
         chooseScale();
-        if (variant == 3 && !stacked && columns == 3 && height > 0 && minimumHeight > height
-                && canWrapSixClocks()) {
-            columns = 6;
-            wrapClocks = true;
-            minimumHeight = requiredHeight();
-        }
-        if (variant == 4 && !fitsWithinBounds()) {
-            summaryOnly = true;
-            chooseScale();
-        }
     }
 
     private void chooseScale() {
-        // Keyguard widgets are fixed one-row surfaces; their regular type scale
-        // cannot absorb a custom font's line height. Use the compact scale that
-        // the 2x1/4x1 hosts were designed around. Keyguard hosts also keep the
-        // Normal scale: a larger three-line stack cannot fit without dropping a
-        // value, so Larger applies to the five home-screen variants.
-        largeText = state.presentation.widgetLargeText && variant <= 4;
+        largeText = state.presentation.widgetLargeText;
         textScale = 1f;
-        compact = variant == 5 || variant == 6;
-        tight = compact;
+        compact = false;
+        tight = false;
         chooseComposition();
         if (!tight && height > 0 && minimumHeight > height) {
             tight = true;
@@ -100,9 +78,6 @@ final class WidgetLayout {
         // make Larger text smaller than Normal. Only spacing may then tighten.
         textScale = LARGE_TEXT_SCALE;
         chooseComposition();
-        // Re-evaluate width at the enlarged scale: the Normal-pass decision may no
-        // longer hold once Larger text is measured, and a host that fits compact
-        // Larger text must not fall through to a simpler variant.
         if (!compact && !fitsWidth()) {
             compact = true;
             tight = true;
@@ -118,11 +93,6 @@ final class WidgetLayout {
         }
     }
 
-    float dimension(int resource) {
-        return context.getResources().getDimension(resource)
-            / context.getResources().getDisplayMetrics().density;
-    }
-
     int px(float dp) {
         return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
@@ -131,66 +101,34 @@ final class WidgetLayout {
         return context.getResources().getDimension(compact ? small : regular) * textScale;
     }
 
-    float labelSize() { return state.valid ? textSize(R.dimen.w_label_size, R.dimen.w_label_size_compact) : contextSize(); }
-    float contextSize() { return textSize(R.dimen.w_context_size, R.dimen.w_context_size_compact); }
-    float nameSize() { return textSize(R.dimen.w_schedule_name_size, R.dimen.w_schedule_name_size_compact); }
-    float timeSize() {
-        float opticalScale = nonAsciiDigits && variant <= 4 ? 1.08f : 1f;
-        return textSize(R.dimen.w_schedule_time_size, R.dimen.w_schedule_time_size_compact) * opticalScale;
+    float labelSize() {
+        return state.valid
+            ? textSize(R.dimen.w_label_size, R.dimen.w_label_size_compact)
+            : textSize(R.dimen.w_context_size, R.dimen.w_context_size_compact);
     }
+
     float countdownSize() {
-        float opticalScale = nonAsciiDigits && variant <= 4 ? 1.12f : 1f;
-        if (variant == 0 || variant == 2 || variant == 5)
-            return textSize(R.dimen.w_countdown_small_size, R.dimen.w_countdown_small_size_compact) * opticalScale;
-        if (variant == 4 || variant == 6)
-            return textSize(R.dimen.w_countdown_table_size, R.dimen.w_countdown_table_size_compact) * opticalScale;
-        return textSize(R.dimen.w_countdown_size, R.dimen.w_countdown_size_compact) * opticalScale;
+        float opticalScale = nonAsciiDigits ? 1.12f : 1f;
+        return textSize(R.dimen.w_countdown_small_size, R.dimen.w_countdown_small_size_compact) * opticalScale;
     }
 
     private boolean isTallCell() {
-        if (tight || compact || height <= 0) return false;
-        if (variant == 0 || variant == 2) return height >= 106 && height <= 145;
-        if (variant == 1) return height >= 195 && height <= 280;
-        if (variant == 3) return height >= 275 && height <= 320;
-        if (variant == 4) return height >= 205 && height <= 310;
-        return false;
+        return !tight && !compact && height >= 106 && height <= 145;
     }
-    private boolean isMediumTightWide() {
-        return tight && variant == 3 && height >= 210;
-    }
-    float horizontalInset() { return variant == 0 || tight ? 12 : 16; }
+
+    float horizontalInset() { return 12; }
+
     float verticalInset() {
-        if (variant == 0) return tight ? (largeText ? 5 : 6) : (isTallCell() ? 12 : 8);
-        if (isMediumTightWide()) return 10;
-        return tight ? 6 : 16;
+        return tight ? (largeText ? 5 : 6) : (isTallCell() ? 12 : 8);
     }
-    float cellHorizontalInset() {
-        if (columns == 6) return sixColumnInset();
-        return tight ? compactCellInset : 8;
-    }
-    private float sixColumnInset() {
-        return Math.min(tight ? compactCellInset : 8f, SIX_COLUMN_INSET);
-    }
-    float cellVerticalInset() { return tight ? (isMediumTightWide() ? 7 : (variant == 3 || variant == 4 ? 3 : 6)) : (isTallCell() ? 10 : 8); }
-    float cellLabelGap() { return tight ? 2 : 4; }
+
     float progressGap() {
-        if (variant == 0) return tight ? 3 : (isTallCell() ? 10 : 4);
-        if (isMediumTightWide()) return 8;
-        if (tight) return 4;
-        if (variant == 2) return isTallCell() ? 12 : 8;
-        return isTallCell() ? 14 : 12;
+        return tight ? 3 : (isTallCell() ? 10 : 4);
     }
-    float footerGap() { return tight ? 4 : (variant == 1 && isTallCell() ? 12 : 8); }
-    float scheduleGap() {
-        if (isMediumTightWide()) return 10;
-        return tight ? (variant == 3 || variant == 4 ? 4 : 8) : (isTallCell() ? 18 : 16);
+
+    float contentWidth() {
+        return width > 0 ? Math.max(0, width - 2 * horizontalInset()) : 0;
     }
-    float columnGap() { return dimension(R.dimen.w_gap_cells); }
-    float rowGap() {
-        if (isMediumTightWide()) return 6;
-        return tight ? (variant == 3 || variant == 4 ? 4 : 6) : (isTallCell() ? 10 : 8);
-    }
-    float contentWidth() { return width > 0 ? Math.max(0, width - 2 * horizontalInset()) : 0; }
 
     private void font(float size, boolean bold) {
         paint.setTextSize(size);
@@ -216,7 +154,7 @@ final class WidgetLayout {
         if (text.isEmpty()) return lineHeight(size, bold);
         font(size, bold);
         int measuredWidth = availableWidth >= 0 ? px(availableWidth)
-            : (int)Math.ceil(paint.measureText(text)) + px(4);
+            : (int) Math.ceil(paint.measureText(text)) + px(4);
         StaticLayout.Builder builder = StaticLayout.Builder.obtain(text, 0, text.length(), paint, Math.max(1, measuredWidth))
             .setIncludePad(false);
         if (Build.VERSION.SDK_INT >= 28) builder.setUseLineSpacingFromFallbacks(true);
@@ -259,232 +197,31 @@ final class WidgetLayout {
         return height;
     }
 
-    private float heroWidth() {
-        return Math.max(countdownWidth(), textWidth(state.label, labelSize(), true) + 2);
-    }
-
-    private float contextWidth() {
-        if (variant == 4)
-            return Math.max(textWidth(state.footerText, contextSize(), false),
-                textWidth(state.summaryText, timeSize(), true));
-        if (!state.valid) return 0;
-        return Math.max(textWidth(state.footerText, contextSize(), false),
-            textWidth(state.contextLine2, contextSize(), false));
-    }
-
     private void chooseComposition() {
-        labelLineHeight = textHeight(state.label, labelSize(), true);
-        contextLineHeight = Math.max(textHeight(state.footerText, contextSize(), false),
-            textHeight(state.contextLine2, contextSize(), false));
-        compactCellInset = 4;
-        if ((variant == 3 || variant == 4) && !summaryOnly) {
-            nameLineHeight = lineHeight(nameSize(), false);
-            clockLineHeight = lineHeight(timeSize(), true);
-            float widest = 0;
-            if (variant == 4 && state.valid) {
-                for (int i = 0; i < state.forecastIds.length; i++) {
-                    String id = state.forecastIds[i];
-                    String clock = state.forecastTimes[i];
-                    nameLineHeight = Math.max(nameLineHeight, textHeight(state.presentation.label(id), nameSize(), false));
-                    clockLineHeight = Math.max(clockLineHeight, textHeight(clock, timeSize(), true));
-                    widest = Math.max(widest, textWidth(state.presentation.label(id), nameSize(), false));
-                    widest = Math.max(widest, textWidth(clock, timeSize(), true));
-                }
-            } else {
-                for (String id : PRAYERS) {
-                    nameLineHeight = Math.max(nameLineHeight, textHeight(state.presentation.label(id), nameSize(), false));
-                    clockLineHeight = Math.max(clockLineHeight, textHeight(state.chipClock(id), timeSize(), true));
-                    widest = Math.max(widest, textWidth(state.presentation.label(id), nameSize(), false));
-                    widest = Math.max(widest, textWidth(state.chipClock(id), timeSize(), true));
-                }
-            }
-            // Weighted rows allocate whole pixels; do not round a fractional text width down.
-            scheduleTextPixels = (int)Math.ceil(widest * context.getResources().getDisplayMetrics().density) + 1;
-        }
-        float available = contentWidth();
-        stacked = !state.valid && variant != 0 && variant != 5;
-        metadataStacked = stacked && variant == 4;
-        if (width > 0) {
-            if (variant == 1) {
-                float header = textWidth(state.label, labelSize(), true)
-                    + textWidth(state.nextTime, contextSize(), false) + 10;
-                float footer = textWidth(state.footerText, contextSize(), false)
-                    + textWidth(state.currentStartTime, contextSize(), false) + 8;
-                stacked = Math.max(header, footer) > available;
-            } else if (variant == 2 || variant == 3 || variant == 6) {
-                stacked = !state.valid || heroWidth() + contextWidth() + 8 > available;
-            } else if (variant == 4) {
-                float metadata = textWidth(state.presentation.locationName, contextSize(), true)
-                    + textWidth(state.hijriText, contextSize(), false) + 8;
-                stacked = !state.valid || heroWidth() + contextWidth() + 8 > available;
-                metadataStacked = stacked || metadata > available;
-            }
-        }
-        columns = variant == 4 ? 4
-            : variant == 3 && !stacked && state.valid && width > 0
-                && (width >= 440 || (height > 0 && height < 140)) && sixColumnsFit() ? 6 : 3;
-        if ((variant == 3 || variant == 4) && tight && width > 0) {
-            int fittingInset = (cellWidthPixels(variant == 4 ? 4 : 3) - scheduleTextPixels) / 2;
-            compactCellInset = Math.max(px(1), Math.min(px(4), fittingInset))
-                / context.getResources().getDisplayMetrics().density;
-        }
-        if (!state.valid && width > 0) {
-            labelLineHeight = textHeight(state.label, labelSize(), true, Math.max(0, available));
-        }
-        float contextAllocation = width <= 0 ? -1 : Math.max(0, stacked ? available : available - heroWidth() - 8);
-        contextBlockHeight = textHeight(state.footerText, contextSize(), false, contextAllocation) + 4
-            + textHeight(state.contextLine2, contextSize(), false, contextAllocation);
-        if (variant == 4 && state.valid && !summaryOnly && width > 0
-                && cellWidthPixels(4) < requiredCellWidthPixels() && canWrapFourClocks()) {
-            wrapClocks = true;
-        }
+        labelLineHeight = textHeight(state.label, labelSize(), true,
+            !state.valid && width > 0 ? Math.max(0, contentWidth()) : -1);
         minimumHeight = requiredHeight();
     }
 
-    private int cellWidthPixels(int count) {
-        return Math.max(0, (px(contentWidth()) - (count - 1) * px(columnGap())) / count);
-    }
-
-    private int requiredCellWidthPixels() {
-        return scheduleTextPixels + 2 * px(cellHorizontalInset());
-    }
-
-    private boolean sixColumnsFit() {
-        return cellWidthPixels(6) >= requiredCellWidthPixels();
-    }
-
     private boolean fitsWidth() {
-        if (width <= 0) return true;
-        if (state.valid && countdownWidth() > contentWidth()) return false;
-        if (summaryOnly || (variant != 3 && variant != 4)) return true;
-        if (variant == 4) {
-            return wrapClocks ? canWrapFourClocks()
-                : cellWidthPixels(4) >= requiredCellWidthPixels();
-        }
-        return wrapClocks ? canWrapSixClocks()
-            : cellWidthPixels(columns) >= requiredCellWidthPixels();
+        return width <= 0 || !state.valid || countdownWidth() <= contentWidth();
     }
 
     boolean fitsWithinBounds() {
         return (height <= 0 || minimumHeight <= height) && fitsWidth();
     }
 
-    private boolean canWrapFourClocks() {
-        if (width <= 0 || !state.valid) return false;
-        int cellWidth = cellWidthPixels(4) - 2 * px(cellHorizontalInset()) - 1;
-        if (cellWidth <= 0) return false;
-        float density = context.getResources().getDisplayMetrics().density;
-        for (int i = 0; i < state.forecastIds.length; i++) {
-            String id = state.forecastIds[i];
-            if (Math.ceil(textWidth(state.presentation.label(id), nameSize(), false) * density) > cellWidth) return false;
-            String clock = state.forecastTimes[i];
-            font(timeSize(), true);
-            StaticLayout lines = StaticLayout.Builder.obtain(clock, 0, clock.length(), paint, cellWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).build();
-            if (lines.getLineCount() > 2) return false;
-            for (int line = 0; line < lines.getLineCount(); line++)
-                if (lines.getLineWidth(line) > cellWidth) return false;
-        }
-        return true;
-    }
-
-    private boolean canWrapSixClocks() {
-        if (width <= 0) return false;
-        int cellWidth = cellWidthPixels(6) - 2 * px(sixColumnInset()) - 1;
-        if (cellWidth <= 0) return false;
-        float density = context.getResources().getDisplayMetrics().density;
-        for (String id : PRAYERS) {
-            if (Math.ceil(textWidth(state.presentation.label(id), nameSize(), false) * density) > cellWidth) return false;
-            String clock = state.chipClock(id);
-            font(timeSize(), true);
-            StaticLayout lines = StaticLayout.Builder.obtain(clock, 0, clock.length(), paint, cellWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).build();
-            if (lines.getLineCount() > 2) return false;
-            for (int line = 0; line < lines.getLineCount(); line++)
-                if (lines.getLineWidth(line) > cellWidth) return false;
-        }
-        return true;
-    }
-
-    float cellHeight() {
-        float text = nameLineHeight + cellLabelGap()
-            + clockLineHeight * (wrapClocks ? 2 : 1) + 2 * cellVerticalInset();
-        float floor = isMediumTightWide() ? 52 : tight ? (variant == 3 || variant == 4 ? 36 : 48) : (isTallCell() ? 70 : 64);
-        return Math.max(floor, text);
-    }
-
-    private float tableMetadataHeight() {
-        float location = textHeight(state.presentation.locationName, contextSize(), true);
-        float hijri = textHeight(state.hijriText, contextSize(), false);
-        return metadataStacked ? location + 4 + hijri : Math.max(location, hijri);
-    }
-
-    private float tableSummaryHeight() {
-        float allocated = width <= 0 ? -1 : Math.max(0, contentWidth()
-            - (state.valid && !stacked ? countdownWidth() + 8 : 0));
-        String summary = state.summaryText;
-        return (state.valid ? textHeight(state.footerText, contextSize(), false, allocated) : 0)
-            + 4 + textHeight(summary, timeSize(), true, allocated);
-    }
-
     private float requiredHeight() {
-        float label = labelLineHeight;
         if (!state.valid) {
-            float recovery = label;
-            if (variant == 0)
-                // The primary group's 6dp bottom margin already clears the
-                // bottom-pinned bar, so only that band is reserved for it.
-                recovery += 6;
-            else if (variant == 1)
-                recovery = label;
-            else if (variant == 4)
-                recovery = tableMetadataHeight() + 4 + label;
-            if (variant == 3)
-                recovery += scheduleGap() + 2 * cellHeight() + rowGap();
-            return recovery + 2 * verticalInset();
+            // The primary group's 6dp bottom margin already clears the
+            // bottom-pinned bar, so only that band is reserved for it.
+            return labelLineHeight + 6 + 2 * verticalInset();
         }
-        float digits = countdownHeight();
-        float contextLine = contextLineHeight;
-        float primary = label + 4 + digits;
-        float contextBlock = contextBlockHeight;
-        float body;
-        switch (variant) {
-            case 0:
-                body = label + (tight ? 0 : 2) + digits + progressGap() + 4;
-                break;
-            case 1:
-                body = (stacked ? label + contextLine + 4 : Math.max(label, contextLine))
-                    + 4 + digits + progressGap() + 4 + footerGap()
-                    + (stacked ? 2 * contextLine + 4 : contextLine);
-                break;
-            case 2:
-            case 3:
-            case 6:
-                body = stacked ? primary + (state.valid ? 4 + contextBlock : 0) : Math.max(primary, contextBlock);
-                if (variant != 6) body += progressGap() + 4;
-                if (variant == 3)
-                    body += scheduleGap() + (columns == 6 ? cellHeight() : 2 * cellHeight() + rowGap());
-                break;
-            case 4:
-                float summary = tableSummaryHeight();
-                body = tableMetadataHeight() + (tight ? 4 : 8)
-                    + (stacked ? primary + 4 + summary : Math.max(primary, summary))
-                    + progressGap() + 4
-                    + (summaryOnly ? 0 : scheduleGap() + cellHeight());
-                break;
-            case 5:
-                body = primary + 4 + contextLine;
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown widget variant");
-        }
+        float body = labelLineHeight + (tight ? 0 : 2) + countdownHeight() + progressGap() + 4;
         return body + 2 * verticalInset();
     }
 
     int layoutId() {
-        switch (variant) {
-            case 0: return R.layout.widget_prayer_strip;
-            default: throw new IllegalArgumentException("Unknown widget variant");
-        }
+        return R.layout.widget_prayer_strip;
     }
 }

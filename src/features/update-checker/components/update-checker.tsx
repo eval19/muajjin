@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useTranslation } from '@/contexts/translation-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { subscribeUpdateChecks } from '@/features/update-checker/services/update-events';
@@ -71,8 +71,7 @@ export const UpdateChecker: FC = () => {
         }
         if (!latestRelease) {
           if (options?.notifyUpToDate) {
-            toast({
-              title: t('update.checkFailedTitle'),
+            toast.error(t('update.checkFailedTitle'), {
               description: t('update.checkFailedDescription'),
               duration: 3000,
             });
@@ -85,8 +84,7 @@ export const UpdateChecker: FC = () => {
         );
         if (!isNewer) {
           if (options?.notifyUpToDate) {
-            toast({
-              title: t('update.upToDateTitle'),
+            toast(t('update.upToDateTitle'), {
               description: t('update.upToDateDescription', {
                 currentVersion,
               }),
@@ -120,8 +118,7 @@ export const UpdateChecker: FC = () => {
   useEffect(() => {
     const unsubscribe = subscribeUpdateChecks((options) => {
       if (!isOnline()) {
-        toast({
-          title: t('update.offlineTitle'),
+        toast.error(t('update.offlineTitle'), {
           description: t('update.offlineDescription'),
           duration: 3000,
         });

@@ -4,10 +4,27 @@ import type {
   Position,
   PositionOptions,
   PermissionStatus,
+  WatchHeadingCallback,
 } from './definitions';
+
+function readOrientationHeading(
+  event: DeviceOrientationEvent & { webkitCompassHeading?: number },
+): { heading: number; source: 'webkit' | 'alpha-absolute' | 'alpha-relative' } | null {
+  if (typeof event.webkitCompassHeading === 'number' && Number.isFinite(event.webkitCompassHeading)) {
+    return { heading: ((event.webkitCompassHeading % 360) + 360) % 360, source: 'webkit' };
+  }
+  if (typeof event.alpha === 'number' && Number.isFinite(event.alpha)) {
+    return {
+      heading: ((360 - event.alpha) % 360 + 360) % 360,
+      source: event.absolute ? 'alpha-absolute' : 'alpha-relative',
+    };
+  }
+  return null;
+}
 
 export class NativeGeolocationWeb implements NativeGeolocationPlugin {
   private requests = new Map<string, { watch: number; cancel: () => void }>();
+  private headingWatches = new Map<string, () => void>();
   async getCurrentPosition(options?: PositionOptions): Promise<Position> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -71,35 +88,18 @@ export class NativeGeolocationWeb implements NativeGeolocationPlugin {
 
   async getCurrentHeading(): Promise<HeadingResult> {
     return new Promise((resolve, reject) => {
-      if (
-        typeof window === 'undefined' ||
-        !('DeviceOrientationEvent' in window)
-      ) {
+      if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
         reject(new Error('Compass heading is not supported on this device'));
         return;
       }
 
       const handleOrientation = (event: Event) => {
-        const orientationEvent = event as DeviceOrientationEvent & {
-          webkitCompassHeading?: number;
-        };
-
-        if (
-          typeof orientationEvent.webkitCompassHeading === 'number' &&
-          Number.isFinite(orientationEvent.webkitCompassHeading)
-        ) {
-          cleanup();
-          resolve({ heading: orientationEvent.webkitCompassHeading });
-          return;
-        }
-
-        if (
-          typeof orientationEvent.alpha === 'number' &&
-          Number.isFinite(orientationEvent.alpha)
-        ) {
-          cleanup();
-          resolve({ heading: (360 - orientationEvent.alpha + 360) % 360 });
-        }
+        const parsed = readOrientationHeading(
+          event as DeviceOrientationEvent & { webkitCompassHeading?: number },
+        );
+        if (!parsed) return;
+        cleanup();
+        resolve({ heading: parsed.heading });
       };
 
       const timeoutId = window.setTimeout(() => {
@@ -109,24 +109,45 @@ export class NativeGeolocationWeb implements NativeGeolocationPlugin {
 
       const cleanup = () => {
         window.clearTimeout(timeoutId);
-        window.removeEventListener(
-          'deviceorientationabsolute',
-          handleOrientation,
-          true,
-        );
-        window.removeEventListener(
-          'deviceorientation',
-          handleOrientation,
-          true,
-        );
+        window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+        window.removeEventListener('deviceorientation', handleOrientation, true);
       };
 
-      window.addEventListener(
-        'deviceorientationabsolute',
-        handleOrientation,
-        true,
-      );
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
       window.addEventListener('deviceorientation', handleOrientation, true);
     });
+  }
+
+  async watchHeading(callback: WatchHeadingCallback): Promise<string> {
+    if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
+      throw new Error('Compass heading is not supported on this device');
+    }
+    const id = crypto.randomUUID();
+    let selectedSource: 'webkit' | 'alpha-absolute' | 'alpha-relative' | null = null;
+    const handleOrientation = (event: Event) => {
+      const parsed = readOrientationHeading(
+        event as DeviceOrientationEvent & { webkitCompassHeading?: number },
+      );
+      if (!parsed) return;
+      if (selectedSource === null || parsed.source === 'webkit') {
+        selectedSource = parsed.source;
+      }
+      if (parsed.source !== selectedSource) return;
+      callback({ heading: parsed.heading });
+    };
+    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    this.headingWatches.set(id, () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+    });
+    return id;
+  }
+
+  async clearHeadingWatch(options: { id: string }): Promise<void> {
+    const cleanup = this.headingWatches.get(options.id);
+    if (!cleanup) return;
+    this.headingWatches.delete(options.id);
+    cleanup();
   }
 }

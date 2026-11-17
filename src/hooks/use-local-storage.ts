@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { createPersistentStore } from '@/utils/persistent-storage';
 import type { PersistentStore, StorageSnapshot, StorageUpdate } from '@/utils/persistent-storage';
 import { normalizeStorageValue } from '@/utils/settings-storage';
@@ -56,7 +56,7 @@ export function useLocalStorage<T>(
   useEffect(() => {
     if (snapshot.error && !reported.has(snapshot)) {
       reported.add(snapshot);
-      toast({ title: 'Device data could not be saved or loaded', description: snapshot.error, variant: 'destructive' });
+      toast.error('Device data could not be saved or loaded', { description: snapshot.error });
     }
   }, [snapshot]);
   return [snapshot.value, store.set, { error: snapshot.error, reset: store.reset }];

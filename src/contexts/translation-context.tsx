@@ -1,4 +1,4 @@
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import arTemplate from '@/i18n/template-ar.json';
 import bnTemplate from '@/i18n/template-bn.json';
 import enTemplate from '@/i18n/template-en.json';
@@ -72,7 +72,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     const originalMessage = error instanceof Error ? error.message : storageFailure(error);
     const message = cleanupMessage === undefined ? originalMessage : `${originalMessage}; ${cleanupMessage}`;
     if (live.current && (token === undefined || requests.current.isCurrent(token))) setStorageError(message);
-    toast({ title: 'Device data or font operation failed', description: message, variant: 'destructive' });
+    toast.error('Device data or font operation failed', { description: message });
   }, []);
   const publish = useCallback((next: TranslationState) => { stateRef.current = next; setState(next); setStorageError(null); }, []);
   const selectedLanguage = useCallback(() => {
@@ -329,7 +329,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         activateFont({ face, family: `'${face.family}', system-ui, -apple-system, sans-serif`, selection: metadata.id });
         cachedFont.current = candidate; selectionRef.current = metadata; setCustomFont(metadata); setStorageError(null);
       });
-      toast({ title: t('settings.fontUploaded'), description: t('settings.fontUploadedDesc') });
+      toast.success(t('settings.fontUploaded'), { description: t('settings.fontUploadedDesc') });
       if (previous && previous.id !== metadata.id) void cleanupRecord(previous.id, token);
       return true;
     } catch (error) {
@@ -355,7 +355,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(CUSTOM_FONT_KEY);
         activateFont(prepared); selectionRef.current = null; cachedFont.current = null; setCustomFont(null); setStorageError(null);
       });
-      toast({ title: t('settings.fontRemoved'), description: t('settings.fontRemovedDesc') });
+      toast.success(t('settings.fontRemoved'), { description: t('settings.fontRemovedDesc') });
       if (previous) void cleanupRecord(previous.id, token);
       return true;
     } catch (error) { if (requests.current.isCurrent(token)) report(error); return false; }

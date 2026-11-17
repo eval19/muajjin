@@ -272,6 +272,8 @@ export function createWidgetSync(
 
 const PrayerWidget = registerPlugin<PrayerWidgetPluginInterface & {
   getSystemClockFormat(): Promise<{ timeFormat: '12h' | '24h' }>;
+  getLiveUpdateEnabled(): Promise<{ enabled: boolean }>;
+  setLiveUpdateEnabled(options: { enabled: boolean }): Promise<{ enabled: boolean }>;
 }>('PrayerWidget');
 export const syncPrayerTimesToWidget = createWidgetSync(PrayerWidget, () =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('PrayerWidget'),
@@ -285,6 +287,18 @@ export async function readNativeSystemTimeFormat(): Promise<'12h' | '24h'> {
 
 export async function readWidgetReliability(): Promise<WidgetReliability> {
   return widgetReliabilitySchema.parse(await PrayerWidget.getWidgetReliability());
+}
+
+export async function readLiveUpdateEnabled(): Promise<boolean> {
+  const result = await PrayerWidget.getLiveUpdateEnabled();
+  if (typeof result.enabled !== 'boolean') throw new Error('Invalid live update preference');
+  return result.enabled;
+}
+
+export async function writeLiveUpdateEnabled(enabled: boolean): Promise<boolean> {
+  const result = await PrayerWidget.setLiveUpdateEnabled({ enabled });
+  if (typeof result.enabled !== 'boolean') throw new Error('Invalid live update preference');
+  return result.enabled;
 }
 
 export async function openExactAlarmSettings(): Promise<void> {

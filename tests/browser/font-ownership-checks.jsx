@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TranslationProvider, useTranslation } from '/src/contexts/translation-context.tsx';
-import { useToast } from '/src/hooks/use-toast.ts';
+import { useSonner } from 'sonner';
 import { CUSTOM_FONT_KEY, saveFontRecord } from '/src/utils/font-storage.ts';
 import enTemplate from '/src/i18n/template-en.json';
 
@@ -27,7 +27,7 @@ function check(condition, message) {
 
 function Probe() {
   const api = useTranslation();
-  const { toasts } = useToast();
+  const { toasts } = useSonner();
   useLayoutEffect(() => {
     current = { api, toasts };
     for (const observer of observers) observer();

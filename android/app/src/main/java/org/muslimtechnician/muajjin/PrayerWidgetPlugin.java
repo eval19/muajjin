@@ -161,4 +161,36 @@ public class PrayerWidgetPlugin extends Plugin {
             } catch(Exception error){call.reject("Unable to save prayer presentation: "+error.getMessage(),error);}
         });
     }
+    @PluginMethod
+    public void getLiveUpdateEnabled(PluginCall call) {
+        Context context=getContext();if(context==null){call.reject("Context is null");return;}
+        Context application=context.getApplicationContext();
+        PrayerUpdateCoordinator.execute(()->{
+            try {
+                SharedPreferences prefs=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
+                JSObject result=new JSObject();
+                result.put("enabled",prefs.getBoolean("live_update_enabled",true));
+                call.resolve(result);
+            } catch(Exception error){call.reject("Unable to read notification preference: "+error.getMessage(),error);}
+        });
+    }
+    @PluginMethod
+    public void setLiveUpdateEnabled(PluginCall call) {
+        Context context=getContext();if(context==null){call.reject("Context is null");return;}
+        Boolean enabled=call.getBoolean("enabled");
+        if(enabled==null){call.reject("Enabled boolean is required");return;}
+        Context application=context.getApplicationContext();
+        PrayerUpdateCoordinator.execute(()->{
+            try {
+                SharedPreferences prefs=application.getSharedPreferences(PrayerWidgetHelper.PREFS_NAME,Context.MODE_PRIVATE);
+                if(!prefs.edit().putBoolean("live_update_enabled",enabled).commit()) {
+                    throw new IllegalStateException("Could not save notification preference");
+                }
+                JSObject result=new JSObject();
+                result.put("enabled",enabled);
+                call.resolve(result);
+                PrayerUpdateCoordinator.dispatchNow(application,false);
+            } catch(Exception error){call.reject("Unable to update notification preference: "+error.getMessage(),error);}
+        });
+    }
 }

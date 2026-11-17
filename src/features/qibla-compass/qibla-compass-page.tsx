@@ -172,14 +172,6 @@ const QiblaCompassPage: FC = () => {
 
   const effectiveHeading = smoothedHeading ?? heading;
 
-  const directionDelta = useMemo(() => {
-    if (effectiveHeading === null || qiblaBearing === null) {
-      return null;
-    }
-
-    return normalizeSignedDegrees(qiblaBearing - effectiveHeading);
-  }, [effectiveHeading, qiblaBearing]);
-
   useEffect(() => {
     if (heading === null) {
       setSmoothedHeading(null);
@@ -277,49 +269,45 @@ const QiblaCompassPage: FC = () => {
       return;
     }
 
-    let intervalId: number | null = null;
     let cancelled = false;
-    let polling = false;
-    let nativeFailureCount = 0;
+    let watchId: string | null = null;
     let cleanupFallback: (() => void) | null = null;
 
-    const pollHeading = async () => {
-      if (polling || cancelled) {
+    void NativeGeolocation.watchHeading((result, error) => {
+      if (cancelled) return;
+      if (error || !result) {
+        const message = typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : String(error ?? '');
+        if (message.toLowerCase().includes('cancelled')) return;
+        if (cleanupFallback === null) {
+          cleanupFallback = startBrowserOrientationFallback();
+        }
         return;
       }
-
-      polling = true;
-
-      try {
-        const result = await NativeGeolocation.getCurrentHeading();
-        if (!cancelled) {
-          nativeFailureCount = 0;
-          setHeading(normalizeDegrees(result.heading));
-          setPermissionState('granted');
+      setHeading(normalizeDegrees(result.heading));
+      setPermissionState('granted');
+    })
+      .then((id) => {
+        if (cancelled) {
+          void NativeGeolocation.clearHeadingWatch({ id }).catch(() => undefined);
+          return;
         }
-      } catch (error) {
-        if (!cancelled) {
-          nativeFailureCount += 1;
-
-          if (nativeFailureCount >= 3 && cleanupFallback === null) {
-            cleanupFallback = startBrowserOrientationFallback();
-          }
+        watchId = id;
+      })
+      .catch(() => {
+        if (!cancelled && cleanupFallback === null) {
+          cleanupFallback = startBrowserOrientationFallback();
         }
-      } finally {
-        polling = false;
-      }
-    };
-
-    pollHeading();
-    intervalId = window.setInterval(pollHeading, 120);
+      });
 
     return () => {
       cancelled = true;
+      if (watchId !== null) {
+        void NativeGeolocation.clearHeadingWatch({ id: watchId }).catch(() => undefined);
+      }
       if (cleanupFallback) {
         cleanupFallback();
-      }
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
       }
     };
   }, [startBrowserOrientationFallback, active]);

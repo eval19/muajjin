@@ -45,6 +45,7 @@ export default function FinalSettingsPage() {
     Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const [reliability, setReliability] = useState<WidgetReliability | null>(null);
   const [reliabilityUnavailable, setReliabilityUnavailable] = useState(false);
+  const [allowApproximateAlarms, setAllowApproximateAlarms] = useState(false);
 
   const refreshReliability = useCallback(async () => {
     if (!nativeAndroid) return;
@@ -79,17 +80,18 @@ export default function FinalSettingsPage() {
     reliability !== null &&
     reliability.exactAlarmSupported !== false &&
     !reliability.exactAlarmAllowed;
+  const blockedByExactAlarm = needsExactAlarm && !allowApproximateAlarms;
   const isReadyToFinish =
     settings.madhab !== null &&
     hasValidLocation &&
     !checkingExactAlarm &&
-    !needsExactAlarm;
+    !blockedByExactAlarm;
   const handleFinish = () => {
     if (!hasValidLocation) {
       navigate('/onboarding/location', { replace: true });
       return;
     }
-    if (settings.madhab === null || checkingExactAlarm || needsExactAlarm) {
+    if (settings.madhab === null || checkingExactAlarm || blockedByExactAlarm) {
       return;
     }
     if (updateSettings({ ...settings, onboardingComplete: true })) navigate('/', { replace: true });
@@ -149,7 +151,7 @@ export default function FinalSettingsPage() {
           <HijriCalendarInfoCard />
 
           {/* Exact Alarm Permission (Android 12+) */}
-          {needsExactAlarm && (
+          {blockedByExactAlarm && (
             <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Clock className="h-4 w-4 text-primary" />
@@ -169,6 +171,14 @@ export default function FinalSettingsPage() {
                     .catch(() => setReliabilityUnavailable(true));
                 }}>
                 {t('onboarding.exactAlarmButton')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground"
+                onClick={() => setAllowApproximateAlarms(true)}>
+                {t('onboarding.exactAlarmSkip')}
               </Button>
             </div>
           )}
@@ -208,7 +218,7 @@ export default function FinalSettingsPage() {
         disabled={!isReadyToFinish}>
         {settings.madhab === null || !hasValidLocation
           ? t('onboarding.madhabRequired')
-          : needsExactAlarm
+          : blockedByExactAlarm
             ? t('onboarding.exactAlarmRequiredAction')
             : t('onboarding.getStarted')}
       </Button>
