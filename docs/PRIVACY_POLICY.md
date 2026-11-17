@@ -109,7 +109,7 @@ Muajjin is a privacy-focused Islamic Salat times application. We respect your pr
 
 For privacy-related inquiries:
 
-- **GitHub Issues:** https://github.com/muslimtechnician/muajjin/issues
+- **GitHub Issues:** https://github.com/eval19/muajjin/issues
 
 ## 11. App Version Information
 
